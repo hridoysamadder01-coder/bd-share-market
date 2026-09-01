@@ -71,21 +71,70 @@ The Q1−Q5 cross-sectional spread at the legal e+2 exit is real (+1.49%, 75%
 positive, t = 3.15) — but capturing it **requires shorting Q5, unavailable in
 Bangladesh**. The long-only capturable piece is the +0.32% / t = 0.43 row: noise.
 
-**Status: CLOSED as a trade.** Archived as a frozen rule with an explicit
-re-open trigger — **intraday netting OR short-selling going live**, either of
-which legalises the profitable window or leg.
+**Status when Round 2 closed it: CLOSED as a trade**, on the assumption that the
+earliest legal sale is entry + 2 sessions. **That kill reason has been WITHDRAWN**
+— see the re-run below.
+
+### R2-3 RE-RUN 2026-09-01 — the T+2 kill reason withdrawn, candidate re-measured
+
+Settlement and broker-level saleability are different mechanics. Round 2 closed
+this candidate on the second, which is **UNKNOWN** until confirmed against real
+LankaBangla / DSE account behaviour (`config.EARLIEST_SALEABILITY_DAYS = None`).
+A candidate must not stay dead on an unverified assumption, so it was
+independently re-implemented and re-measured with **no exit horizon excluded**,
+verified brokerage separated from estimated costs, and panels never pooled.
+Script: `experiments/rerun_saleability_killed.py`; rows:
+`results/rerun_saleability_killed.csv`.
+
+**PRE-FLOOR panel, 42 events** (Round 2 had 32 on its own universe construction):
+
+| Cohort · exit | Gross | t(gross) | Net after **verified** 0.8% | t | +0.2% est | +0.4% est |
+|---|---|---|---|---|---|---|
+| whole cohort · same-session | −0.47% | −1.17 | −1.27% | −3.17 | −1.47% | −1.67% |
+| whole cohort · sell next close | +0.50% | +1.02 | −0.30% | −0.60 | −0.50% | −0.70% |
+| whole cohort · 2 sessions | +0.02% | +0.02 | −0.78% | −1.13 | −0.98% | −1.18% |
+| **Q1 (most oversold fifth) · sell next close** | **+1.49%** | **+2.09** | **+0.69%** | **+0.97** | +0.49% | +0.29% |
+| Q1 · same-session | −0.33% | −0.55 | −1.13% | −1.88 | −1.33% | −1.53% |
+| Q1 · 2 sessions | +0.74% | +0.80 | −0.06% | −0.07 | −0.26% | −0.46% |
+| Q1−Q5 spread · sell next close | +1.36% | +1.56 | *not long-only capturable* | — | — | — |
+
+**POSTBREAK panel (2024-02-22 →), 5 usable events: every cohort and every exit
+negative.** Post-floor inside the primary panel: **1 event** — nothing inferable.
+
+**Replication discrepancy, stated rather than smoothed:** Round 2 reported the
+profit sitting in the *same-session* exit (gross +2.05%). This re-implementation
+finds the same-session exit **negative** (−0.47% whole cohort, −0.33% Q1), with
+the only pre-cost profit at the *next-close* exit and only in Q1. The definitions
+differ somewhere — most likely the liquidity universe or the cohort construction
+(Round 2's headline may have been a quintile, not the whole cohort). **Neither
+version is treated as established** until the difference is traced.
+
+**Outcome: still NOT promotable — but now for defensible reasons, not an
+assumption.** Best cell (Q1, next close) is +0.69% after verified brokerage with
+**t = 0.97** on 42 events — not significant; it survives only the verified-cost
+layer and thins to +0.29% under a 0.4% estimate; it does not replicate the prior
+result's location; and the post-break panel contradicts it outright. The
+saleability question stays open and is now recorded as **owner action**, not as a
+verdict.
 
 ### What Round 2 established as structure, not opinion
 
 These now live in `bdlib/config.py` and constrain every future candidate:
 
-- **T+2 settlement** — a return measured at an exit earlier than entry + 2
-  sessions was never capturable. Any horizon < 2 days is measurement only.
+- ~~**T+2 settlement** — a return measured at an exit earlier than entry + 2
+  sessions was never capturable.~~ **WITHDRAWN 2026-09-01.** Settlement (T+2) is
+  a clearing mechanic; broker-level saleability is a different one and may be
+  earlier. `EARLIEST_SALEABILITY_DAYS = None` (UNKNOWN) until verified against
+  actual LankaBangla / DSE account behaviour. No candidate may be killed by it
+  while unknown; short holds are labelled with the question, not filtered out.
 - **No short selling** — a long/short spread is not a strategy here.
 - **Floor era 2022-07-28…2024-01-31** — a distinct regime; pooling it with free
   periods mixes two different markets.
-- **Round-trip cost ≈ 1%** — at DSE daily-horizon effect sizes this is not a
-  detail, it is usually the entire result.
+- **Costs are reported in layers, never as one number** — verified brokerage
+  **0.8% round trip** (evidence) is kept separate from an **estimated** band of
+  additional costs (+0.2% / +0.4%), with capital-gains tax and slippage recorded
+  as UNKNOWN and not modelled. At DSE daily-horizon effect sizes the cost layer
+  is usually the entire result, so which layer a candidate dies at is the finding.
 - Capital-gains tax **unknown**, modelled as 0 — so every net figure above is
   optimistic by an unknown amount.
 

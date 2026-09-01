@@ -1,0 +1,74 @@
+{
+  "phase": "3_state_formation_engine",
+  "rungs_built": [
+    "1_univariate_departure",
+    "2_multivariate_novelty_rms"
+  ],
+  "rungs_not_built": [
+    "2b_full_covariance",
+    "3_change_point",
+    "4_online_clustering",
+    "5_transition_analysis"
+  ],
+  "novelty_components": [
+    "rel_volume_z",
+    "rel_turnover_z",
+    "range_z",
+    "amihud_z"
+  ],
+  "min_components": 3,
+  "novelty_window": 250,
+  "state_edges": [
+    0.5,
+    0.9,
+    0.99
+  ],
+  "panels": [
+    {
+      "panel": "PRIMARY",
+      "rows": 819534,
+      "symbols": 386,
+      "novelty_defined": 734572,
+      "transitions": 332594,
+      "CALM": 362736,
+      "DRIFT": 282461,
+      "DEPARTURE": 65001,
+      "EXTREME": 12833,
+      "UNDEFINED": 96503,
+      "rung1_volume_departure": 40166
+    },
+    {
+      "panel": "POSTBREAK",
+      "rows": 41722,
+      "symbols": 94,
+      "novelty_defined": 39771,
+      "transitions": 17894,
+      "CALM": 18212,
+      "DRIFT": 14624,
+      "DEPARTURE": 3523,
+      "EXTREME": 592,
+      "UNDEFINED": 4771,
+      "rung1_volume_departure": 1764
+    }
+  ],
+  "emits_orders": false,
+  "labels_consulted": false,
+  "outputs": [
+    "results/STATE_EVENT_LOG.parquet",
+    "results/state_engine_summary.csv"
+  ],
+  "written_at_utc": "2026-09-01T14:13:31.757111+00:00",
+  "git_commit": "11f5274328e06ec5c3d9784eb5b0e658e90fafb7",
+  "python": "3.11.15",
+  "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
+  "pandas": "3.0.5",
+  "unverified_flags": {
+    "SESSION_VERIFIED": false,
+    "CALENDAR_VERIFIED": false,
+    "CORP_ACTIONS_AVAILABLE": false,
+    "TICK_RULES_VERIFIED": false,
+    "BROKERAGE_VERIFIED": true,
+    "STRUCTURE_VERIFIED": false,
+    "SALEABILITY_VERIFIED": false
+  }
+}

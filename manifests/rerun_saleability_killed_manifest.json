@@ -1,0 +1,62 @@
+{
+  "phase": "re-measurement of a candidate closed on an unverified assumption",
+  "definition": {
+    "lookback": 5,
+    "oversold": -0.15,
+    "breadth": 0.05,
+    "cooldown": 10,
+    "liquid_top": 0.4,
+    "gap_guard": -0.15,
+    "holds": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "floor_era_excluded": true,
+    "entry": "next session open",
+    "unit_of_analysis": "event day"
+  },
+  "saleability": {
+    "earliest_saleability_days": null,
+    "verified": false,
+    "settlement_cycle_days": 2
+  },
+  "costs": {
+    "brokerage_round_trip_verified": 0.008,
+    "estimated_additional": [
+      0.0,
+      0.002,
+      0.004
+    ],
+    "not_modelled": [
+      "capital_gains_tax",
+      "slippage",
+      "impact"
+    ]
+  },
+  "panels": {
+    "PRIMARY": {
+      "events_detected": 43,
+      "events_usable": 43
+    },
+    "POSTBREAK": {
+      "events_detected": 13,
+      "events_usable": 5
+    }
+  },
+  "written_at_utc": "2026-09-01T14:10:48.504955+00:00",
+  "git_commit": "11f5274328e06ec5c3d9784eb5b0e658e90fafb7",
+  "python": "3.11.15",
+  "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
+  "pandas": "3.0.5",
+  "unverified_flags": {
+    "SESSION_VERIFIED": false,
+    "CALENDAR_VERIFIED": false,
+    "CORP_ACTIONS_AVAILABLE": false,
+    "TICK_RULES_VERIFIED": false,
+    "BROKERAGE_VERIFIED": true,
+    "STRUCTURE_VERIFIED": false,
+    "SALEABILITY_VERIFIED": false
+  }
+}

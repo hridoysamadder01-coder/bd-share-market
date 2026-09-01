@@ -41,12 +41,36 @@ ASSUMED_BAR_MINUTES = 1
 # measured return was ever capturable.
 # --------------------------------------------------------------------------
 STRUCTURE_VERIFIED = False
-SETTLEMENT_T_PLUS = 2             # earliest LEGAL sale is entry + 2 sessions
+
+# --- SETTLEMENT vs SALEABILITY: two different mechanics, do not conflate ---
+# Settlement is when the trade clears. Saleability is when the BROKER lets you
+# sell the position — which depends on account type and broker practice, and can
+# be earlier than settlement. Round 2 assumed "earliest legal sale = entry + 2
+# sessions" and closed a candidate on that basis alone. That assumption is now
+# withdrawn: it is UNKNOWN until confirmed against actual LankaBangla / DSE
+# account behaviour, and no candidate may be killed by it while it is unknown.
+SALEABILITY_VERIFIED = False
+EARLIEST_SALEABILITY_DAYS = None  # UNKNOWN — must not be assumed, in either direction
+SETTLEMENT_CYCLE_DAYS = 2         # settlement mechanic only; NOT a saleability claim
 SHORT_SELLING_AVAILABLE = False   # long-only market ⇒ a Q1−Q5 spread is not tradeable
 FLOOR_ERA = ("2022-07-28", "2024-01-31")   # price-floor regime: separate, never pool
-ROUND_TRIP_COSTS = (0.008, 0.010, 0.012)   # brokerage + charges bracket used in Round 2
-CAPITAL_GAINS_TAX = None          # UNKNOWN — Round 2 modelled it as 0
 NORMAL_CIRCUIT_PCT = 0.10         # DSE circuit ≈ ±10%; a >15% 1-day move is an ex-date suspect
+
+# --- COSTS: verified and estimated are reported separately, never summed into
+# one opaque number. A result must show what it survives on evidence and what it
+# survives only on assumption. ---
+BROKERAGE_ROUND_TRIP_VERIFIED = 0.008   # 0.8% — owner-verified
+BROKERAGE_VERIFIED = True
+ESTIMATED_ADDITIONAL_COSTS = (0.000, 0.002, 0.004)  # ESTIMATE band on top of brokerage
+CAPITAL_GAINS_TAX = None          # UNKNOWN — modelled as 0, so nets are optimistic
+SLIPPAGE_MODEL = None             # UNKNOWN — no impact model exists yet
+
+# --- COVERAGE PANELS: the dataset changes basis on 2024-02-22 (381 → 88
+# reporting symbols). Cross-sectional statistics from either side are not
+# comparable, so panels are declared explicitly and never pooled. ---
+COVERAGE_BREAK_DATE = "2024-02-22"
+PANEL_PRIMARY = ("2012-10-01", "2024-02-20")   # full universe — primary panel
+PANEL_POSTBREAK = ("2024-02-22", "2030-01-01")  # ~88 symbols — separate panel
 
 REQUIRED_COLUMNS = ("symbol", "ts", "open", "high", "low", "close", "volume")
 OPTIONAL_COLUMNS = ("turnover", "trades")
@@ -103,4 +127,5 @@ def unverified_flags() -> dict:
         "TICK_RULES_VERIFIED": TICK_RULES_VERIFIED,
         "BROKERAGE_VERIFIED": BROKERAGE_VERIFIED,
         "STRUCTURE_VERIFIED": STRUCTURE_VERIFIED,
+        "SALEABILITY_VERIFIED": SALEABILITY_VERIFIED,
     }
