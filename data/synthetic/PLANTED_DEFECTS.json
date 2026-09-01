@@ -1,0 +1,19 @@
+{
+  "seed": 20260901,
+  "rows": 65668,
+  "symbols": 10,
+  "days": 25,
+  "planted": {
+    "OHLC_INCONSISTENT": 5,
+    "NAN_FIELD": 3,
+    "NONPOS_PRICE": 2,
+    "DUP_BAR": 8,
+    "ZERO_VOLUME": 40,
+    "LOCKED_BAR": 15,
+    "STALE_RUN_rows": 45,
+    "LARGE_OVERNIGHT_GAP": 1,
+    "OUT_OF_SESSION": 3,
+    "late_listing_rows_removed": 1620,
+    "thin_day_rows_removed": 216
+  }
+}

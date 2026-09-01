@@ -1,0 +1,4 @@
+# Generated artifacts — regenerate with run_phase1_2.py (deterministic seed).
+# Reports, manifests and CSV ledgers ARE committed: they are the evidence.
+*.parquet
+__pycache__/

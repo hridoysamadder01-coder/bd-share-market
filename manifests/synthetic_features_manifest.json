@@ -1,0 +1,47 @@
+{
+  "phase": "2_adaptive_features",
+  "input": {
+    "path": "results/synthetic_bars_annotated.parquet"
+  },
+  "params": {
+    "features": {
+      "baseline_window": 60,
+      "short_window": 10,
+      "vol_window": 30,
+      "autocorr_window": 60,
+      "abnormal_z": 2.0,
+      "min_history": 90,
+      "eps": 1e-12
+    },
+    "labels": {
+      "horizons": [
+        5,
+        15,
+        30,
+        60
+      ],
+      "move_threshold": 0.02
+    }
+  },
+  "rows_in": 65668,
+  "rows_after_qa_exclusion": 65647,
+  "n_features": 28,
+  "n_label_columns": 16,
+  "outputs": [
+    "synthetic_features.parquet",
+    "synthetic_labels.parquet",
+    "synthetic_feature_coverage.csv"
+  ],
+  "written_at_utc": "2026-09-01T09:44:53.659422+00:00",
+  "git_commit": "755c7bad302c84acff8cb058669290a06104c866",
+  "python": "3.11.15",
+  "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
+  "pandas": "3.0.5",
+  "unverified_flags": {
+    "SESSION_VERIFIED": false,
+    "CALENDAR_VERIFIED": false,
+    "CORP_ACTIONS_AVAILABLE": false,
+    "TICK_RULES_VERIFIED": false,
+    "BROKERAGE_VERIFIED": false
+  }
+}

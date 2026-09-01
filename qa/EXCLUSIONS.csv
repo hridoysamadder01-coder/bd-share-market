@@ -1,0 +1,22 @@
+row,symbol,ts,code,detail
+7450,SYN01,2026-01-06 12:40:00,NAN_FIELD,missing/non-numeric OHLCV field
+7451,SYN01,2026-01-06 12:41:00,NAN_FIELD,missing/non-numeric OHLCV field
+7452,SYN01,2026-01-06 12:42:00,NAN_FIELD,missing/non-numeric OHLCV field
+14400,SYN02,2026-01-07 11:30:00,NONPOS_PRICE,price <= 0
+14401,SYN02,2026-01-07 11:31:00,NONPOS_PRICE,price <= 0
+500,SYN00,2026-01-05 13:50:00,OHLC_INCONSISTENT,"high < max(open,close) or low > min(open,close) or high < low"
+501,SYN00,2026-01-05 13:51:00,OHLC_INCONSISTENT,"high < max(open,close) or low > min(open,close) or high < low"
+502,SYN00,2026-01-05 13:52:00,OHLC_INCONSISTENT,"high < max(open,close) or low > min(open,close) or high < low"
+503,SYN00,2026-01-05 13:53:00,OHLC_INCONSISTENT,"high < max(open,close) or low > min(open,close) or high < low"
+504,SYN00,2026-01-05 13:54:00,OHLC_INCONSISTENT,"high < max(open,close) or low > min(open,close) or high < low"
+21034,SYN03,2026-01-07 13:10:00,DUP_BAR,"duplicate (symbol, ts)"
+21035,SYN03,2026-01-07 13:10:00,DUP_BAR,"duplicate (symbol, ts)"
+21036,SYN03,2026-01-07 13:11:00,DUP_BAR,"duplicate (symbol, ts)"
+21037,SYN03,2026-01-07 13:11:00,DUP_BAR,"duplicate (symbol, ts)"
+21038,SYN03,2026-01-07 13:12:00,DUP_BAR,"duplicate (symbol, ts)"
+21039,SYN03,2026-01-07 13:12:00,DUP_BAR,"duplicate (symbol, ts)"
+21040,SYN03,2026-01-07 13:13:00,DUP_BAR,"duplicate (symbol, ts)"
+21041,SYN03,2026-01-07 13:13:00,DUP_BAR,"duplicate (symbol, ts)"
+55405,SYN08,2026-01-11 18:30:00,OUT_OF_SESSION,timestamp outside the ASSUMED session window (unverified)
+55406,SYN08,2026-01-11 18:31:00,OUT_OF_SESSION,timestamp outside the ASSUMED session window (unverified)
+55407,SYN08,2026-01-11 18:32:00,OUT_OF_SESSION,timestamp outside the ASSUMED session window (unverified)
