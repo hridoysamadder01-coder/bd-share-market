@@ -1,0 +1,1 @@
+panel,cohort,horizon,exec_status,exec_note,n_occurrences,n_untradeable,n_no_outcome,n_measured,n_dates,gross_mean,gross_median,net_verified_mean,t_clustered,t_naive,excess_vs_base,t_excess,fail_share_gross,fail_share_net_verified,p05,p95,mfe_mean,mae_mean,net_est_+0.2%,net_est_+0.4%,p_clustered,survives_fdr10,p_excess,excess_survives_fdr10,eligible

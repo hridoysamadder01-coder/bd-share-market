@@ -1,0 +1,54 @@
+{
+  "phase": "4_precursor_research",
+  "entry_convention_variant": "close",
+  "status": "FULL-SAMPLE DESCRIPTIVE \u2014 no walk-forward, nothing validated",
+  "horizons": [
+    1,
+    2,
+    3,
+    5,
+    10
+  ],
+  "execution_status_by_horizon": {
+    "1": "UNKNOWN",
+    "2": "UNKNOWN",
+    "3": "OK",
+    "5": "OK",
+    "10": "OK"
+  },
+  "saleability": {
+    "earliest_saleability_days": null,
+    "verified": false
+  },
+  "entry_convention": "state read at close(t) \u21d2 entry at open(t+1); exit at close(t+h)",
+  "inference": "t computed across DATES (occurrences cluster on days); naive per-occurrence t also reported",
+  "multiple_testing": {
+    "hypotheses": 750,
+    "method": "BH-FDR",
+    "q": 0.1,
+    "survivors": 727
+  },
+  "min_n": 200,
+  "min_dates": 30,
+  "candidates_shortlisted": 0,
+  "excess_information_survivors": 165,
+  "emits_orders": false,
+  "outputs": [
+    "results/FAILED_FOOTPRINT_ANALYSIS.csv",
+    "results/PRECURSOR_CANDIDATES.csv"
+  ],
+  "written_at_utc": "2026-09-01T14:35:13.404555+00:00",
+  "git_commit": "952d3166e9a0c00f44e1f10ff2540bc7e557123a",
+  "python": "3.11.15",
+  "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
+  "pandas": "3.0.5",
+  "unverified_flags": {
+    "SESSION_VERIFIED": false,
+    "CALENDAR_VERIFIED": false,
+    "CORP_ACTIONS_AVAILABLE": false,
+    "TICK_RULES_VERIFIED": false,
+    "BROKERAGE_VERIFIED": true,
+    "STRUCTURE_VERIFIED": false,
+    "SALEABILITY_VERIFIED": false
+  }
+}

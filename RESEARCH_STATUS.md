@@ -6,11 +6,11 @@
 
 | | |
 |---|---|
-| Phase | 1–2 complete · **Phase 3 rungs 1–2 built and causality-proved** |
+| Phase | 1–2 complete · Phase 3 rungs 1–2 built · **Phase 4 complete** |
 | Data | 392 equity-like symbols · 861,256 usable daily bars · 2012-10-01 → 2026-01-22 |
 | Bar frequency | **DAILY (EOD)** — minute data was requested; what exists is end-of-day |
-| Research claims | **zero** |
-| Surviving leads | **none** (`SURVIVING_RESEARCH_LEADS.md`) |
+| Research claims | **zero tradeable**; one unvalidated NEGATIVE information finding |
+| Tradeable candidates | **none** — 0 of 750 pre-registered hypotheses survived verified brokerage + FDR |
 | Prior rounds | Round 2 preserved verbatim (`prior_rounds/`, ledgered in `REJECTED_CANDIDATES.md`) |
 | Isolation from the OYSHE HFT system | ✅ no shared file, import or build |
 
@@ -111,14 +111,39 @@ control caught.
 (longest 30). Departures on DSE daily data are overwhelmingly transient — which
 is precisely what Phase 4 has to price before anything can be called a precursor.
 
+## Phase 4 — precursor research (complete)
+
+750 pre-registered hypotheses, panel-separated, date-clustered inference,
+benchmarked against the **same-day** base rate, BH-FDR corrected, and run twice
+under two entry conventions. Full report: `reports/PHASE4_PRECURSOR_REPORT.md`.
+
+**Result 1 — nothing tradeable.** Zero cohorts positive after the verified 0.8%
+brokerage and FDR, in either variant. 91 / 38 cohorts had statistically real
+*positive* excess; none survived brokerage alone.
+
+**Result 2 — real information exists, and it is negative.** Sustained
+abnormal-activity departure underperforms the same-day market by 0.44%–1.57% at
+h = 10 (t = −8 to −11 across ~2,000 dates), stable across both entry conventions.
+Not monetisable — no short selling — so its only possible use is avoidance, and
+only after Phase 5.
+
+**Result 3 — rung 2 has not earned its complexity.** Plain abnormal volume
+(rung 1) carries this at least as well as the multivariate novelty states.
+Rungs 2b–5 are therefore NOT to be built on this evidence.
+
+**A data question found on the way:** the `open` field has a mean overnight gap
+of +0.385% against a median of exactly 0, with 66% of nonzero gaps upward, stable
+across price buckets and robust to trimming. Provenance unresolved. Every
+open-entry number inherits a ≈−0.4% intraday drag, which is why the entire phase
+was also run with a close-entry variant that avoids `open` entirely.
+
 ## What is NOT built
 
-Phase 3 rungs **2b–5** (full rolling covariance, change-point detection, online
-clustering, state-transition analysis) — each must beat the rung below it on
-held-out data before being written. Phase 4 (precursor research with
-failed-footprint denominators), Phase 5 (walk-forward), Phase 6 (economics).
-`FAILED_FOOTPRINT_ANALYSIS.csv`, `PRECURSOR_CANDIDATES.csv` and
-`WALK_FORWARD_RESULTS.csv` therefore do not exist and have not been fabricated.
+Phase 3 rungs **2b–5** — and Phase 4 gave a positive reason NOT to build them
+(rung 1 matches rung 2). Phase 5 (walk-forward) and Phase 6 (economics) are not
+built; `WALK_FORWARD_RESULTS.csv` does not exist and has not been fabricated.
+`PRECURSOR_CANDIDATES.csv` exists but is **empty by construction** — nothing
+qualified.
 
 ## Open gaps (owner action)
 
@@ -126,7 +151,8 @@ failed-footprint denominators), Phase 5 (walk-forward), Phase 6 (economics).
 |---|---|---|
 | D-1 | **Minute-level data** — only EOD exists | Intraday structure formation is unobservable; all windows are in days |
 | D-2 | The 2024-02-22 coverage break | Handled by panel separation (PRIMARY is primary, POSTBREAK separate, never pooled). Obtaining the missing symbols' post-Feb-2024 history would restore statistical power after the break — POSTBREAK currently yields only 5 usable events for an event study |
-| D-6 | **Earliest saleability UNKNOWN** | Decides whether short holds are tradeable at all. Verify against a real LankaBangla / DSE account: can a position bought today be sold today, tomorrow, or only after settlement? |
+| D-6 | **Earliest saleability UNKNOWN** | Decides whether short holds are tradeable at all. Verify against a real LankaBangla / DSE account: can a position bought today be sold today, tomorrow, or only after settlement? *(Phase 4 note: it did not change any conclusion — nothing was tradeable at ANY horizon, including the unrestricted ones.)* |
+| D-7 | **`open` field provenance** | Mean overnight gap +0.385% vs median 0, 66% of nonzero gaps upward, stable across price buckets. Is this real DSE opening behaviour or a data-construction artefact? Until answered, open-entry numbers are provisional — hence the close-entry variant |
 | D-3 | Session hours + holiday calendar unverified | 775 Saturday rows are excluded on an *assumption*; if DSE held special Saturday sessions, those are real bars |
 | D-4 | No corporate-action table | 309 gap suspects unadjusted |
 | D-5 | Brokerage/charges + capital-gains tax unverified | Phase 6 economics cannot be finalised |
@@ -147,4 +173,6 @@ python3 run_phase1_2.py --input data/raw/dse_eod.parquet --tag dse_eod \
 python3 state_engine/run_states.py --tag dse_eod     # Phase 3 rungs 1–2, per panel
 python3 state_engine/verify_state_causality.py       # state-layer no-lookahead proof
 python3 experiments/rerun_saleability_killed.py      # the withdrawn-T+2 re-measurement
+python3 experiments/phase4_precursors.py --entry open    # Phase 4
+python3 experiments/phase4_precursors.py --entry close   # robustness variant
 ```
