@@ -1,0 +1,3184 @@
+{
+  "source": "owner-supplied DSE end-of-day CSVs (merged_eod)",
+  "bar_frequency": "DAILY",
+  "turnover_derived": true,
+  "files_seen": 424,
+  "symbols_kept": 392,
+  "symbols_excluded_non_equity": [
+    "00DS30",
+    "00DSES",
+    "00DSEX",
+    "00DSMEX",
+    "1JANATAMF",
+    "1STPRIMFMF",
+    "ABB1STMF",
+    "AIBL1STIMF",
+    "APSCLBOND",
+    "BEXGSUKUK",
+    "CAPITECGBF",
+    "CAPMBDBLMF",
+    "CAPMIBBLMF",
+    "DBH1STMF",
+    "EBL1STMF",
+    "EBLNRBMF",
+    "EXIM1STMF",
+    "GLDNJMF",
+    "GREENDELMF",
+    "ICBEPMF1S1",
+    "IFIC1STMF",
+    "IFILISLMF1",
+    "LRGLOBMF1",
+    "MBL1STMF",
+    "NCCBLMF1",
+    "PF1STMF",
+    "PHPMF1",
+    "POPULAR1MF",
+    "SEMLLECMF",
+    "TRUSTB1MF",
+    "VAMLBDMF1",
+    "_MANIFEST"
+  ],
+  "rows": 862073,
+  "date_range": [
+    "2012-10-01 00:00:00",
+    "2026-01-22 00:00:00"
+  ],
+  "per_file": [
+    {
+      "symbol": "AAMRANET",
+      "file": "AAMRANET.csv",
+      "sha256": "eaad01ed4ed54d092fd95eea6e795b94d0194afeebc6f9263fc26cdbfb3f72d3",
+      "rows": 1954,
+      "first": "2017-10-02 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "AAMRATECH",
+      "file": "AAMRATECH.csv",
+      "sha256": "a6a937c3cae9338486e328de14419ae826ea28cdb16a9b9205da5497778cb206",
+      "rows": 2700,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ABBANK",
+      "file": "ABBANK.csv",
+      "sha256": "7b0a264b3998afcd4503a438bdccb68fe31b178786fa1e6f718fb18ba779d52e",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ACFL",
+      "file": "ACFL.csv",
+      "sha256": "fdcd42a30858932bd989424895bb2336c992091f357d67ce6b819656e06df9ad",
+      "rows": 1668,
+      "first": "2018-08-06 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ACHIASF",
+      "file": "ACHIASF.csv",
+      "sha256": "b7726bd0ef39f73631a38c4bacf14e3595b6128ae543a39507615a2c4584ef79",
+      "rows": 467,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ACI",
+      "file": "ACI.csv",
+      "sha256": "3ffafb8b4d1adc7118099e2056be1b3fe84a3fd235392bb0ee9a58de6fa3107a",
+      "rows": 2692,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ACIFORMULA",
+      "file": "ACIFORMULA.csv",
+      "sha256": "6e4315faced70cae7a6d40d2cd6af61b089cbe835d440e9617361769462324ba",
+      "rows": 2691,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ACMELAB",
+      "file": "ACMELAB.csv",
+      "sha256": "ecefda05ed0959b16fbf507ba9cbea1fbd3610d580e8f3b77fb888930c810a8f",
+      "rows": 1826,
+      "first": "2016-06-07 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ACMEPL",
+      "file": "ACMEPL.csv",
+      "sha256": "bfa11dc4203f77521d83efc560f616ea08971daa9a776f9c6f0562af0baad535",
+      "rows": 921,
+      "first": "2021-11-14 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ACTIVEFINE",
+      "file": "ACTIVEFINE.csv",
+      "sha256": "14b1e348eed722819082a1a1d817c96c6369eca83ef4b3b3b5ff61f6bec7c250",
+      "rows": 2633,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ADNTEL",
+      "file": "ADNTEL.csv",
+      "sha256": "c2bb90c4f026b7e65d643c8648370e07fec58a69557babdc31318b127902a3e1",
+      "rows": 1410,
+      "first": "2020-01-06 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ADVENT",
+      "file": "ADVENT.csv",
+      "sha256": "53a43e131924c8afd919c1b48535181879b8a50fd122598466ce14728d71c611",
+      "rows": 1810,
+      "first": "2018-04-12 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "AFCAGRO",
+      "file": "AFCAGRO.csv",
+      "sha256": "8676e5741a5c7e2f954964b05070f7857d78a75c5904144bbfd9d78b0d488f1d",
+      "rows": 2246,
+      "first": "2014-02-11 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AFTABAUTO",
+      "file": "AFTABAUTO.csv",
+      "sha256": "823a55f8ad1d6e14157c0970e2b78ce971fe71113e700a62f568cf95b37346f9",
+      "rows": 2704,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AGNISYSL",
+      "file": "AGNISYSL.csv",
+      "sha256": "e46929238cbc65c2443046dee6ba164e7b1a1ed5d16bce9acc4f1bd9de954d35",
+      "rows": 2703,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AGRANINS",
+      "file": "AGRANINS.csv",
+      "sha256": "40c3cc701a9346538122cb0f1cb4debd55347496642518639e22f8b946c6456e",
+      "rows": 2681,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AIL",
+      "file": "AIL.csv",
+      "sha256": "d9785c6d5a3f65239770e58f4802c07cdfae12cecbac87cbe10d5d4cc9d3542f",
+      "rows": 1790,
+      "first": "2017-12-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "AL-HAJTEX",
+      "file": "AL-HAJTEX.csv",
+      "sha256": "b0fab5ab855b3622b56dfc7d07e8d9106483f8100b97a2a6e50e929ad3b86725",
+      "rows": 2673,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ALARABANK",
+      "file": "ALARABANK.csv",
+      "sha256": "29feb451bd790d56f61a0404ca4f7b0c81e30138bb803506ee09f87bf1848658",
+      "rows": 2701,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ALIF",
+      "file": "ALIF.csv",
+      "sha256": "3e4729d40ccd061a66cb0265d419fdb24b672d1fa736b085563b2f6324eb69b4",
+      "rows": 2665,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ALLTEX",
+      "file": "ALLTEX.csv",
+      "sha256": "006f647103ff5e58f6e822e99a0f006404178b6730b8f0d2dab6fa8549965e32",
+      "rows": 2633,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AMANFEED",
+      "file": "AMANFEED.csv",
+      "sha256": "d0fb21b39f91840702e09a36886e289a9eef8bde8fbff7e7c72cd97be3e5563b",
+      "rows": 1959,
+      "first": "2015-09-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AMBEEPHA",
+      "file": "AMBEEPHA.csv",
+      "sha256": "c4487e93f11d85de5d99a66c671a2f38b10fc57a88bc40953f2cf749bbd5b302",
+      "rows": 2700,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AMCL(PRAN)",
+      "file": "AMCL(PRAN).csv",
+      "sha256": "521e86637ef771190804f57d9ce9ab35ea3ecae046a9ae2fc0422fa42c2f94a9",
+      "rows": 2694,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AMPL",
+      "file": "AMPL.csv",
+      "sha256": "d18768492256f8c326f071c1499e6c7c04cc9682adfb6452c393992945523f9d",
+      "rows": 470,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ANLIMAYARN",
+      "file": "ANLIMAYARN.csv",
+      "sha256": "e786395a46fdbd5b8a73dd7b7a0c46609e3e6834d29cc4a143b1f6798f1efbef",
+      "rows": 2705,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ANWARGALV",
+      "file": "ANWARGALV.csv",
+      "sha256": "694c0f98cd6563178da902394e499c684a17ef51e4db8da5b0c2b9687121fd80",
+      "rows": 2680,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AOL",
+      "file": "AOL.csv",
+      "sha256": "5907134a5ed354befaf565e7869de85cbb578b9cd60b120a7f46cb7afdf8c447",
+      "rows": 1228,
+      "first": "2020-10-25 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "AOPLC",
+      "file": "AOPLC.csv",
+      "sha256": "a4bfe3bb2a5a28c5554a1fa6842ab2cffd3d263be37d3df53983c0edd8b52ca1",
+      "rows": 472,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "APEXFOODS",
+      "file": "APEXFOODS.csv",
+      "sha256": "d8691376e3fa135bcb1f87a3682573c9532c4432583089d7603e3b091bdf0ce7",
+      "rows": 2680,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "APEXFOOT",
+      "file": "APEXFOOT.csv",
+      "sha256": "e79e4d2a22867ca9e3e1863dfa0bfa628dd6053c8c0f1818339e3e83387f7353",
+      "rows": 2678,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "APEXSPINN",
+      "file": "APEXSPINN.csv",
+      "sha256": "679553794f9a201163040719fabe33a89c4335d320e09c548df89d6ee7530d14",
+      "rows": 2632,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "APEXTANRY",
+      "file": "APEXTANRY.csv",
+      "sha256": "2af0fae06d318898aca997114489d60e1d8ce7cec977ded0a070805544c05228",
+      "rows": 2649,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "APOLOISPAT",
+      "file": "APOLOISPAT.csv",
+      "sha256": "bf33ca2623b30daa8f0d93864ebd65a48d1b954e2da636dd888659027f39aa0e",
+      "rows": 2362,
+      "first": "2013-12-24 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ARAMIT",
+      "file": "ARAMIT.csv",
+      "sha256": "01f970f1bfb1948cbca1c5fbfcfea591209e7f35c69017d3ab3579890984c3af",
+      "rows": 2691,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ARAMITCEM",
+      "file": "ARAMITCEM.csv",
+      "sha256": "b0bb8eaaddd55787fb1e3c2ec9d668c3eccb821e4f3928869c12b5d618dbf525",
+      "rows": 2692,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ARGONDENIM",
+      "file": "ARGONDENIM.csv",
+      "sha256": "5ba8041427fbdb337bafe91e880ad4e6e3f7fd7c99b243b2318b0c1aecd1c451",
+      "rows": 2511,
+      "first": "2013-02-19 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ASIAINS",
+      "file": "ASIAINS.csv",
+      "sha256": "7cf1894787ae3b717c5c3e177915ea1e260232d3250795b0e8ea8c9109bcfb92",
+      "rows": 2692,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ASIAPACINS",
+      "file": "ASIAPACINS.csv",
+      "sha256": "60a7f67e00db5ad3916fe335373d1565b913037910b533e63204cdd83bd501f9",
+      "rows": 2667,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ASIATICLAB",
+      "file": "ASIATICLAB.csv",
+      "sha256": "f82cdcae08d074cb2df7e638aa110b64c4c4ada5ced3a76049b37393a10e7d71",
+      "rows": 444,
+      "first": "2024-03-06 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ATCSLGF",
+      "file": "ATCSLGF.csv",
+      "sha256": "8172fee2886898ca83bd90a25bdbc74419f4119e69453ea566305aea1d412144",
+      "rows": 1930,
+      "first": "2015-03-31 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ATLASBANG",
+      "file": "ATLASBANG.csv",
+      "sha256": "a3b1e950b1dd2f1884a9f58a083613aeb099685330c9e120275cba07a1a24f1f",
+      "rows": 2462,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "AZIZPIPES",
+      "file": "AZIZPIPES.csv",
+      "sha256": "1bec727e127356bc36312cd28d7fb77962c450be700cf908aea221b4b3a752b0",
+      "rows": 2676,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BANGAS",
+      "file": "BANGAS.csv",
+      "sha256": "65dffef6beb90956072c05eec231359cc2dc30f140a4b8d640254aeed219daf3",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BANKASIA",
+      "file": "BANKASIA.csv",
+      "sha256": "9788164b42b59035db73cc6b389a390828e4acd25b0d9da9854e0dba3ea0eee4",
+      "rows": 2660,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BARKAPOWER",
+      "file": "BARKAPOWER.csv",
+      "sha256": "a92bcacdee175e7bdb7f4a6ef82f3dd245baf9c17690efbd345752bcf55791a1",
+      "rows": 2613,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BATASHOE",
+      "file": "BATASHOE.csv",
+      "sha256": "2e63889ce0ed30e1ee5d6aea90f4e02f2889a30070a9a818677d67b37dc53f61",
+      "rows": 2674,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BATBC",
+      "file": "BATBC.csv",
+      "sha256": "ce1531ccf22a8d792c6cf0127a515dfd565914b72a3486ef619cda1bb1c857cb",
+      "rows": 3127,
+      "first": "2012-10-01 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BAYLEASING",
+      "file": "BAYLEASING.csv",
+      "sha256": "262a45b2d6aff67ea7022d71837ed4baa00d9028906c3aa566e21001ed919e10",
+      "rows": 2530,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BBS",
+      "file": "BBS.csv",
+      "sha256": "06ec05ba69bc0e7a1127ddd9ee8342178b195c591e0de04e9aca3273fd896f58",
+      "rows": 2438,
+      "first": "2013-10-08 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BBSCABLES",
+      "file": "BBSCABLES.csv",
+      "sha256": "be98323d966cc58f9c92160b9df093719a485d28ca6408271c88326fefdd43fd",
+      "rows": 1966,
+      "first": "2017-07-31 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BDAUTOCA",
+      "file": "BDAUTOCA.csv",
+      "sha256": "5b5005814b509b52ce8bc5964997ce03ced5036343135c6b9042f928ed220517",
+      "rows": 2640,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BDCOM",
+      "file": "BDCOM.csv",
+      "sha256": "0bc00da6ed9e2d3183fbb99ada72391862f3a5984589ffdc4bee7c2d48b06988",
+      "rows": 2706,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BDFINANCE",
+      "file": "BDFINANCE.csv",
+      "sha256": "8acf088043620a34c132a92fd17e761d88c58a6b46d181cece1fd54593e7d96d",
+      "rows": 2520,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BDLAMPS",
+      "file": "BDLAMPS.csv",
+      "sha256": "eb077ec38abe4545e641571063596a571044470defab23b1b3f17661843ca0da",
+      "rows": 2653,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BDPAINTS",
+      "file": "BDPAINTS.csv",
+      "sha256": "1e000bf5cc8bbc974d3f6c821408465feb8133a62681061d6a461ad79cc6acfe",
+      "rows": 470,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BDTHAI",
+      "file": "BDTHAI.csv",
+      "sha256": "f44dd13e277096b91fa75f329efbf8bac514383b934f74bcf0ae3dad66e66201",
+      "rows": 2679,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BDTHAIFOOD",
+      "file": "BDTHAIFOOD.csv",
+      "sha256": "e322261db7e07d52c374ff71882cfc6b6a430d03414deecc4be6f28011a59484",
+      "rows": 919,
+      "first": "2022-01-24 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BDWELDING",
+      "file": "BDWELDING.csv",
+      "sha256": "5aca3623e6583b6f892325fc80fb7d53a89ed472e92df51d6f88d561ce69f56f",
+      "rows": 2712,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BEACHHATCH",
+      "file": "BEACHHATCH.csv",
+      "sha256": "6ecba4207cbc14f12b4096bd4c59785dc8e80c7ff13299960ac59a6999861b89",
+      "rows": 2685,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BEACONPHAR",
+      "file": "BEACONPHAR.csv",
+      "sha256": "bc2f789a6c69dd7dffba90bd0d0679d47a0b33fae7c1f0c8d4353f7e9bcf0fbe",
+      "rows": 2651,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BENGALBISC",
+      "file": "BENGALBISC.csv",
+      "sha256": "c7a6902d11c9c49f7945bf91b8eb80043cf6e72cc0c8b6f36588d5470a45e47c",
+      "rows": 447,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BENGALWTL",
+      "file": "BENGALWTL.csv",
+      "sha256": "e03cd2dd82bc03d7cb89a99bb893f20b9f530568a72b1fe6140d486587237d98",
+      "rows": 2562,
+      "first": "2013-04-16 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BERGERPBL",
+      "file": "BERGERPBL.csv",
+      "sha256": "35c4f67b3755baa8eafa3a55a28e212dd6034efe0a565810c09961e7123de6e6",
+      "rows": 2618,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BESTHLDNG",
+      "file": "BESTHLDNG.csv",
+      "sha256": "71da9ab10a5c8c3f63a7bdaa1ff8c41e962c867323dd21a41065b76c53b590c7",
+      "rows": 464,
+      "first": "2024-02-06 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BEXIMCO",
+      "file": "BEXIMCO.csv",
+      "sha256": "68e8a4af5e62c82a35bb24be482c0fb209efed8aa59d6a1c69e4c6f62f2e76b2",
+      "rows": 2696,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BGIC",
+      "file": "BGIC.csv",
+      "sha256": "a216e0de5dbab0a0e4e6af9d1fbbb959dbaf8e9026b3b05188f92982186f66ce",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BIFC",
+      "file": "BIFC.csv",
+      "sha256": "f15d04a248cfdafe550d501d8226413a3b0cea45bba76d5260d8a231aee6be7a",
+      "rows": 2524,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BNICL",
+      "file": "BNICL.csv",
+      "sha256": "c4af79ad303f7790c1a5e4210718c6ee51f6f810a3487e63b81f25fcae9cc4f3",
+      "rows": 1852,
+      "first": "2016-04-21 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BPML",
+      "file": "BPML.csv",
+      "sha256": "bdcae9fd269dcdbc07ffdb57d1ec48764126398364fd3ddfe2c7c92be50d7d9f",
+      "rows": 1773,
+      "first": "2018-07-02 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BPPL",
+      "file": "BPPL.csv",
+      "sha256": "2aa68eae827a2de6d593dbd78d9db134e8479be62d329fd2aac9815b6b9b05ef",
+      "rows": 1010,
+      "first": "2021-07-15 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "BRACBANK",
+      "file": "BRACBANK.csv",
+      "sha256": "b55559d6a201f99b2eb59fe0e6e98cfe54be1c25d8ce1d7787e6b061a1e08a74",
+      "rows": 2704,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BSC",
+      "file": "BSC.csv",
+      "sha256": "004b54315e7797028bc65f289eeaf26e250ec6743f3412639048911a2c2b53cc",
+      "rows": 2704,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BSCCL",
+      "file": "BSCCL.csv",
+      "sha256": "45b4a8eb19172e02ce5eab7146cd13f1a151d83ebc34ab55ddff61667eea4102",
+      "rows": 2694,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BSRMLTD",
+      "file": "BSRMLTD.csv",
+      "sha256": "dac120cb0e043fd653859697d0e8ea99b8f48c9f1517741be96feae6b6638b50",
+      "rows": 2044,
+      "first": "2015-04-27 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BSRMSTEEL",
+      "file": "BSRMSTEEL.csv",
+      "sha256": "365f61a02c72e8d26bc2696b25baa02ddbf6dd37d87f761c57ded848d4f9074a",
+      "rows": 2678,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BXPHARMA",
+      "file": "BXPHARMA.csv",
+      "sha256": "3c89d6bf0917c9fa1c64d98fbeea6c3a189d9281533916684f51d1304a63c0f5",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "BXSYNTH",
+      "file": "BXSYNTH.csv",
+      "sha256": "3cfcc5ee58a6115b3f7d3eb667f0c197ece87a92d34e078c1404093cb52289cb",
+      "rows": 1866,
+      "first": "2012-10-01 00:00:00",
+      "last": "2020-09-07 00:00:00"
+    },
+    {
+      "symbol": "CENTRALINS",
+      "file": "CENTRALINS.csv",
+      "sha256": "f676b2fce7fc2069c068d4d7511908b176eb38b58d4fe10c152d6ce8359e7a1a",
+      "rows": 2674,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CENTRALPHL",
+      "file": "CENTRALPHL.csv",
+      "sha256": "8191c57ffeee6cff1f1567ece0572258521e0be69908703fe35c898893a5d58b",
+      "rows": 2500,
+      "first": "2013-08-14 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CITYBANK",
+      "file": "CITYBANK.csv",
+      "sha256": "8f462a92ddea1a2fbacf561421798d93a7a05d4766b02e223fa9571cb4d1789b",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CITYGENINS",
+      "file": "CITYGENINS.csv",
+      "sha256": "4193556297bdc74499e023cad62266d8352ca01e7941e04741249af056f94444",
+      "rows": 2703,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CLICL",
+      "file": "CLICL.csv",
+      "sha256": "c325a6e0119d6663e69c57a1d4495bdeb05aef4112e7c7ef2d75f1d6cbf7091d",
+      "rows": 775,
+      "first": "2022-10-30 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "CNATEX",
+      "file": "CNATEX.csv",
+      "sha256": "6c0d9aa9d8bacc1d5d880a3ecbc3022507ebc1d142d37c45525eaddd1fb21e66",
+      "rows": 2089,
+      "first": "2015-01-21 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CONFIDCEM",
+      "file": "CONFIDCEM.csv",
+      "sha256": "cdbeac945aba903aed24bb7bd21835d9f9a3e7fccb414c7735fbf6bf01b90463",
+      "rows": 2671,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CONTININS",
+      "file": "CONTININS.csv",
+      "sha256": "56813e5b8ac459b83a25b57102529fe3041a02d9611a0de2b1c2ad5579dcb9a8",
+      "rows": 2684,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "COPPERTECH",
+      "file": "COPPERTECH.csv",
+      "sha256": "23b9253df437c75d105dc6c61f44a2e0a236a01020b0b0a78b970fb4e75d8195",
+      "rows": 1425,
+      "first": "2019-08-05 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "CRAFTSMAN",
+      "file": "CRAFTSMAN.csv",
+      "sha256": "2b3d23a7a2810b151e88bd7beec9b25ab5e60475fe176ef23869edc56a5cab0d",
+      "rows": 399,
+      "first": "2024-05-16 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "CROWNCEMNT",
+      "file": "CROWNCEMNT.csv",
+      "sha256": "6725d570ef3b46461af5e3332b8a0b168659fa538b1ac54a4881ea3e619c0de3",
+      "rows": 2536,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "CRYSTALINS",
+      "file": "CRYSTALINS.csv",
+      "sha256": "65d1663ae66ed80c9f71a3c92bf8ccfcb85e15ff3090ac87aac3b6b23e660e18",
+      "rows": 1221,
+      "first": "2020-12-21 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "CVOPRL",
+      "file": "CVOPRL.csv",
+      "sha256": "8de775e28e070a8809c6c00ce850c5044d1ca771e4acc0685238905437727791",
+      "rows": 2598,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DACCADYE",
+      "file": "DACCADYE.csv",
+      "sha256": "33297e9a31ef547bbaa08825bde3601dea3e84236cc6cafad2eb55686876a945",
+      "rows": 2693,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DAFODILCOM",
+      "file": "DAFODILCOM.csv",
+      "sha256": "9413c4d2313043463bc4cd9377798c68949579ba19fc420a4f33f9138bedffb3",
+      "rows": 2565,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DBH",
+      "file": "DBH.csv",
+      "sha256": "aeaf518dbc868b6c13fbb9071d2fb3b174d6762d05979ecd1ec99da9be2db153",
+      "rows": 2665,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DELTALIFE",
+      "file": "DELTALIFE.csv",
+      "sha256": "23c6e5953821676a3550a504b8b83c7d7bffa3135daef9af4a270f0fbb229959",
+      "rows": 2676,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DELTASPINN",
+      "file": "DELTASPINN.csv",
+      "sha256": "0798329f9f09f3a3105dac284c576957ddc3e269f9b6d1d7d5d758804d6965eb",
+      "rows": 2621,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DESCO",
+      "file": "DESCO.csv",
+      "sha256": "6ab8c8b24acb336bbb398a83633f15a2dcdc46a5a4a74d895f8aaedc9e7e3605",
+      "rows": 2605,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DESHBANDHU",
+      "file": "DESHBANDHU.csv",
+      "sha256": "ac625f070c2809e2b6b714d7d4072a9ca844d4857d39f681e55287e0401470bf",
+      "rows": 2695,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DGIC",
+      "file": "DGIC.csv",
+      "sha256": "bd827fbe397012d0d704a659c52c9f62a31bbd1a56e4906b30dd5e553f67e2a0",
+      "rows": 1154,
+      "first": "2021-03-29 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "DHAKABANK",
+      "file": "DHAKABANK.csv",
+      "sha256": "ef4e52f06f1c4f55b4fe617c7bf4a441884790969353b6bf830e54f5963ffdd0",
+      "rows": 2694,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DHAKAINS",
+      "file": "DHAKAINS.csv",
+      "sha256": "dce3bf5ba4cea768e4bb3228d93280fe88f958ec55be7eabe72f402ad7c685bc",
+      "rows": 2690,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DOMINAGE",
+      "file": "DOMINAGE.csv",
+      "sha256": "8db429ad3765acaa6ff1666f844ea086c5e7e70c98f7177dcb8fd14c17e78b80",
+      "rows": 1211,
+      "first": "2020-12-02 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "DOREENPWR",
+      "file": "DOREENPWR.csv",
+      "sha256": "d47b02857fce796a24723f1ec5ca174479abc002e1e40e5982541f9aab9a27cb",
+      "rows": 1785,
+      "first": "2016-04-06 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DSHGARME",
+      "file": "DSHGARME.csv",
+      "sha256": "4019d316a0b50696cc1c903c9964b05a50450b4c4e9d3f8a4799c9afe1f66456",
+      "rows": 2686,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DSSL",
+      "file": "DSSL.csv",
+      "sha256": "868607961e7bca54ae82e4256b263361f0fd528870988e99ef8528df68a220fc",
+      "rows": 1809,
+      "first": "2016-03-23 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DULAMIACOT",
+      "file": "DULAMIACOT.csv",
+      "sha256": "e1d0e9d2ab78017faebdc6cbc1861712612b7b065aa98f7457371621f39f93b5",
+      "rows": 2432,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "DUTCHBANGL",
+      "file": "DUTCHBANGL.csv",
+      "sha256": "c7fda0e649d4a61af7418623a5a1b0b0694503249a3799b3970471611f00363e",
+      "rows": 2693,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EASTERNINS",
+      "file": "EASTERNINS.csv",
+      "sha256": "195b80e6068fb5f59cad3334fe04da50a076c6d4246acb0b53c9e1766d256f89",
+      "rows": 2681,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EASTLAND",
+      "file": "EASTLAND.csv",
+      "sha256": "75a0e2ea06bebe6c252feb9923fa91ed1afccb69771435d3f5d90105f9261517",
+      "rows": 2699,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EASTRNLUB",
+      "file": "EASTRNLUB.csv",
+      "sha256": "f26d0e17d18b12df51548465021451aae112ed0732bc06697ab4a671cf3e38c7",
+      "rows": 2553,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EBL",
+      "file": "EBL.csv",
+      "sha256": "2c088ac15380d45457e8559e56cd14449b280fc0d70c7e2605cc005ed2c8dd49",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ECABLES",
+      "file": "ECABLES.csv",
+      "sha256": "486aa38118b88775a22e5daa4a730a64ac40ca574836fa46dbe6fde3f8429d94",
+      "rows": 2660,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EGEN",
+      "file": "EGEN.csv",
+      "sha256": "306b17d3d703ec3d64950a7eab1e6dd9fe30fda56fa35ebe45556413796f65b9",
+      "rows": 1133,
+      "first": "2021-02-23 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "EHL",
+      "file": "EHL.csv",
+      "sha256": "cffec5e051408b68d7b5c8725f93681fdf24bcb5c63f729676c8ce1b76eba7b1",
+      "rows": 2707,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EIL",
+      "file": "EIL.csv",
+      "sha256": "fb7d01ae4c7cf05bd959d7084d72c105d34bcb7c1d4ed1db5d57f178679ee716",
+      "rows": 1296,
+      "first": "2020-08-24 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "EMERALDOIL",
+      "file": "EMERALDOIL.csv",
+      "sha256": "4b5bfd19dbb9fe734c35dfd6f41553b5c7db7dda0cb09e1393e7cd26f4859145",
+      "rows": 2361,
+      "first": "2014-03-19 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ENVOYTEX",
+      "file": "ENVOYTEX.csv",
+      "sha256": "8d42424ee89da8d164b6679fb4ffd20dc6d97eb21b6fbb19e343ef35b9f881c8",
+      "rows": 2492,
+      "first": "2012-12-09 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EPGL",
+      "file": "EPGL.csv",
+      "sha256": "03f170a0bcb05903987728efe92aeca3a1cbeff9a1d951d8605cf4ce620a3d4f",
+      "rows": 1155,
+      "first": "2021-01-19 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ESQUIRENIT",
+      "file": "ESQUIRENIT.csv",
+      "sha256": "acb20db95715efcaa5c6ab4038805c21e45fe3be723bbc5a7caf43d2c307d624",
+      "rows": 1424,
+      "first": "2019-04-09 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ETL",
+      "file": "ETL.csv",
+      "sha256": "913dbcd19f4d8c1709ac4c8ec5f20e1b12c761a59275ced428c9c7ca5a425a56",
+      "rows": 1709,
+      "first": "2016-07-17 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "EXIMBANK",
+      "file": "EXIMBANK.csv",
+      "sha256": "8a900c6fe2400423090c4dde6325859cac999975fef5859bf3d1d9764ef27aab",
+      "rows": 2700,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FAMILYTEX",
+      "file": "FAMILYTEX.csv",
+      "sha256": "cdf1b6da3d17293b7c609167296f12ef3b2833ce4ca95ad35f745a97db4587d4",
+      "rows": 2438,
+      "first": "2013-06-18 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FARCHEM",
+      "file": "FARCHEM.csv",
+      "sha256": "4ebafca6f4cc127ce96a642abdb8166030f5795becd7e46d7de3e103f23de7c7",
+      "rows": 2259,
+      "first": "2014-07-08 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FAREASTFIN",
+      "file": "FAREASTFIN.csv",
+      "sha256": "1557d858516bc8a4a4c08b941a09b8cf2e94a1428453b60ca40c90d4b046b486",
+      "rows": 2242,
+      "first": "2013-09-17 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FAREASTLIF",
+      "file": "FAREASTLIF.csv",
+      "sha256": "9acf4943ad33d9d8bd8d9d98ba27a99d91a3b5b565fc47c93d4a7b0081efd2ce",
+      "rows": 2643,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FASFIN",
+      "file": "FASFIN.csv",
+      "sha256": "06bf5e58add58fccacb2d114fa849d6088825cc5c2a760c11f4a8069d9805854",
+      "rows": 2638,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FBFIF",
+      "file": "FBFIF.csv",
+      "sha256": "073a5021e16c467c32fc5b4e2e579ea03ca3b0b19119f8b6de90d0e559b56cb5",
+      "rows": 2440,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FEDERALINS",
+      "file": "FEDERALINS.csv",
+      "sha256": "db526ef0612e2b26e9669fbd48b28db166893f9d09b6a9127b0d2c24717556c4",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FEKDIL",
+      "file": "FEKDIL.csv",
+      "sha256": "22ebde1ff764c45df9519d174069c9bde5e521260df75c853551b2df9f3b0dc4",
+      "rows": 2225,
+      "first": "2014-08-28 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FINEFOODS",
+      "file": "FINEFOODS.csv",
+      "sha256": "85752b3cb90875e3dc2da180c799ec54281e34ea2119f724735df69233250f61",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FIRSTFIN",
+      "file": "FIRSTFIN.csv",
+      "sha256": "48b2b710f62825fb6dfd34600a5ce51c86394adc29ba611cc0f9999b0f4b5ff3",
+      "rows": 2551,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FIRSTSBANK",
+      "file": "FIRSTSBANK.csv",
+      "sha256": "b43b52e72f14f2c00415dcbecae8dd97f4f9169e4cd30ed26fce4939cc6d62c4",
+      "rows": 2699,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FORTUNE",
+      "file": "FORTUNE.csv",
+      "sha256": "7da113430b22b2ea81e961e5f362d0c643ded88a4bee50d335fdc1b8c1629c7f",
+      "rows": 1676,
+      "first": "2016-10-20 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FUWANGCER",
+      "file": "FUWANGCER.csv",
+      "sha256": "b2010fb1dcd4dade545d15e75fc79fd848d24529be147e9454e14c080fb9b204",
+      "rows": 2653,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "FUWANGFOOD",
+      "file": "FUWANGFOOD.csv",
+      "sha256": "d6c5662c879de6403cf67262f9c6aa872d2ee939a89bb263cb66a0d236f7958f",
+      "rows": 2670,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GBBPOWER",
+      "file": "GBBPOWER.csv",
+      "sha256": "b03001fefcfaf4d8773688c16f99b2ae1fe1e57bb9297624c7ac4b3e03863f6d",
+      "rows": 2696,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GEMINISEA",
+      "file": "GEMINISEA.csv",
+      "sha256": "c78913911920df053663ab04e32de02e33efd0cdba392551eed453841dc697de",
+      "rows": 2632,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GENEXIL",
+      "file": "GENEXIL.csv",
+      "sha256": "ef2ba543f50d3cc508d9b6e8fe171f60686d26e66acda398c9ca38b9e217e44b",
+      "rows": 1603,
+      "first": "2019-02-06 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "GENNEXT",
+      "file": "GENNEXT.csv",
+      "sha256": "ea8217d6d05884db295f778b10b039db4296cd2fa18ae48f18784f5fe94ca957",
+      "rows": 2652,
+      "first": "2012-12-05 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GHAIL",
+      "file": "GHAIL.csv",
+      "sha256": "8ff28028388746f772f6bb967d28812b6c38daea5ac6946da26e00418c18f6e1",
+      "rows": 2531,
+      "first": "2013-03-04 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GHCL",
+      "file": "GHCL.csv",
+      "sha256": "9883e0ad1fc81ab0097093da3dd1be8c05ac0bbb2c84ecd8d3811d0e319b5fe9",
+      "rows": 2375,
+      "first": "2013-03-06 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GIB",
+      "file": "GIB.csv",
+      "sha256": "823be7db665e6e86a2d191f247e265ee842a49c989bc4357dbfb6748f232574f",
+      "rows": 709,
+      "first": "2022-11-16 00:00:00",
+      "last": "2025-11-05 00:00:00"
+    },
+    {
+      "symbol": "GLOBALINS",
+      "file": "GLOBALINS.csv",
+      "sha256": "8b5c049c5f91485555a26438b978a86cd27eb16a00c31508a29071d8d57d1e45",
+      "rows": 2684,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GOLDENSON",
+      "file": "GOLDENSON.csv",
+      "sha256": "3ce8bdbcf001be4ee9b1d2597c62196a915bda3e679fa5ee01efe685d5bacf1e",
+      "rows": 2562,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GP",
+      "file": "GP.csv",
+      "sha256": "92427c05c18cd9c20223163eb3596cd6181a938a2991ee28df14339e381ca772",
+      "rows": 3146,
+      "first": "2012-10-01 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "GPHISPAT",
+      "file": "GPHISPAT.csv",
+      "sha256": "a30cbbb62a071fcf776cc421c6cb1946d8161eb5f06f59ae4a6369902b38dde0",
+      "rows": 2685,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GQBALLPEN",
+      "file": "GQBALLPEN.csv",
+      "sha256": "d98e5c9e8dbdb96991b3156cce219023e39844c861abf85fea10ca2930207e9e",
+      "rows": 2696,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GRAMEENS2",
+      "file": "GRAMEENS2.csv",
+      "sha256": "5a60ed188cd0d65df763da4ee0b5d539ccbc2698a7d41b8e9f3e3ea0f1e042db",
+      "rows": 2586,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GREENDELT",
+      "file": "GREENDELT.csv",
+      "sha256": "b3ce1bab8c04a73f688fb99caf0c73b02a97079872a8dc4181f10ac2dc8e44e8",
+      "rows": 2659,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "GSPFINANCE",
+      "file": "GSPFINANCE.csv",
+      "sha256": "958cb56327a60d4caf846a57802ceb8803a6519543470bd853cd925dd3ab4be2",
+      "rows": 2524,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "HAKKANIPUL",
+      "file": "HAKKANIPUL.csv",
+      "sha256": "35f472c395d702be8d8760463aa20adcdda4508c83e6670679b46f4801c9ddd9",
+      "rows": 2649,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "HEIDELBCEM",
+      "file": "HEIDELBCEM.csv",
+      "sha256": "4305244883901ca1463782994a4c6da9db9c784b54bb4271b0305101da78acac",
+      "rows": 2666,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "HFL",
+      "file": "HFL.csv",
+      "sha256": "c47030a75a0f06b91b3db77a56d40ca9693bace933796b9478a262dc99ae1a98",
+      "rows": 2177,
+      "first": "2014-12-04 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "HIMADRI",
+      "file": "HIMADRI.csv",
+      "sha256": "5ae2971fbd9db5b18d49dead7cac925bf214e3f80523107a8b3bbb8135ddd317",
+      "rows": 431,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "HRTEX",
+      "file": "HRTEX.csv",
+      "sha256": "7ffdcc781c81221681be5265ea82b0dafb0644f265c7baf53279f7275d46f1f1",
+      "rows": 2539,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "HWAWELLTEX",
+      "file": "HWAWELLTEX.csv",
+      "sha256": "9a26776456891c1b3851e42ffbfa87c7b0c6b5359d84ab4544a52725fb21e826",
+      "rows": 2303,
+      "first": "2014-05-14 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "IBNSINA",
+      "file": "IBNSINA.csv",
+      "sha256": "0caa34740963983e724ec287179df535bbe7ea442d606574526a5cc1829510b2",
+      "rows": 2699,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "IBP",
+      "file": "IBP.csv",
+      "sha256": "77b2d5ab0e5fe998b2d895db3c9a1baff3a4e9b04ac17663e53ea74b5f13565d",
+      "rows": 1690,
+      "first": "2018-10-18 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ICB",
+      "file": "ICB.csv",
+      "sha256": "b33a6e640122216d7eb802a08dd2375f352f989acf5baefe3f9a989da5eb89b3",
+      "rows": 2640,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ICB3RDNRB",
+      "file": "ICB3RDNRB.csv",
+      "sha256": "1e3d414689b6a112a0b2c0ee0be0f08e8528b2fe69c668b6818e400877c6ccec",
+      "rows": 2532,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ICBAGRANI1",
+      "file": "ICBAGRANI1.csv",
+      "sha256": "14904348e1abf6aa1e2f76c9d01ebbeeeca4e6187ac11b6dc9b15f2e500f6869",
+      "rows": 1643,
+      "first": "2017-10-08 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "ICBAMCL2ND",
+      "file": "ICBAMCL2ND.csv",
+      "sha256": "875c1abb578b268128ec8d2337e506b6f270d04f15d7c5a6ef772114f9e38434",
+      "rows": 2501,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ICBIBANK",
+      "file": "ICBIBANK.csv",
+      "sha256": "02c2fa9ebd53b09e632cb632f3010907f70e1b519f7a3da0730f06b089af04dc",
+      "rows": 2565,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ICBSONALI1",
+      "file": "ICBSONALI1.csv",
+      "sha256": "95db0a7ef137dfca00d431776d424e044993f4ea8405840b31c197a004aa38a0",
+      "rows": 2174,
+      "first": "2013-06-12 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ICICL",
+      "file": "ICICL.csv",
+      "sha256": "4026bba6d45c9c2d071efd2e4fc7370635f6fd5060790e69b78501a5a0dff504",
+      "rows": 739,
+      "first": "2022-12-18 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "IDLC",
+      "file": "IDLC.csv",
+      "sha256": "512969b3673f1e073f152da8ab781116b7db5c2565773f74b541102dba8fcd4a",
+      "rows": 2670,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "IFADAUTOS",
+      "file": "IFADAUTOS.csv",
+      "sha256": "5130ec5dcd3d38cc483b8f1b5b142a9e15e6e9f7b50cd22d7f94070f3567234c",
+      "rows": 2104,
+      "first": "2015-02-05 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "IFIC",
+      "file": "IFIC.csv",
+      "sha256": "5b1c35c9e4981b09156311c9d507a8a2ed96cce226c32b033144aba1f1ef1f86",
+      "rows": 2701,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ILFSL",
+      "file": "ILFSL.csv",
+      "sha256": "c4f0dec9c5ba481ee6955c805402fb30ce89342a462a7068a75089d62af0f3ec",
+      "rows": 2643,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "IMAMBUTTON",
+      "file": "IMAMBUTTON.csv",
+      "sha256": "829858133b2bb5c0d5adae6ee11f3e021c58035321894389c2c4c21f983a9b39",
+      "rows": 2592,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-19 00:00:00"
+    },
+    {
+      "symbol": "INDEXAGRO",
+      "file": "INDEXAGRO.csv",
+      "sha256": "0a9690377042fdd7b021c66c1c9df0933d4d02efa1ef85f0bd5422f0bea52d9d",
+      "rows": 1054,
+      "first": "2021-04-07 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "INTECH",
+      "file": "INTECH.csv",
+      "sha256": "0563eef5898ce6c68ac66cec94e40b375711d5f050fd0803c43f662b36b70bb1",
+      "rows": 2691,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "INTRACO",
+      "file": "INTRACO.csv",
+      "sha256": "1c3594dbd7eec5986981774735137bd40db19977a3cc167bc6cb43baba98e517",
+      "rows": 1793,
+      "first": "2018-05-17 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "IPDC",
+      "file": "IPDC.csv",
+      "sha256": "97b14abe431c847d53736da72f9060a86a0c0424971edae189f7058fd8798657",
+      "rows": 2569,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ISLAMIBANK",
+      "file": "ISLAMIBANK.csv",
+      "sha256": "e1354a3939ad6d033a2ddf6216e34685c0e2f79d4d25632a5c31a4a280fde13e",
+      "rows": 2689,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ISLAMICFIN",
+      "file": "ISLAMICFIN.csv",
+      "sha256": "b899b1924786efe02e62e38befcccc27a96ffdde618b457e1017076ca9c80852",
+      "rows": 2643,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ISLAMIINS",
+      "file": "ISLAMIINS.csv",
+      "sha256": "7ed677684f702316c936a9db3e7a6e00e7bed3cc51954bb9420d7a44051b3352",
+      "rows": 2690,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ISNLTD",
+      "file": "ISNLTD.csv",
+      "sha256": "3c8c6c4addbb8757efd3fc11a695a47f5faea3e14e4cc9f296f07c9d1ceff338",
+      "rows": 2685,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ITC",
+      "file": "ITC.csv",
+      "sha256": "a3f6b12b913e4f34944fd79a1c18b9f64131cdce0d6f32baa72ad40828297711",
+      "rows": 1918,
+      "first": "2016-01-10 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "JAMUNABANK",
+      "file": "JAMUNABANK.csv",
+      "sha256": "4e0dd614c235e4e08e527b713107ad11bd69ec6832430b364f2036ab328e2f5e",
+      "rows": 2703,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "JAMUNAOIL",
+      "file": "JAMUNAOIL.csv",
+      "sha256": "9e8ff770024331d8933bd0e7bfe7b2a8e0df2fbec3aa2d6ddcfc2d43d7c3793a",
+      "rows": 2705,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "JANATAINS",
+      "file": "JANATAINS.csv",
+      "sha256": "9df8aba23a077bafdd35589f964e7d19f3265f287f3e7f9ba6dc2638a45d2146",
+      "rows": 2681,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "JHRML",
+      "file": "JHRML.csv",
+      "sha256": "a9ae962147ac0a086b9f4150a110e28270e6cc11da8820d7cb49c3cd892e6304",
+      "rows": 912,
+      "first": "2022-03-31 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "JMISMDL",
+      "file": "JMISMDL.csv",
+      "sha256": "208d8dc0137e7f3f175caf0e020a073c807ea6f7d98bfeb94148ce5af8e85bdc",
+      "rows": 2484,
+      "first": "2013-06-19 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "JUTESPINN",
+      "file": "JUTESPINN.csv",
+      "sha256": "f743056fef3ad75083c900b694d0c11e28ed8a530a1bc9925715183ce69be9b2",
+      "rows": 2534,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KARNAPHULI",
+      "file": "KARNAPHULI.csv",
+      "sha256": "8a9b97622e6da56c7cb01ec477a757505fb2f75419d315986c8d79688c024cf3",
+      "rows": 2697,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KAY&QUE",
+      "file": "KAY&QUE.csv",
+      "sha256": "b58df4165fbc9b0817d877a45cf25f553cb96564fc8bf7eee3de8cb46c22b083",
+      "rows": 2619,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KBPPWBIL",
+      "file": "KBPPWBIL.csv",
+      "sha256": "2503340802f76fc01a470bc876f7ef4e5a00e606f6e13d9dd62d86d3b3aba2df",
+      "rows": 2176,
+      "first": "2014-11-18 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KBSEED",
+      "file": "KBSEED.csv",
+      "sha256": "91ce6310b768175bc7f81e73d5debd6c51b2b7fae4125879bad01a84656b857e",
+      "rows": 461,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "KDSALTD",
+      "file": "KDSALTD.csv",
+      "sha256": "619ce53b31d3b51b280e0714c23b978cd2f95db36d5d106a03568e3267426c3c",
+      "rows": 1881,
+      "first": "2015-10-15 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KEYACOSMET",
+      "file": "KEYACOSMET.csv",
+      "sha256": "fe56ee6d0e0b3cb6948c29c7711296c9ee9e6ceb4f133b53d9fff47c53cc09c2",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KFL",
+      "file": "KFL.csv",
+      "sha256": "d76486e4a6011813c05addf9287fbaba5ec8764583eb5b4d5a61de3ab3dae0de",
+      "rows": 469,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "KOHINOOR",
+      "file": "KOHINOOR.csv",
+      "sha256": "a4bb67fc86eb9672317b3e67a93bbeba53b1b97e853f00926c406287448f5ed1",
+      "rows": 2473,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KPCL",
+      "file": "KPCL.csv",
+      "sha256": "7ac7383e6ca99899d087185ba36f4147f6559f4ba87393e7920171a098856415",
+      "rows": 2631,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-19 00:00:00"
+    },
+    {
+      "symbol": "KPPL",
+      "file": "KPPL.csv",
+      "sha256": "672fda59a6b59efc20532fcfd1580b5cb9c2f371da660dd90d0cec60def2b3a6",
+      "rows": 2208,
+      "first": "2014-08-18 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "KTL",
+      "file": "KTL.csv",
+      "sha256": "a3951a9d499125302fe1cd2d2a607f6883ab651bb6d45c2905fdc5ca701f315d",
+      "rows": 1579,
+      "first": "2018-11-12 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "LANKABAFIN",
+      "file": "LANKABAFIN.csv",
+      "sha256": "f5dc1ffa48a8f0632df547230654de1fbc2e57d2d48673e207ca1b91b473d4c9",
+      "rows": 2683,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "LEGACYFOOT",
+      "file": "LEGACYFOOT.csv",
+      "sha256": "0aa80aba2668d02c04c9e9edeab68742fca77d31d17fdd666da55f625d96312a",
+      "rows": 2639,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "LHBL",
+      "file": "LHBL.csv",
+      "sha256": "9d032a3b0c559e7470bc951977023a9dfeb97c075ea40b2f8933f18eb7338619",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "LIBRAINFU",
+      "file": "LIBRAINFU.csv",
+      "sha256": "73204576be263b550db4a4a33b71877e35a6a14bbb750efbe0eb57b480255b8b",
+      "rows": 2538,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "LINDEBD",
+      "file": "LINDEBD.csv",
+      "sha256": "cace25f3c9583d94dc2e9906572cdaddcb46b1d86797f3af08d95f2c4c1f919d",
+      "rows": 2656,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "LOVELLO",
+      "file": "LOVELLO.csv",
+      "sha256": "4d5240c7e524bc8e783c9d084811941cbc524509ddc49c88e963e1a5b216cbb6",
+      "rows": 1164,
+      "first": "2021-02-10 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "LRBDL",
+      "file": "LRBDL.csv",
+      "sha256": "a3d6065d23ac77c83d1efd93894b44181ff2c1d46163a5dddba142b6769290ce",
+      "rows": 1161,
+      "first": "2021-03-09 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MAGURAPLEX",
+      "file": "MAGURAPLEX.csv",
+      "sha256": "05908dfa736bdfdc205afac0a323ffdc75d875c6eb0d50aa1323a90ddf01331d",
+      "rows": 1101,
+      "first": "2021-06-13 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MAKSONSPIN",
+      "file": "MAKSONSPIN.csv",
+      "sha256": "88a6c667cabfafe700b1717be2bbccf485fd5f2f03c532b9e89545bcbf367ea7",
+      "rows": 2650,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MALEKSPIN",
+      "file": "MALEKSPIN.csv",
+      "sha256": "fc23a02ddd159d536c6d65aa9748a367ba6c03b1c485a82d3b8947f2bd8c6044",
+      "rows": 2664,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MAMUNAGRO",
+      "file": "MAMUNAGRO.csv",
+      "sha256": "a2a8896cfde8476e287f2eab3cee1725ab61e14d63991e32d91cc42f4ff4829d",
+      "rows": 467,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-21 00:00:00"
+    },
+    {
+      "symbol": "MARICO",
+      "file": "MARICO.csv",
+      "sha256": "f42dfb07213fd6e7d3b8d3a5ae80f8af5260a6c55d1174b7e8669305e57f9252",
+      "rows": 2667,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MASTERAGRO",
+      "file": "MASTERAGRO.csv",
+      "sha256": "6e44164a6227848ade33f5c8e86dcfaa606a7170f87d19483a40c2f5cd31ee9b",
+      "rows": 470,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MATINSPINN",
+      "file": "MATINSPINN.csv",
+      "sha256": "fd7c5c9725a81e4c76c18bb2d12b04e8a0a50cfe4a839e51d444e0f0ecb25354",
+      "rows": 2211,
+      "first": "2014-04-08 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MEGCONMILK",
+      "file": "MEGCONMILK.csv",
+      "sha256": "826ecd9ecd76fdbe0e930249fc73c52acb449d911b9570d2e79bb46a080bc8b1",
+      "rows": 2633,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MEGHNACEM",
+      "file": "MEGHNACEM.csv",
+      "sha256": "4b2b0c951c7d6b7a7dc5a2d9e04e134da0e683654a2da1919aa0c28fe937a81a",
+      "rows": 2645,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MEGHNAINS",
+      "file": "MEGHNAINS.csv",
+      "sha256": "e7208504cf44d433fe1677eae368308a0d7080258fde0b1981c8dbb97555d9d6",
+      "rows": 866,
+      "first": "2022-06-08 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MEGHNALIFE",
+      "file": "MEGHNALIFE.csv",
+      "sha256": "8303a8423a6e5cbb7279c01edca6a0ac8fa552e55fb86c663193bc37ce23d1a9",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MEGHNAPET",
+      "file": "MEGHNAPET.csv",
+      "sha256": "a631ded6fd1bc0bf88b20d8cd444690749a368db0a547877f260bb56a83db9a4",
+      "rows": 2535,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MERCANBANK",
+      "file": "MERCANBANK.csv",
+      "sha256": "a39e0702ee5d3736404863eb48d40804737385c33dd0720c140412a738b9fca2",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MERCINS",
+      "file": "MERCINS.csv",
+      "sha256": "708bb54d0af4cd9f43cbb3f1646231cef0537af896ddea80589915489fe74a33",
+      "rows": 2679,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "METROSPIN",
+      "file": "METROSPIN.csv",
+      "sha256": "e10dd104ce35e2fcaf4528e0f9e50b08926a333a65a62c19585873cc4685f9a1",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MHSML",
+      "file": "MHSML.csv",
+      "sha256": "a7993d05bb0d4eca4fada8a09a358174980a1369a244f55bea9773869496672b",
+      "rows": 2225,
+      "first": "2014-01-21 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MIDASFIN",
+      "file": "MIDASFIN.csv",
+      "sha256": "cf12acbf6d5d4f74ab054553a1b7695ccff96f8ebdd6f92ab3245f0eec323eca",
+      "rows": 2590,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MIDLANDBNK",
+      "file": "MIDLANDBNK.csv",
+      "sha256": "66aed9ca401546a2cc4b6ab2cf11b551cfe4c98d325f69dd2eee49569616d966",
+      "rows": 672,
+      "first": "2023-03-27 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MIRACLEIND",
+      "file": "MIRACLEIND.csv",
+      "sha256": "7035d401b0e79f64756da68043d361b333c2a49ea6906bbf9e6742ff18202d22",
+      "rows": 2693,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MIRAKHTER",
+      "file": "MIRAKHTER.csv",
+      "sha256": "1cc7860d74e8066f3d10146d70ab99ae580ad7d784af35030f32dc880ecfcc02",
+      "rows": 1176,
+      "first": "2021-02-02 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MITHUNKNIT",
+      "file": "MITHUNKNIT.csv",
+      "sha256": "27297000523dfec2eb637228496b5f8c9f0434c231cbcb0e995d734518d522ac",
+      "rows": 2559,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MJLBD",
+      "file": "MJLBD.csv",
+      "sha256": "9461c4b815639ba93d6ee269943858941a0defd7f433b866561e875aeb43b4fb",
+      "rows": 2703,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MKFOOTWEAR",
+      "file": "MKFOOTWEAR.csv",
+      "sha256": "66208515102f65bac2254298637b0ecbdb36cacaeda4e88f0ac96cf78850abee",
+      "rows": 452,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MLDYEING",
+      "file": "MLDYEING.csv",
+      "sha256": "23fc78c9263ae284ef75f7e1ff29274dbe6e177effe154dffc1d883832d257a8",
+      "rows": 1578,
+      "first": "2018-09-17 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MONNOAGML",
+      "file": "MONNOAGML.csv",
+      "sha256": "adebca3ff8baf3e62e6011f6bbfb9026201220499000122eb569f1874c8ada79",
+      "rows": 2560,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MONNOCERA",
+      "file": "MONNOCERA.csv",
+      "sha256": "291287dbbe90236836540af06a2bcab01c630126697685ce32e6d7dd1bda5197",
+      "rows": 2686,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MONNOFABR",
+      "file": "MONNOFABR.csv",
+      "sha256": "d27b1f8b714e8f85e5c5c59a4614d65959685211603d4d6c223e4cbfcb4dbb62",
+      "rows": 989,
+      "first": "2021-06-13 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MONOSPOOL",
+      "file": "MONOSPOOL.csv",
+      "sha256": "f0d09d62c23ed15896152b9534b6d95fbb480394edad852f55ad84f3923b7789",
+      "rows": 1102,
+      "first": "2021-06-13 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MOSTFAMETL",
+      "file": "MOSTFAMETL.csv",
+      "sha256": "0b993566c49046fd69a75470ace35e3c15bd0320ffc985dcb54563ae3598b0ed",
+      "rows": 468,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "MPETROLEUM",
+      "file": "MPETROLEUM.csv",
+      "sha256": "9b301ee591b552b076e3d91fdb5cb104bf5c4ffc4156fa65ff01ece1a23db6f1",
+      "rows": 2703,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "MTB",
+      "file": "MTB.csv",
+      "sha256": "cbed29f3dca486ad2781ae47bdcd29a06057f2513de20b4c3601f996be92d9a6",
+      "rows": 2651,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NAHEEACP",
+      "file": "NAHEEACP.csv",
+      "sha256": "a9ebe236a91865900900f6774eeaace4b5eed26740207dfeb53da4dd01c8ce70",
+      "rows": 1751,
+      "first": "2017-12-24 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "NATLIFEINS",
+      "file": "NATLIFEINS.csv",
+      "sha256": "0e5056bc8dba2b061a6e6f77789919b5438a85375f5f7dd678f6954570428f75",
+      "rows": 2514,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NAVANACNG",
+      "file": "NAVANACNG.csv",
+      "sha256": "4cf00723a538b3f7ace03435c82ba4f9217923c7dfb8a759f2ba0a621fe68f80",
+      "rows": 2697,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NAVANAPHAR",
+      "file": "NAVANAPHAR.csv",
+      "sha256": "d2f46c1d95ac891ca31cac74e68aa7b7a88518e4ec2f3a926851d28cf669b0b3",
+      "rows": 780,
+      "first": "2022-10-18 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "NBL",
+      "file": "NBL.csv",
+      "sha256": "11a077ced7d949c2a0c7bbacb58da3b9eef36782376ec07bfc5242dff64c00cd",
+      "rows": 2635,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NCCBANK",
+      "file": "NCCBANK.csv",
+      "sha256": "320d6709254d79c7b93bd23ee7be66add520ac2639f1906237842dfa6559229b",
+      "rows": 2686,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NEWLINE",
+      "file": "NEWLINE.csv",
+      "sha256": "7066190ac0d2ddbe9611b09decc008ce3983a34b60962b7c17f0814683eb200f",
+      "rows": 1473,
+      "first": "2019-05-27 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "NFML",
+      "file": "NFML.csv",
+      "sha256": "c778005f1f3ad958a831fa0397162791e5c5298bb756431d76e5c8bc52164c17",
+      "rows": 2151,
+      "first": "2015-01-19 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NHFIL",
+      "file": "NHFIL.csv",
+      "sha256": "4950d37e83223f4c69a05e4e6f987b0cf4be95a271e22c7ccd470fa06ed21c31",
+      "rows": 2655,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NIALCO",
+      "file": "NIALCO.csv",
+      "sha256": "ac9928a895cdfdc418b02c0ac131a93264a4e3bfb4a78867967895bf10b46ec0",
+      "rows": 468,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "NITOLINS",
+      "file": "NITOLINS.csv",
+      "sha256": "45711da98a9a024da81e74ac224b0c63193c89048443964be0d7617f8a90c280",
+      "rows": 2626,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NORTHERN",
+      "file": "NORTHERN.csv",
+      "sha256": "4c73c1b22369bd050d3cfe0654c29f7722d3e540bcfb92ecae61d800115fc26e",
+      "rows": 2289,
+      "first": "2013-01-24 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NORTHRNINS",
+      "file": "NORTHRNINS.csv",
+      "sha256": "a344d6ac000b5e5c6d85ace0901379776110681ad8c58f41967e90e8eaeac659",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NPOLYMER",
+      "file": "NPOLYMER.csv",
+      "sha256": "f699fa6db8b5eef628a8e5e2db419b5de57340cfbe21d50df687d4f7b394a973",
+      "rows": 2662,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NRBBANK",
+      "file": "NRBBANK.csv",
+      "sha256": "6db575d5fa63bbe791f876becc6511291b55c42cec327bc8257225b2f92cc3cd",
+      "rows": 450,
+      "first": "2024-02-27 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "NRBCBANK",
+      "file": "NRBCBANK.csv",
+      "sha256": "24f2d94d0384db233442de47db649a407f6e9fa57a68365c43e9e50b00943bb7",
+      "rows": 1117,
+      "first": "2021-03-22 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "NTC",
+      "file": "NTC.csv",
+      "sha256": "96bcbb890a042c174d694ce9c8c379ea5adcc782d6bf47b726767b79d13b0b84",
+      "rows": 2528,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NTLTUBES",
+      "file": "NTLTUBES.csv",
+      "sha256": "b91653cdbab12a755312d7f91b52d1d21edecb478540eac17f69863bbb6df0f5",
+      "rows": 2656,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "NURANI",
+      "file": "NURANI.csv",
+      "sha256": "90b9cb6f9adad07c9cc734630dff6bee79d2b9304899f2d9ac0c6b257f4533ef",
+      "rows": 1932,
+      "first": "2017-06-01 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "OAL",
+      "file": "OAL.csv",
+      "sha256": "afa3c9d9ff086dc521bbc1ceb23f3c4b5a7b1c5f81c5dd32a42edd7db85271b3",
+      "rows": 2036,
+      "first": "2015-06-25 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "OIMEX",
+      "file": "OIMEX.csv",
+      "sha256": "72bdfd6c3d95ddd7e49fa5a520f4261293815d4118d651f2562bb5a879584aea",
+      "rows": 1892,
+      "first": "2017-11-06 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "OLYMPIC",
+      "file": "OLYMPIC.csv",
+      "sha256": "a540e528f852358c34c5ed341aac1f4d4b9da8caa13a07e6bf3af9aeeddbb489",
+      "rows": 2707,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ONEBANKPLC",
+      "file": "ONEBANKPLC.csv",
+      "sha256": "cc7dba8526f11689e17970408e77a24b2f8854be13a492957235b57bb84e3e0b",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ORIONINFU",
+      "file": "ORIONINFU.csv",
+      "sha256": "27c0f337226ce938a931c4a8721c594d8e0786b367579db595304170a33e8aaa",
+      "rows": 2690,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ORIONPHARM",
+      "file": "ORIONPHARM.csv",
+      "sha256": "befcd4ab9fc053c63fae90ce62adbb14cb34de1f79bee721ceb916dba474fa1d",
+      "rows": 2591,
+      "first": "2013-03-20 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ORYZAAGRO",
+      "file": "ORYZAAGRO.csv",
+      "sha256": "b4bbdb157ce67205bd49b253d10f4049a933a8cdc7a8b55071a8e93e93da9d51",
+      "rows": 470,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "PADMALIFE",
+      "file": "PADMALIFE.csv",
+      "sha256": "dd0cf472e34a5be601e8e9f9371ad5bf2ae1e709f8aec555659f13cf37fb1e61",
+      "rows": 2675,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PADMAOIL",
+      "file": "PADMAOIL.csv",
+      "sha256": "b8eee0e5dea6ac26390215b9247774ce5be93e2bba7caa579fb871ed10a25f20",
+      "rows": 2686,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PAPERPROC",
+      "file": "PAPERPROC.csv",
+      "sha256": "740c19bef8254b81264535e0748b7b24cbcdb7f655b93df887e340a0593ac7e0",
+      "rows": 650,
+      "first": "2021-06-13 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PARAMOUNT",
+      "file": "PARAMOUNT.csv",
+      "sha256": "92cedfa69fb7b657ac58275170a49a1158b10d7bc267540ce8b3f54d892f0b5c",
+      "rows": 2699,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PDL",
+      "file": "PDL.csv",
+      "sha256": "edf44592fd5ab48f13ca30a32dbdc04a26d2dfab45ddece092f5a6c56af08ef4",
+      "rows": 2093,
+      "first": "2017-02-07 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "PENINSULA",
+      "file": "PENINSULA.csv",
+      "sha256": "3d0135754d715428dc5d5881735c26fee47e12620db6055feaab73f6e0db9658",
+      "rows": 2259,
+      "first": "2014-06-15 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PEOPLESINS",
+      "file": "PEOPLESINS.csv",
+      "sha256": "a4fab6441cc738e7b21b98fb6ba5f1e44d0287425af50c51a697fd2ec8543ce6",
+      "rows": 2683,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PHARMAID",
+      "file": "PHARMAID.csv",
+      "sha256": "26a55fc53f34ad7306d63074d7d7b868496ceba7fea64f3cb7f8d7803fbfb9e3",
+      "rows": 2540,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PHENIXINS",
+      "file": "PHENIXINS.csv",
+      "sha256": "0284447d8fde0cde5d4c50dd7b397d1877329b04ded56828c205d516715b4296",
+      "rows": 2681,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PHOENIXFIN",
+      "file": "PHOENIXFIN.csv",
+      "sha256": "85e57cc1b4b91897527fa6ff34f7b59ce5f37440bd69af2c7a55177ca2718be5",
+      "rows": 2481,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PIONEERINS",
+      "file": "PIONEERINS.csv",
+      "sha256": "be17afecf3d0135e63dc61bcddc6008b72c87c880da89af7e9953d354a191fed",
+      "rows": 2693,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "POPULARLIF",
+      "file": "POPULARLIF.csv",
+      "sha256": "1de6deba10f794ac8729d14bc9dc5d7c8b7ef3e4f5d970b1b54ecdc5c47bcc9f",
+      "rows": 2609,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "POWERGRID",
+      "file": "POWERGRID.csv",
+      "sha256": "9e40659fd447e59b0506a07f20866062bb7d8e67db32edf7d452dc61a14c0547",
+      "rows": 2652,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRAGATIINS",
+      "file": "PRAGATIINS.csv",
+      "sha256": "456978d39dc4c243749386168320cfe6ca97a889d00760c504f454f2be8290ae",
+      "rows": 2674,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRAGATILIF",
+      "file": "PRAGATILIF.csv",
+      "sha256": "6146a48c4c570ff34a827e13b65e8c18c022ee16a45e96bb3546f8a8011feb67",
+      "rows": 2613,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PREMIERBAN",
+      "file": "PREMIERBAN.csv",
+      "sha256": "72e1f878b5aa9dbf05bf9c30c8f126467727991285f7cd3b49cdd6fe5f4948cb",
+      "rows": 2705,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PREMIERCEM",
+      "file": "PREMIERCEM.csv",
+      "sha256": "e7181c3ec3e215ccf919d0b67efcc8e1bf75ffa257bab6e59ace04a0d7f6436a",
+      "rows": 2506,
+      "first": "2013-03-03 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PREMIERLEA",
+      "file": "PREMIERLEA.csv",
+      "sha256": "0b1a045ef024f6d94299154fd86750f5e8bba31045b6a4a435e8c0d19b8c84c5",
+      "rows": 2585,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRIME1ICBA",
+      "file": "PRIME1ICBA.csv",
+      "sha256": "c730bac89a9692c40d3bf2aa674a1744c9f83a327c7ce4b30ed65cf5875c93bf",
+      "rows": 2456,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRIMEBANK",
+      "file": "PRIMEBANK.csv",
+      "sha256": "847b79f9d1b87600e5d3b181817159d6cc26661e4a2ab758dae1093f6a481675",
+      "rows": 2707,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRIMEFIN",
+      "file": "PRIMEFIN.csv",
+      "sha256": "f683b5cf10bb54c7441a5447cd2e29d033c1b275b34121cc513e081120080724",
+      "rows": 2580,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRIMEINSUR",
+      "file": "PRIMEINSUR.csv",
+      "sha256": "21b33d863581bffb75c42995e6c32aed78f2419cd9070b9f817edc7f5785caba",
+      "rows": 2476,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRIMELIFE",
+      "file": "PRIMELIFE.csv",
+      "sha256": "8c6b04fe7b15bd434e82458566744f1c0fe347bd542e6b1e339cb0611fbbfe28",
+      "rows": 2676,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PRIMETEX",
+      "file": "PRIMETEX.csv",
+      "sha256": "a7f5cacc1dc520817d64a746e929ee910a0f5f22092674e7d0eaa7e6ac16df11",
+      "rows": 2605,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PROGRESLIF",
+      "file": "PROGRESLIF.csv",
+      "sha256": "3bddb1089ee0ee21124f123b0c1065a0ae8dab0b7475c4b87c5e4ba1f1223154",
+      "rows": 2425,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PROVATIINS",
+      "file": "PROVATIINS.csv",
+      "sha256": "cb978ac130d8eabd24693a1d709255383cb151bca8d79cf734b5ca05afefcf26",
+      "rows": 2681,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PTL",
+      "file": "PTL.csv",
+      "sha256": "387d9da7997273b95be465820478f6c36849c180cd47c940b815a0f3ab295b5f",
+      "rows": 2411,
+      "first": "2013-11-19 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PUBALIBANK",
+      "file": "PUBALIBANK.csv",
+      "sha256": "eb4c5a1ae47d2777844a7914a6c476faf1b77297265f9da251b29e2bb5878a7f",
+      "rows": 2706,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "PURABIGEN",
+      "file": "PURABIGEN.csv",
+      "sha256": "4e9a6419797055bd6f0f9678825b3ac4b132c1290e034428379a8e00e1e55516",
+      "rows": 2692,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "QUASEMIND",
+      "file": "QUASEMIND.csv",
+      "sha256": "077d753deda0005109a09f36f80d4e812578e9e61736f0577a085af177b29bc2",
+      "rows": 2508,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "QUEENSOUTH",
+      "file": "QUEENSOUTH.csv",
+      "sha256": "1208fbeffe1c5ba435b0fb736e40e54aee60d1b1274938f583cfe60e59c1f712",
+      "rows": 1772,
+      "first": "2018-03-13 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "RAHIMAFOOD",
+      "file": "RAHIMAFOOD.csv",
+      "sha256": "24996ca29b75bb9afa1cb5a985ed279de622fface0728901655f54f95b1b7dea",
+      "rows": 2115,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RAHIMTEXT",
+      "file": "RAHIMTEXT.csv",
+      "sha256": "d9ca7b6af33cbf263db5d82d744dd90d842019e7348ba4e90de70a90317628cb",
+      "rows": 2550,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RAKCERAMIC",
+      "file": "RAKCERAMIC.csv",
+      "sha256": "d37954ceac94538b42692785f83d8da04f1865580ef47a49ddd7813402efed97",
+      "rows": 2657,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RANFOUNDRY",
+      "file": "RANFOUNDRY.csv",
+      "sha256": "2a9d2d87d788b7be1d910f4aba688a3b76a507ca949f3e10ab27f1e4ff396382",
+      "rows": 2673,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RDFOOD",
+      "file": "RDFOOD.csv",
+      "sha256": "8624be6f41caf34376b4fa73f1867533d4a478cdade489d681090a34386cacbf",
+      "rows": 2691,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RECKITTBEN",
+      "file": "RECKITTBEN.csv",
+      "sha256": "c37a471c110062043a86f937e41c75fae19a1bc3d989e22e597087c472c8f455",
+      "rows": 2496,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "REGENTTEX",
+      "file": "REGENTTEX.csv",
+      "sha256": "00ac6cd3568ba0cab0a1f701d23de6951cf2f85e118484cd7aac04c6cb46065a",
+      "rows": 1775,
+      "first": "2015-12-14 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RELIANCE1",
+      "file": "RELIANCE1.csv",
+      "sha256": "3216132836aa1b3b16e20b874450ffac1626b6b0f4e7a38a6bc0319bcae0d2c5",
+      "rows": 2528,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RELIANCINS",
+      "file": "RELIANCINS.csv",
+      "sha256": "b7bc09cbed47fda36a9485c43e9110b41ab209a6e58654a07814bcbe718cdcf1",
+      "rows": 2615,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RENATA",
+      "file": "RENATA.csv",
+      "sha256": "a7a3ae97b127de6a56635596913a66f6ac252d78caf00d517f2fef6a4e918dc7",
+      "rows": 2684,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RENWICKJA",
+      "file": "RENWICKJA.csv",
+      "sha256": "a6d417d170fb17e24d108e1ec0a10ec7e0dd38a16302b6287c7f2b98fac0f7d2",
+      "rows": 2585,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "REPUBLIC",
+      "file": "REPUBLIC.csv",
+      "sha256": "12a913b7e3d5eb6d7d7cb2911ec65b5abfc8786747f3d9e317df2fe215f0f9f1",
+      "rows": 2686,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RINGSHINE",
+      "file": "RINGSHINE.csv",
+      "sha256": "74687c576eaa290e44cfe7ccae2231c18a2d74a94b642424471942d405448ee6",
+      "rows": 1361,
+      "first": "2019-12-12 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "RNSPIN",
+      "file": "RNSPIN.csv",
+      "sha256": "e0a1df70fd29394118f1d5c2939f9f91fcd88c696545da8cf585df8a8cb24454",
+      "rows": 2649,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ROBI",
+      "file": "ROBI.csv",
+      "sha256": "835fb15c2cd8fbc20178514d72b432e716efb4ac4bfaccfc8c091d8ff1c18d64",
+      "rows": 1214,
+      "first": "2020-12-24 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "RSRMSTEEL",
+      "file": "RSRMSTEEL.csv",
+      "sha256": "f58e8055c6d7a05d468284c06d30e0c48f57e1678654b8e69a07a66838c77568",
+      "rows": 2233,
+      "first": "2014-09-22 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RUNNERAUTO",
+      "file": "RUNNERAUTO.csv",
+      "sha256": "017e0024399ec289ae6037f06ae6806b50c267dc70652356b8e051c0af0e1bbf",
+      "rows": 1433,
+      "first": "2019-05-21 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "RUPALIBANK",
+      "file": "RUPALIBANK.csv",
+      "sha256": "2abd814c4c5f549adb4f9a0a394cd79f4b9aae30db6a37db6a0713b05971c2ac",
+      "rows": 2651,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RUPALIINS",
+      "file": "RUPALIINS.csv",
+      "sha256": "15883655af501ea80e19b57735722d344fbba60aada4b480689647a4bda8fc24",
+      "rows": 2695,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "RUPALILIFE",
+      "file": "RUPALILIFE.csv",
+      "sha256": "5a6d4dd3a0b3b46b3f987aa29956095d3d0da2d0565be488bf76d498b4ef84eb",
+      "rows": 2694,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SADHESIVE",
+      "file": "SADHESIVE.csv",
+      "sha256": "af590c07942f7332df674e9f0fd46d8b7fca8dc08ebf9c0f231a3d51a913db60",
+      "rows": 462,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SAFKOSPINN",
+      "file": "SAFKOSPINN.csv",
+      "sha256": "ecfb1c4b2ac66584d77b047c8570c5d2068547e9ac3afaa76410766e095aa5e3",
+      "rows": 2609,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAIFPOWER",
+      "file": "SAIFPOWER.csv",
+      "sha256": "92f0771fb2e79c48d7b8ee27b124633e407d7a94a1c8cc039f9155d9680afafa",
+      "rows": 2184,
+      "first": "2014-09-29 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAIHAMCOT",
+      "file": "SAIHAMCOT.csv",
+      "sha256": "78877e3e659426b5001e0db3dce1579c74465c4d98a1fc255cc8e50efdada2a2",
+      "rows": 2560,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAIHAMTEX",
+      "file": "SAIHAMTEX.csv",
+      "sha256": "d6105487658f3a7cda38627c4ffd7711e30ac567882ef9cbf79a554b75454892",
+      "rows": 2616,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SALAMCRST",
+      "file": "SALAMCRST.csv",
+      "sha256": "e0b852f3f9a7655c0acce1cba34227a23e77ccdbae1420e528e4cd522949109f",
+      "rows": 2499,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SALVOCHEM",
+      "file": "SALVOCHEM.csv",
+      "sha256": "83905fc3861ba55e91c128a0fa4c5d0fd044915e293bcf3cd04a16554e5419c9",
+      "rows": 2598,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAMATALETH",
+      "file": "SAMATALETH.csv",
+      "sha256": "0175295c5e0e88ff7c309bdea3a14042aabc758c240f25d6c95abc4170692587",
+      "rows": 2369,
+      "first": "2012-10-02 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAMORITA",
+      "file": "SAMORITA.csv",
+      "sha256": "7d8bfb41197f414d5c2ab90d4b6773fc939818a0202cf0d4636918d26a6be1df",
+      "rows": 2619,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SANDHANINS",
+      "file": "SANDHANINS.csv",
+      "sha256": "b85b423a8995e6f8865be9152f794b2e63873e3c6d747597625cb02083fb2d26",
+      "rows": 2691,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAPORTL",
+      "file": "SAPORTL.csv",
+      "sha256": "30c34d2304c688816eb9dbb8f2f2124bf66a286df7f2a0ed876769726c037430",
+      "rows": 2700,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SAVAREFR",
+      "file": "SAVAREFR.csv",
+      "sha256": "76598859d5588b563fa9f3c8ef8de7c08f9c13b92bce222c31f1d9eb82c6287f",
+      "rows": 1966,
+      "first": "2012-10-01 00:00:00",
+      "last": "2023-05-03 00:00:00"
+    },
+    {
+      "symbol": "SBACBANK",
+      "file": "SBACBANK.csv",
+      "sha256": "bdea719a29e4a57331ba6b6872f1f94e9efdca8ebc6476366dc74f419a46ed07",
+      "rows": 1041,
+      "first": "2021-08-11 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SEAPEARL",
+      "file": "SEAPEARL.csv",
+      "sha256": "c300012241c1754b104e6df2228b871ff36c921f9148db94a379d3a8fa41f0d3",
+      "rows": 1396,
+      "first": "2019-07-16 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SEMLFBSLGF",
+      "file": "SEMLFBSLGF.csv",
+      "sha256": "ba6b6911b36d87355ce0384f2bb36699dce4e00a46d80eba73115b00c68a0827",
+      "rows": 1460,
+      "first": "2019-03-04 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SEMLIBBLSF",
+      "file": "SEMLIBBLSF.csv",
+      "sha256": "d4740652ace24dacc902b5eca2e5e30d038cc48de185c23e4cbfb20eb0cc15da",
+      "rows": 1866,
+      "first": "2017-02-12 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SHAHJABANK",
+      "file": "SHAHJABANK.csv",
+      "sha256": "5bf939a4ddc085a83867a6130ff9512f67a8048a2c613ffcab919ed177813789",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SHARPIND",
+      "file": "SHARPIND.csv",
+      "sha256": "72d7141b3788fac1755edb2d2051eaa4cc2da89abcfab5d9f2df10c42ed0da96",
+      "rows": 296,
+      "first": "2024-10-29 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SHASHADNIM",
+      "file": "SHASHADNIM.csv",
+      "sha256": "1bc46f212b2df8568b24d4b51e10fc55849aea25d0bfab042ac517e492510c3b",
+      "rows": 1951,
+      "first": "2015-03-05 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SHEPHERD",
+      "file": "SHEPHERD.csv",
+      "sha256": "cf7feb50565fd780040371efb5ed73d07f3916136bc245c29f93d0132866507a",
+      "rows": 1920,
+      "first": "2017-03-08 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SHURWID",
+      "file": "SHURWID.csv",
+      "sha256": "9891ae8cbf4a009b9f8afd20b62d4785b1046f7166c59c20c976d8f6c389b3dd",
+      "rows": 2192,
+      "first": "2014-09-08 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SHYAMPSUG",
+      "file": "SHYAMPSUG.csv",
+      "sha256": "08b81a7e18ba1dcf8ff42852d1cf75dcded5178d8881032d9b6da3342fe40654",
+      "rows": 2322,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SIBL",
+      "file": "SIBL.csv",
+      "sha256": "7c766dc7a4e29e99154074f4717c497a512c2d81680f9d091fb63716d21336f0",
+      "rows": 2682,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SICL",
+      "file": "SICL.csv",
+      "sha256": "dbfea5c4b2e1ee33e9738ae9f1aa16bd713f3926388a8d6944bb97a3e71af442",
+      "rows": 472,
+      "first": "2024-01-24 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SILCOPHL",
+      "file": "SILCOPHL.csv",
+      "sha256": "087aa2c9022b03b4b6899239b62334f2ce49047ab160db1d17416937a8838dfd",
+      "rows": 1537,
+      "first": "2019-06-13 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SILVAPHL",
+      "file": "SILVAPHL.csv",
+      "sha256": "8da2793da4940edf08e976c019198390a15fc71aa41d7f61b32a141b6610c15c",
+      "rows": 1651,
+      "first": "2018-10-10 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SIMTEX",
+      "file": "SIMTEX.csv",
+      "sha256": "4255ea87d442a731b076a8a33fbe0d21fb814b5248411308273ec91bec37326e",
+      "rows": 1936,
+      "first": "2015-11-23 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SINGERBD",
+      "file": "SINGERBD.csv",
+      "sha256": "08bc11361b2daf9f835f168d0ba6bfda82507984ca5496a2d2ed479790f794ec",
+      "rows": 2691,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SINOBANGLA",
+      "file": "SINOBANGLA.csv",
+      "sha256": "64e14fbe5d0ee4404f2c0cdd5034f027a1fb495d982e79a3cd9004b30795d027",
+      "rows": 2698,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SIPLC",
+      "file": "SIPLC.csv",
+      "sha256": "c1116b4b41d9bcd3afe93d724441e1c7b5ee57d64da3f117a345269bdf783f60",
+      "rows": 1012,
+      "first": "2021-11-07 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SKICL",
+      "file": "SKICL.csv",
+      "sha256": "0e7f3969f6896026bdcbde41dd488c58f98b88c10e9c0dfc7521b9b4fea758b0",
+      "rows": 561,
+      "first": "2021-11-07 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SKTRIMS",
+      "file": "SKTRIMS.csv",
+      "sha256": "c1195824b800a8db1dddc605f2591ac73e0672ef231bfb9692bd15b602a8697e",
+      "rows": 1684,
+      "first": "2018-07-15 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SONALIANSH",
+      "file": "SONALIANSH.csv",
+      "sha256": "3a913907ecc5b3242553f2d58afffe348803ed551ca6dfb355da17d5dfc6cf85",
+      "rows": 2702,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SONALILIFE",
+      "file": "SONALILIFE.csv",
+      "sha256": "5e4c52ba037f0ef95e7c600b9964397319f3f1827ac9190265d6d2a2da8ffd18",
+      "rows": 1091,
+      "first": "2021-06-30 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SONALIPAPR",
+      "file": "SONALIPAPR.csv",
+      "sha256": "b0c790d31b260edd052d0408f90ba27ccb2e2051f18b10d0613bbff211215c40",
+      "rows": 1266,
+      "first": "2020-07-27 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SONARBAINS",
+      "file": "SONARBAINS.csv",
+      "sha256": "780a26bac9d57ff4fac5087667b5ea9847f5525f63a94b5c4ec005f8d7bb73fa",
+      "rows": 2679,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SONARGAON",
+      "file": "SONARGAON.csv",
+      "sha256": "7c5c8d477500d7d9b40eb196c1c29fd24b940da4af89b3c236d9b88612582c55",
+      "rows": 2631,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SOUTHEASTB",
+      "file": "SOUTHEASTB.csv",
+      "sha256": "2855b386e7a21efd68d257f5dedbc3f788186b44c1fa80d1ecd0b7f93c4b334a",
+      "rows": 2688,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SPCERAMICS",
+      "file": "SPCERAMICS.csv",
+      "sha256": "f94c8afd887ed630d4573b19027be1d9bf3a10dc54f4dcd87faf8d99675060ba",
+      "rows": 2658,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SPCL",
+      "file": "SPCL.csv",
+      "sha256": "72bf476c5b997dfeeaf8c43384d915c802597fa5173c5069b90e8c07062de4d5",
+      "rows": 2196,
+      "first": "2014-07-15 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SQUARETEXT",
+      "file": "SQUARETEXT.csv",
+      "sha256": "16ea90ebe74382624ae7db15fa4be22f45e61d57aa333159599456d1fdf00f0b",
+      "rows": 2649,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SQURPHARMA",
+      "file": "SQURPHARMA.csv",
+      "sha256": "74ce131a43e0b679f706d05a4a6d8b59f2fffc5130ed612062dda45ed21be697",
+      "rows": 3159,
+      "first": "2012-10-01 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "SSSTEEL",
+      "file": "SSSTEEL.csv",
+      "sha256": "5fa3ddcfb4e75db0b13bb3c3b40353455abd73ff656aa1f6168b49d7abe9925a",
+      "rows": 1609,
+      "first": "2019-01-17 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "STANCERAM",
+      "file": "STANCERAM.csv",
+      "sha256": "0e42226efea632d443aaa0a718bf79565de25efb72a646fe9333bd2eff4c382a",
+      "rows": 2528,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "STANDARINS",
+      "file": "STANDARINS.csv",
+      "sha256": "a81cd64cead82161f0eb2380cc71578b691c23aad432c05891b983d8425defca",
+      "rows": 2615,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "STANDBANKL",
+      "file": "STANDBANKL.csv",
+      "sha256": "6673b7fb523859ff8e6849f9afd9ef632bf28cd7d0f48f97b6fdeb1ca01755b1",
+      "rows": 2663,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "STYLECRAFT",
+      "file": "STYLECRAFT.csv",
+      "sha256": "c39972b3fae9ebe446236546b9ed1e6332400e74dba9827d441118c627b93cf7",
+      "rows": 2293,
+      "first": "2012-10-02 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SUMITPOWER",
+      "file": "SUMITPOWER.csv",
+      "sha256": "9e528715f7a26a6567cdc40ec15f902ae6af694fae0f6aabaaa4219fdd02f79b",
+      "rows": 2653,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "SUNLIFEINS",
+      "file": "SUNLIFEINS.csv",
+      "sha256": "8943e902ee0bedf590198eacf495ece4005e07a64eba74cec17079f83e959588",
+      "rows": 2541,
+      "first": "2013-01-31 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "TAKAFULINS",
+      "file": "TAKAFULINS.csv",
+      "sha256": "aedbbf60e80680e71066b0fa5a0dd57be3f016a1668904726d4032b31c0c8601",
+      "rows": 2671,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "TALLUSPIN",
+      "file": "TALLUSPIN.csv",
+      "sha256": "6e8294d950dbd689101ed7771c81b268c2983e746bcc79b6ba9594df38128a41",
+      "rows": 2568,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "TAMIJTEX",
+      "file": "TAMIJTEX.csv",
+      "sha256": "dfd5fbe9157cf2a1cc683e5ce491c7a330df13b4268a201cd99e8be68ce80e72",
+      "rows": 1076,
+      "first": "2021-06-13 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "TECHNODRUG",
+      "file": "TECHNODRUG.csv",
+      "sha256": "ff9bed0732554248d05ea5b0190b4a1e9b5c99a79d5fd094af6d96005015710f",
+      "rows": 364,
+      "first": "2024-07-14 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "TILIL",
+      "file": "TILIL.csv",
+      "sha256": "415291707f38201ee62ff4e861ba0cbc7814d6909c01e217c50687aa6db1304f",
+      "rows": 645,
+      "first": "2023-05-11 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "TITASGAS",
+      "file": "TITASGAS.csv",
+      "sha256": "0c5fb60730df83a1840e1c384249f0d3446cf4380ca6446883d94b0b95c5de89",
+      "rows": 2642,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-19 00:00:00"
+    },
+    {
+      "symbol": "TOSRIFA",
+      "file": "TOSRIFA.csv",
+      "sha256": "153df3b8f12d0b7692f28d15c2444716bd6cc0ab5ecce0afb29f7e7fe58ab81c",
+      "rows": 2022,
+      "first": "2015-06-17 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "TRUSTBANK",
+      "file": "TRUSTBANK.csv",
+      "sha256": "7013edaf2d7ea0ea46306c6ad1a3a241620712d0f849248acf6ae590408bef48",
+      "rows": 2640,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "TUNGHAI",
+      "file": "TUNGHAI.csv",
+      "sha256": "44f7479e306f26135475bff246193cbef6a4b6b84c9350703c028c8671716da5",
+      "rows": 2106,
+      "first": "2014-09-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UCB",
+      "file": "UCB.csv",
+      "sha256": "4929668f43af845f89c1498deb01b29841d34c7b2d7d31ae64b889f2263513a1",
+      "rows": 2693,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UNILEVERCL",
+      "file": "UNILEVERCL.csv",
+      "sha256": "328552c5c397833420257590e79fb1248bff1fbe1d04fcb8e609287cc80beb5c",
+      "rows": 2655,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UNIONBANK",
+      "file": "UNIONBANK.csv",
+      "sha256": "e0ecdf4dbff56b19e79fe36cf108ce0b5f989d10b3ca038969e915e5e654489a",
+      "rows": 899,
+      "first": "2022-01-26 00:00:00",
+      "last": "2025-11-05 00:00:00"
+    },
+    {
+      "symbol": "UNIONCAP",
+      "file": "UNIONCAP.csv",
+      "sha256": "b2842da0a3025b3b9c9f1226893f364762885da9ddf919a2668e7985b30c6298",
+      "rows": 2693,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UNIONINS",
+      "file": "UNIONINS.csv",
+      "sha256": "938e69117f9fb0c45a5424e5a54e316bff2783ca9b26646dd0cec07f84d053ff",
+      "rows": 964,
+      "first": "2022-01-16 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "UNIQUEHRL",
+      "file": "UNIQUEHRL.csv",
+      "sha256": "98d2c9f063d9db6b8d660bf64ceab71af6887f8f3266ed680e68374d5b3b0e8d",
+      "rows": 2679,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UNITEDFIN",
+      "file": "UNITEDFIN.csv",
+      "sha256": "1e470dab1963708aec5611dc2e0e48251e6b0c86ec0f0b81f7b3190c6172f387",
+      "rows": 2566,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UNITEDINS",
+      "file": "UNITEDINS.csv",
+      "sha256": "1687eb87ea7da03950c2cd322e729344286e0c080d96c1fff0e9d01977722f7f",
+      "rows": 2613,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UPGDCL",
+      "file": "UPGDCL.csv",
+      "sha256": "4f97edecfc65887c1ffa8a12c2bcbdff8a1f469c8a727551678ada50b3fca452",
+      "rows": 2069,
+      "first": "2015-04-05 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "USMANIAGL",
+      "file": "USMANIAGL.csv",
+      "sha256": "3be248a5bc28b33685f9b7adff6b46fa1a84e894d3d9f6318ef0dc726d6c9d91",
+      "rows": 2666,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UTTARABANK",
+      "file": "UTTARABANK.csv",
+      "sha256": "147a6a3452f1571c003e7b69a649553a41a547c1461ef39a1f448d17671399f1",
+      "rows": 2705,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "UTTARAFIN",
+      "file": "UTTARAFIN.csv",
+      "sha256": "5bd3daaff890e893d9dbad3e4ad2f948d32d2c591c502012d2490968cb38dbc7",
+      "rows": 2535,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "VAMLRBBF",
+      "file": "VAMLRBBF.csv",
+      "sha256": "674721e33fbb6e101fa32ba202b64c4856953d66d37f8e3ccd79c2122f253328",
+      "rows": 1426,
+      "first": "2016-12-05 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "VFSTDL",
+      "file": "VFSTDL.csv",
+      "sha256": "8bfa7173ac505aa0f3f0bd374ebb448d7253edd0923e505340d3a554e1269a2e",
+      "rows": 1544,
+      "first": "2018-09-09 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "WALTONHIL",
+      "file": "WALTONHIL.csv",
+      "sha256": "3f6ebf339c1595b91e31ba5850c33f90d4d2e8029e6a6806c536d5a790e2e0e7",
+      "rows": 1216,
+      "first": "2020-09-23 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "WATACHEM",
+      "file": "WATACHEM.csv",
+      "sha256": "f4fdd0b42ac0337ccc5f044dfedeef6415bde9cf0b5606a9180c0f70bc7ae9c4",
+      "rows": 2209,
+      "first": "2014-05-15 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "WEBCOATS",
+      "file": "WEBCOATS.csv",
+      "sha256": "033ca7bdefc3706e4509e46f789f47840225678a082043923fbcd8c306e98ecc",
+      "rows": 438,
+      "first": "2024-03-11 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "WMSHIPYARD",
+      "file": "WMSHIPYARD.csv",
+      "sha256": "580da879ca4f3a25a1503a674d4c98086847778f4248a65f407fe36382afe978",
+      "rows": 2192,
+      "first": "2014-11-02 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "WONDERTOYS",
+      "file": "WONDERTOYS.csv",
+      "sha256": "129c18d8923f2f5ea06fa6140c14b5c932c18d6d799516e56a0492dc6f07a844",
+      "rows": 436,
+      "first": "2024-01-28 00:00:00",
+      "last": "2026-01-22 00:00:00"
+    },
+    {
+      "symbol": "YPL",
+      "file": "YPL.csv",
+      "sha256": "cde50a8fba6cd7e87a003a02fbc8bb3943f9f2fee556ccf73f7e7bed7726828b",
+      "rows": 1739,
+      "first": "2016-09-22 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ZAHEENSPIN",
+      "file": "ZAHEENSPIN.csv",
+      "sha256": "30a1ebb3a5bd973e457cdf9099d5f5697ad68108cd85e50298f471d8e1aff020",
+      "rows": 2040,
+      "first": "2015-03-25 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ZAHINTEX",
+      "file": "ZAHINTEX.csv",
+      "sha256": "c2100027876925129e1e8db1ddd1ed898e020757ed71e5c80a2450a7ac9b30d6",
+      "rows": 2550,
+      "first": "2012-10-01 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    },
+    {
+      "symbol": "ZEALBANGLA",
+      "file": "ZEALBANGLA.csv",
+      "sha256": "3b035c45f2783084926d32f9e9c7bcfff7e88ecb9170f3898aacc82817ab6994",
+      "rows": 2377,
+      "first": "2012-10-02 00:00:00",
+      "last": "2024-02-20 00:00:00"
+    }
+  ]
+}

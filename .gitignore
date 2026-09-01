@@ -2,3 +2,4 @@
 # Reports, manifests and CSV ledgers ARE committed: they are the evidence.
 *.parquet
 __pycache__/
+data/raw/merged_eod/

@@ -32,6 +32,7 @@ FLAGS = {
     "LOCKED_RUN": "part of a run of >= threshold locked bars (circuit/floor proxy)",
     "STALE_RUN": "part of a run of >= threshold identical closes",
     "LARGE_OVERNIGHT_GAP": "|log(open/prev_close)| above threshold — possible corporate action",
+    "FLOOR_ERA": "inside the price-floor regime — separate, never pool with free-market periods",
     "SESSION_FIRST_BAR": "first bar of a trading day (gap semantics differ)",
 }
 
@@ -79,9 +80,12 @@ def audit(df: pd.DataFrame, cfg: C.Config = C.DEFAULT) -> tuple[pd.DataFrame, pd
     # ---- calendar / session (UNVERIFIED assumptions — flagged, and excluded
     #      only so that a wrong assumption is visible rather than silent) ----
     have_ts = d["ts"].notna()
-    tod = d["ts"].dt.strftime("%H:%M")
-    in_session = (tod >= C.ASSUMED_SESSION_START) & (tod <= C.ASSUMED_SESSION_END)
-    mark(have_ts & ~in_session, "OUT_OF_SESSION")
+    if C.BAR_FREQUENCY == "MINUTE":
+        # Intraday only: a daily bar carries no time-of-day, so this check would
+        # reject the entire dataset on a technicality.
+        tod = d["ts"].dt.strftime("%H:%M")
+        in_session = (tod >= C.ASSUMED_SESSION_START) & (tod <= C.ASSUMED_SESSION_END)
+        mark(have_ts & ~in_session, "OUT_OF_SESSION")
     wd = d["ts"].dt.weekday
     mark(have_ts & ~wd.isin(C.ASSUMED_TRADING_WEEKDAYS), "NON_TRADING_WEEKDAY")
 
@@ -96,6 +100,10 @@ def audit(df: pd.DataFrame, cfg: C.Config = C.DEFAULT) -> tuple[pd.DataFrame, pd
     d["flag_locked_bar"] = locked
     d["flag_session_first_bar"] = d.groupby(
         [d["symbol"], d["ts"].dt.date], dropna=False)["ts"].transform("min").eq(d["ts"])
+    # Price-floor regime (Round 2 dates). Kept as a column so research can
+    # separate it — pooling a floored market with a free one is meaningless.
+    fa, fb = (pd.Timestamp(x) for x in C.FLOOR_ERA)
+    d["flag_floor_era"] = d["ts"].between(fa, fb).fillna(False)
 
     d["flag_locked_run"] = False
     d["flag_stale_run"] = False
@@ -107,8 +115,11 @@ def audit(df: pd.DataFrame, cfg: C.Config = C.DEFAULT) -> tuple[pd.DataFrame, pd
         d.loc[g.index, "flag_locked_run"] = (lr >= cfg.qa.locked_bar_run_flag).values
         sr = _run_lengths(g["close"].eq(g["close"].shift()).fillna(False))
         d.loc[g.index, "flag_stale_run"] = (sr >= cfg.qa.stale_price_run_flag).values
-        prev_close = g["close"].shift()
-        gap = np.log(g["open"] / prev_close)
+        # Guard the log: a non-positive price (already excluded above) would emit
+        # -inf and a RuntimeWarning. Undefined, not infinite.
+        prev_close = g["close"].shift().where(lambda s: s > 0)
+        open_pos = g["open"].where(g["open"] > 0)
+        gap = np.log(open_pos / prev_close)
         first = g["flag_session_first_bar"].values
         gap = gap.where(pd.Series(first, index=g.index))   # only across day boundaries
         d.loc[g.index, "overnight_gap"] = gap.values
@@ -131,6 +142,21 @@ def _summarize(d: pd.DataFrame, exclusions: pd.DataFrame, cfg: C.Config) -> dict
     expected = _expected_bars_per_day()
     thin_days = bars_per_day[bars_per_day < expected * cfg.qa.min_bars_per_day_ratio]
 
+    # COVERAGE REGIME BREAKS. A dataset stitched from two sources changes what a
+    # cross-sectional statistic even means on the day the universe jumps. Real
+    # DSE data drops 381 -> 88 reporting symbols on 2024-02-22; nothing about
+    # that day is a market event, but every xs_* feature silently changes basis.
+    per_day_symbols = d.loc[have_ts].groupby(days)["symbol"].nunique().sort_index()
+    delta = per_day_symbols.diff()
+    prior = per_day_symbols.shift()
+    ratio = (delta.abs() / prior.where(prior > 0))
+    brk = ratio[ratio > cfg.qa.coverage_break_ratio]
+    coverage_breaks = [
+        {"date": str(dt), "from": int(prior.loc[dt]), "to": int(per_day_symbols.loc[dt]),
+         "change": int(delta.loc[dt])}
+        for dt in brk.index
+    ]
+
     # Listing / delisting: symbols whose first (last) observation is after (before)
     # the global first (last) day.
     first_seen = d.loc[have_ts].groupby("symbol")["ts"].min()
@@ -151,7 +177,13 @@ def _summarize(d: pd.DataFrame, exclusions: pd.DataFrame, cfg: C.Config) -> dict
             "locked_run": int(d["flag_locked_run"].sum()),
             "stale_run": int(d["flag_stale_run"].sum()),
             "large_overnight_gap": int(d["flag_large_overnight_gap"].sum()),
+            "floor_era": int(d["flag_floor_era"].sum()),
         },
+        "symbols_per_day": {"min": int(per_day_symbols.min()),
+                            "median": int(per_day_symbols.median()),
+                            "max": int(per_day_symbols.max()),
+                            "last": int(per_day_symbols.iloc[-1])},
+        "coverage_breaks": coverage_breaks,
         "thin_days_count": int(len(thin_days)),
         "thin_days_examples": [[str(a), str(b), int(c)] for (a, b), c in thin_days.head(10).items()],
         "survivorship": {
@@ -165,6 +197,8 @@ def _summarize(d: pd.DataFrame, exclusions: pd.DataFrame, cfg: C.Config) -> dict
 
 
 def _expected_bars_per_day() -> int:
+    if C.BAR_FREQUENCY == "DAILY":
+        return 1
     h1, m1 = (int(x) for x in C.ASSUMED_SESSION_START.split(":"))
     h2, m2 = (int(x) for x in C.ASSUMED_SESSION_END.split(":"))
     return max(((h2 * 60 + m2) - (h1 * 60 + m1)) // C.ASSUMED_BAR_MINUTES, 1)
@@ -180,6 +214,7 @@ def report_markdown(summary: dict, source: str, source_sha: str) -> str:
         "",
         "## Source",
         "",
+        f"- bar frequency: **{C.BAR_FREQUENCY}**",
         f"- file: `{source}`",
         f"- sha256: `{source_sha}`",
         f"- rows: {summary['rows_total']:,} · symbols: {summary['symbols']} ·"
@@ -198,9 +233,12 @@ def report_markdown(summary: dict, source: str, source_sha: str) -> str:
     lines += [f"| {k} | {'✅' if v else '❌ **NO**'} |" for k, v in flags.items()]
     lines += [
         "",
-        f"Assumed session {C.ASSUMED_SESSION_START}–{C.ASSUMED_SESSION_END}, "
-        f"{C.ASSUMED_BAR_MINUTES}-minute bars ⇒ {summary['expected_bars_per_day_assumed']} "
-        "bars/day expected.",
+        (f"Assumed session {C.ASSUMED_SESSION_START}–{C.ASSUMED_SESSION_END}, "
+         f"{C.ASSUMED_BAR_MINUTES}-minute bars ⇒ "
+         f"{summary['expected_bars_per_day_assumed']} bars/day expected."
+         if C.BAR_FREQUENCY == "MINUTE" else
+         "Daily bars: one bar per symbol per trading session. Intraday session-window "
+         "checks do not apply; the assumed trading weekdays (Sun–Thu) still do."),
         "",
         "## Exclusions (rows that cannot be trusted as observations)",
         "",
@@ -223,11 +261,32 @@ def report_markdown(summary: dict, source: str, source_sha: str) -> str:
     ]
     flagmap = {"zero_volume": "ZERO_VOLUME", "locked_bar": "LOCKED_BAR",
                "locked_run": "LOCKED_RUN", "stale_run": "STALE_RUN",
-               "large_overnight_gap": "LARGE_OVERNIGHT_GAP"}
+               "large_overnight_gap": "LARGE_OVERNIGHT_GAP",
+               "floor_era": "FLOOR_ERA"}
     for k, n in summary["flags"].items():
         lines.append(f"| `{k}` | {n:,} | {FLAGS[flagmap[k]]} |")
 
     sv = summary["survivorship"]
+    sp = summary["symbols_per_day"]
+    lines += [
+        "",
+        "## ⚠ Coverage regime breaks",
+        "",
+        f"Reporting symbols per day — min {sp['min']} · median {sp['median']} · "
+        f"max {sp['max']} · latest {sp['last']}.",
+        "",
+        "A day where the reporting universe jumps is not a market event: it is the",
+        "dataset changing basis. Every cross-sectional feature (`xs_*`, `market_ret`)",
+        "means something different on either side, and a period straddling a break",
+        "cannot be compared with one that does not.",
+        "",
+    ]
+    if summary["coverage_breaks"]:
+        lines += ["| Date | Symbols before | after | change |", "|---|---|---|---|"]
+        for b in summary["coverage_breaks"]:
+            lines.append(f"| {b['date']} | {b['from']} | {b['to']} | {b['change']:+d} |")
+    else:
+        lines.append("None detected at the configured threshold.")
     lines += [
         "",
         "## Coverage, listing and survivorship",

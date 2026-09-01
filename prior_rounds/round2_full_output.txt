@@ -1,0 +1,144 @@
+Loaded 392 equity-like instruments (index/bond/MF filtered)
+
+==========================================================================
+PART 1 — A-FAMILY: REGIME FAILURE vs COVERAGE ARTIFACT
+==========================================================================
+Universe sizes: FULL P1=302 P2=357 P3=94 | MATCHED (>=150d in all three)=6
+Cost basis for nets in this table: 1.0% round trip
+
+[A1] spike>3.0xADV20, close>20d-high, TP8%/SL4%/15d   (RECONSTRUCTED)
+                 n   raw/tr   net@1%   win      t
+  P1-FULL    3918    0.34%   -0.66%   35%  -5.35
+  P1-MATCH     39    1.86%    0.86%   54%   0.97
+  P2-FULL    3806    0.08%   -0.92%   31%  -6.93
+  P2-MATCH     56   -0.71%   -1.71%   25%  -1.90
+  P3-FULL     395   -1.11%   -2.11%   27%  -5.75
+  P3-MATCH     24   -3.01%   -4.01%   12%  -4.31
+  VERDICT: NEVER WORKED — P3 'failure' is not special; family negative in early periods too
+
+[A2] spike>2.5xADV20, close>15d-high, TP8%/SL4%/15d   (RECONSTRUCTED)
+                 n   raw/tr   net@1%   win      t
+  P1-FULL    5014    0.41%   -0.59%   35%  -5.46
+  P1-MATCH     62    1.06%    0.06%   50%   0.08
+  P2-FULL    4831    0.17%   -0.83%   32%  -7.19
+  P2-MATCH     83   -0.16%   -1.16%   30%  -1.44
+  P3-FULL     526   -0.84%   -1.84%   29%  -5.67
+  P3-MATCH     30   -1.69%   -2.69%   27%  -2.96
+  VERDICT: NEVER WORKED — P3 'failure' is not special; family negative in early periods too
+
+[A3] spike>4.0xADV20, close>30d-high, TP8%/SL4%/15d   (RECONSTRUCTED)
+                 n   raw/tr   net@1%   win      t
+  P1-FULL    2382    0.22%   -0.78%   34%  -4.76
+  P1-MATCH     21    1.16%    0.16%   38%   0.13
+  P2-FULL    2404   -0.06%   -1.06%   31%  -6.27
+  P2-MATCH     28   -0.58%   -1.58%   25%  -1.13
+  P3-FULL     222   -0.79%   -1.79%   28%  -3.43
+  P3-MATCH     13   -4.11%   -5.11%   15%  -3.47
+  VERDICT: NEVER WORKED — P3 'failure' is not special; family negative in early periods too
+
+==========================================================================
+PART 2 — PANIC-DAY REBOUND EVENT STUDY (not a strategy)
+==========================================================================
+Panic days raw=100  independent(>=5d apart)=58
+  pre-floor=40  FLOOR-ERA(separated)=1  post-floor=17
+Def: EW mkt ret<=-2% & >=70% decliners & >=50 names. Entry next OPEN;
+only stocks tradeable+unlocked at entry; 1-day drop>15% -> ex-date suspect, excluded.
+NOTE: horizons 1d/2d are MEASUREMENT ONLY — T+2 saleability makes them
+non-executable live; executable horizons are 3/5/10d.
+
+--- PRE-FLOOR  all-tradeable: 40 usable events (avg 268 names/event, 582 locked-at-entry excluded)
+    H   gross  net.8%   net1%  net1.2%   hit  t(net1%)  drop-top2  exec
+    1  -0.32%  -1.12%  -1.32%   -1.52%   32%     -3.59     -1.57%    no
+    2  -0.29%  -1.09%  -1.29%   -1.49%   35%     -3.59     -1.53%    no
+    3  -0.56%  -1.36%  -1.56%   -1.76%   28%     -3.01     -1.90%   YES
+    5  -0.92%  -1.72%  -1.92%   -2.12%   40%     -2.40     -2.50%   YES
+   10  -0.22%  -1.02%  -1.22%   -1.42%   38%     -1.33     -1.85%   YES
+
+--- PRE-FLOOR  liquid-100: 39 usable events (avg 100 names/event, 101 locked-at-entry excluded)
+    H   gross  net.8%   net1%  net1.2%   hit  t(net1%)  drop-top2  exec
+    1  -0.47%  -1.27%  -1.47%   -1.67%   26%     -3.31     -1.82%    no
+    2  -0.58%  -1.38%  -1.58%   -1.78%   21%     -3.99     -1.89%    no
+    3  -0.95%  -1.75%  -1.95%   -2.15%   23%     -3.74     -2.31%   YES
+    5  -1.70%  -2.50%  -2.70%   -2.90%   31%     -3.26     -3.28%   YES
+   10  -1.21%  -2.01%  -2.21%   -2.41%   38%     -2.22     -2.92%   YES
+
+--- POST-FLOOR all-tradeable: 17 usable events (avg 86 names/event, 44 locked-at-entry excluded)
+    H   gross  net.8%   net1%  net1.2%   hit  t(net1%)  drop-top2  exec
+    1  -0.71%  -1.51%  -1.71%   -1.91%   24%     -4.05     -2.04%    no
+    2  -0.67%  -1.47%  -1.67%   -1.87%   18%     -2.42     -2.35%    no
+    3  -0.78%  -1.58%  -1.78%   -1.98%   29%     -1.87     -2.60%   YES
+    5  -1.87%  -2.67%  -2.87%   -3.07%   35%     -2.42     -3.87%   YES
+   10  -1.49%  -2.29%  -2.49%   -2.69%   29%     -1.83     -3.95%   YES
+
+--- POST-FLOOR liquid-100: 17 usable events (avg 86 names/event, 44 locked-at-entry excluded)
+    H   gross  net.8%   net1%  net1.2%   hit  t(net1%)  drop-top2  exec
+    1  -0.71%  -1.51%  -1.71%   -1.91%   24%     -4.05     -2.04%    no
+    2  -0.67%  -1.47%  -1.67%   -1.87%   18%     -2.42     -2.35%    no
+    3  -0.78%  -1.58%  -1.78%   -1.98%   29%     -1.87     -2.60%   YES
+    5  -1.87%  -2.67%  -2.87%   -3.07%   35%     -2.42     -3.87%   YES
+   10  -1.49%  -2.29%  -2.49%   -2.69%   29%     -1.83     -3.95%   YES
+
+--- FLOOR-ERA  (separated, do not pool): 1 usable events (avg 290 names/event, 63 locked-at-entry excluded)
+    H   gross  net.8%   net1%  net1.2%   hit  t(net1%)  drop-top2  exec
+    1   3.11%   2.31%   2.11%    1.91%  100%       nan       nan%    no
+    2   1.62%   0.82%   0.62%    0.42%  100%       nan       nan%    no
+    3   0.60%  -0.20%  -0.40%   -0.60%    0%       nan       nan%   YES
+    5  -1.52%  -2.32%  -2.52%   -2.72%    0%       nan       nan%   YES
+   10   6.28%   5.48%   5.28%    5.08%  100%       nan       nan%   YES
+
+PROMOTION GATE (pre-registered): candidate-strategy status ONLY if at an
+executable horizon (>=3d): net@1.0% mean>0, t>=2, hit>=60%, survives
+drop-top-2 (>0), survives liquid-100, positive in BOTH pre- and post-floor,
+>=15 independent events per regime. Anything less: remains an observation.
+
+--------------------------------------------------------------------------
+REGISTRY / CAVEATS: A-family & periods RECONSTRUCTED (rerun with exact
+Round 1 defs if they differ). CGT UNKNOWN=0. Unadjusted prices: ex-date
+filter is heuristic (>15% 1-day). Trade-level stats cluster in time —
+Part 1 t-stats optimistic; Part 2 aggregates by event day (correct unit).
+Fresh container: data re-derived from same two GitHub sources as Round 1.
+
+=== SUPPLEMENTARY RUNS ===
+[S1] Matched P1&P2&P3 universe = 6 symbols only (BATBC, GP, PDL, SEMLIBBLSF,
+     SHEPHERD, SQURPHARMA) -> 3-period matched test UNDERPOWERED, declared.
+     P3-covered symbols' history start years: 2012:3, 2017:10, 2018:11,
+     2019:10, 2020:8, 2021:17, 2022:9, 2023:2, 2024:24  (mostly recent listings)
+
+[S2] SAME-SYMBOL P2 vs P3 (59 symbols, >=150d in both):
+      A1  P2 n=393 raw +0.15%  net@1% -0.85%  t=-2.13
+      A1  P3 n=266 raw -1.55%  net@1% -2.55%  t=-6.05
+      A2  P2 n=522 raw +0.05%  net@1% -0.95%  t=-2.71
+      A2  P3 n=354 raw -1.18%  net@1% -2.18%  t=-5.76
+      A3  P2 n=220 raw -0.25%  net@1% -1.25%  t=-2.40
+      A3  P3 n=147 raw -1.12%  net@1% -2.12%  t=-3.42
+     -> raw deterioration survives symbol matching: NOT a coverage artifact.
+
+[S3] PANIC-DAY close -> next-open overnight gap (non-capturable):
+      pre-floor : +0.51% mean over 40 events (23/40 positive)
+      post-floor: +0.83% mean over 17 events (14/17 positive)
+     -> the "rebound" lives entirely in the overnight gap. Decision at close
+        => earliest real fill next open => gap not capturable. Any backtest
+        entering at panic-day close books this gap as fictional profit.
+
+=== S4: REPLICATION OF INDEPENDENT REPORT'S CANDIDATE (panic-regime x-sec MR) ===
+Their def independently re-implemented (liquid top40%, 5s ret<=-15%, >=5% breadth,
+first-crossing +10s cooldown, floor excluded, gap-guard, entry next open).
+Events: pre-floor 32 (theirs: 29 — replicates). POST-FLOOR: 0 events -> no
+persistence evidence possible with this definition.
+
+Oversold cohort, exit bracketed around T+2 legality (cost=1.0% rt):
+  exit close e+1 (ILLEGAL under T+2): gross +2.05%  net +1.05%  t=1.69   <- their headline zone
+  exit close e+2 (earliest LEGAL)   : gross +1.32%  net +0.32%  t=0.43
+  exit close e+3                    : gross +1.19%  net +0.19%  t=0.18
+  exit close e+5                    : gross +0.96%  net -0.04%  t=-0.03
+
+Q1-Q5 cross-sectional spread at LEGAL e+2 exit: +1.49% mean, 75% positive, t=3.15
+  -> phenomenon is REAL, but capturing the spread requires SHORTING Q5 (unavailable
+     in BD). Long-only capturable piece = the +0.32%/t=0.43 row = noise.
+
+RESOLUTION: their +1.98% net was measured at an exit the T+2 rule forbids. Move
+the exit one day to the first legal session and the candidate decays to noise.
+The rebound is front-loaded precisely inside the settlement-blocked window.
+FINAL STATUS: candidate CLOSED as a trade. Archived as frozen rule with re-open
+trigger = intraday netting OR short-selling going live (either legalizes the
+profitable window/leg). Both reports' shared verdict stands: NO proven edge.

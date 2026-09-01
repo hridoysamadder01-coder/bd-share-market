@@ -31,11 +31,15 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", default=None, help="real bar file; omit to use the fixture")
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--frequency", choices=["DAILY", "MINUTE"], default=None)
+    ap.add_argument("--leak-symbols", type=int, default=0,
+                    help="subsample N symbols for the leakage proof (large datasets)")
     a = ap.parse_args()
 
     synthetic = a.input is None
     tag = a.tag or ("synthetic" if synthetic else "run")
     src = a.input or "data/synthetic/synthetic_minute_bars.parquet"
+    freq = a.frequency or ("MINUTE" if synthetic else "DAILY")
 
     if synthetic:
         step("regenerate the synthetic fixture (deterministic seed)",
@@ -43,12 +47,16 @@ def main() -> int:
         step("QA SELF-TEST — every planted defect must be detected",
              ["qa/verify_detectors.py"])
 
-    step("PHASE 1 — data audit", ["qa/run_qa.py", "--input", src, "--tag", tag])
+    step("PHASE 1 — data audit",
+         ["qa/run_qa.py", "--input", src, "--tag", tag, "--frequency", freq])
     step("PHASE 2 — adaptive features + separate outcome labels",
          ["features/run_features.py", "--input", f"results/{tag}_bars_annotated.parquet",
           "--tag", tag])
-    step("NO-LOOKAHEAD PROOF — future corruption + positive control",
-         ["features/leakage_test.py", "--input", src, "--cuts", "8"])
+    leak = ["features/leakage_test.py", "--input", src, "--cuts", "8",
+            "--frequency", freq]
+    if a.leak_symbols:
+        leak += ["--symbols", str(a.leak_symbols)]
+    step("NO-LOOKAHEAD PROOF — future corruption + positive control", leak)
 
     print("\n" + "=" * 72)
     print("PHASES 1–2 COMPLETE — machinery verified.")

@@ -14,6 +14,8 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from bdlib import config as C  # noqa: E402
+
+C.BAR_FREQUENCY = "MINUTE"  # the synthetic fixture is minute-bar data
 from bdlib import io as bio  # noqa: E402
 from bdlib import qa as Q  # noqa: E402
 

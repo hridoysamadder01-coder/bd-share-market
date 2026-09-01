@@ -51,6 +51,22 @@ def _robust_z(s: pd.Series, w: int, eps: float, rel_floor: float = 0.01) -> pd.S
     return z.where(scale > eps)
 
 
+def _robust_z_log(s: pd.Series, w: int, eps: float) -> pd.Series:
+    """Robust z of a MULTIPLICATIVE quantity, taken in log space.
+
+    Volume, turnover and impact span orders of magnitude and sit against zero.
+    Z-scoring their raw levels is a category error on a market like the DSE:
+    an illiquid symbol whose trailing median volume is 1 share produces
+    z ≈ 5·10⁶ the first day something actually trades — a number that says
+    "the denominator was a floor", not "this is unusual".
+
+    In log space the same event is a few units, comparable across a 100-share
+    symbol and a 10-million-share symbol, which is what "unusual for THIS stock"
+    is supposed to mean. Zero stays representable via log1p.
+    """
+    return _robust_z(np.log1p(s.clip(lower=0)), w, eps, rel_floor=0.05)
+
+
 def _run_length_true(mask: pd.Series) -> pd.Series:
     """Consecutive-True count ENDING at each row (0 when False). Causal by construction."""
     out = np.zeros(len(mask), dtype=int)
@@ -76,9 +92,14 @@ def per_symbol_features(g: pd.DataFrame, p: C.FeatureParams) -> pd.DataFrame:
     out["gap_open"] = np.log(g["open"] / close.shift(1))
 
     # --- B. activity, normalised against this symbol's own trailing baseline
-    out["rel_volume_z"] = _robust_z(vol, p.baseline_window, eps)
-    out["rel_turnover_z"] = _robust_z(turn, p.baseline_window, eps)
-    out["range_z"] = _robust_z(out["range_pct"], p.baseline_window, eps)
+    out["rel_volume_z"] = _robust_z_log(vol, p.baseline_window, eps)
+    out["rel_turnover_z"] = _robust_z_log(turn, p.baseline_window, eps)
+    # Same degeneracy rule as activity: a symbol whose trailing daily range is
+    # pinned at zero (floor era, locked stretches) has no range baseline to be
+    # unusual against — real DSE data produced z = 1600 before this guard.
+    med_range = _trailing(out["range_pct"], p.baseline_window).median()
+    out["range_z"] = _robust_z(out["range_pct"], p.baseline_window, eps).where(
+        med_range > p.min_meaningful_vol)
     out["range_compression"] = -out["range_z"]          # positive ⇒ tighter than usual
 
     base_med_vol = _trailing(vol, p.baseline_window).median()
@@ -93,14 +114,19 @@ def per_symbol_features(g: pd.DataFrame, p: C.FeatureParams) -> pd.DataFrame:
     # --- C. volatility regime --------------------------------------------
     rv_short = out["ret_1"].rolling(p.short_window, min_periods=p.short_window).std()
     rv_long = out["ret_1"].rolling(p.vol_window, min_periods=p.vol_window).std()
-    out["vol_regime_ratio"] = rv_short / (rv_long + eps)
+    # A pinned price (floor era, locked stretches) makes rv_long exactly 0, and
+    # rv_short/0 produced ratios of 4363 on real DSE data. Below the resolution
+    # of the price grid the ratio is undefined, not enormous.
+    out["vol_regime_ratio"] = rv_short / rv_long.where(rv_long > p.min_meaningful_vol)
     out["realized_vol"] = rv_long
 
     # --- D. impact / liquidity -------------------------------------------
     # Price move per unit turnover. Undefined — NOT infinite — on a bar with no
     # turnover: "impact per unit of trading" has no meaning when nothing traded.
     amihud = (out["ret_1"].abs() / turn.where(turn > 0))
-    out["amihud_z"] = _robust_z(amihud, p.baseline_window, eps)
+    # Also multiplicative and spanning orders of magnitude — same log rule.
+    out["amihud_z"] = _robust_z(np.log(amihud.where(amihud > 0)),
+                                p.baseline_window, eps, rel_floor=0.05)
     out["hl_spread_proxy"] = 2.0 * (high - low) / (high + low + eps)
     out["illiquidity_persistence"] = (
         (out["amihud_z"] > p.abnormal_z).astype(float)
@@ -127,6 +153,17 @@ def per_symbol_features(g: pd.DataFrame, p: C.FeatureParams) -> pd.DataFrame:
     out["abnormal_persistence"] = _run_length_true(abnormal)
     out["bars_since_abnormal"] = _run_length_true(~abnormal)
 
+    # VALIDITY GUARD (not a signal threshold): a trailing window in which the
+    # symbol barely traded carries no information about what is unusual for it.
+    # Activity z-scores are withheld there rather than reported as huge numbers.
+    active = (vol > 0).astype(float)
+    active_days = _trailing(active, p.baseline_window).sum()
+    thin = active_days < p.min_active_baseline
+    for col in ("rel_volume_z", "rel_turnover_z", "amihud_z",
+                "volume_price_divergence", "accumulation_proxy"):
+        out[col] = out[col].where(~thin)
+    out["baseline_active_days"] = active_days
+
     # History guard: nothing is emitted before the symbol has enough of its own past.
     out.loc[out.index[:p.min_history], :] = np.nan
     return out
@@ -150,6 +187,14 @@ def cross_sectional_features(df: pd.DataFrame, p: C.FeatureParams) -> pd.DataFra
     return out
 
 
+# Unbounded z-family columns. A handful of extreme rows must not dominate a
+# downstream mean or model, so these are winsorised at ±z_clip. The clipping is
+# NOT hidden: run_features.py reports how many values were clipped per feature,
+# and "clipped at 20" is read as "at least 20", never as "exactly 20".
+Z_FAMILY = ["rel_volume_z", "rel_turnover_z", "range_z", "range_compression",
+            "amihud_z", "xs_volume_abnormality", "volume_price_divergence",
+            "vol_regime_ratio"]
+
 FEATURE_COLUMNS = [
     "ret_1", "ret_k", "range_pct", "close_location", "gap_open",
     "rel_volume_z", "rel_turnover_z", "range_z", "range_compression",
@@ -157,7 +202,7 @@ FEATURE_COLUMNS = [
     "vol_regime_ratio", "realized_vol",
     "amihud_z", "hl_spread_proxy", "illiquidity_persistence",
     "volume_price_divergence", "accumulation_proxy", "ret_autocorr_1",
-    "abnormal_persistence", "bars_since_abnormal",
+    "abnormal_persistence", "bars_since_abnormal", "baseline_active_days",
     "xs_rank_rel_volume", "xs_rank_rel_turnover", "xs_volume_abnormality",
     "market_ret", "market_relative_ret", "xs_breadth_abnormal", "xs_symbols_at_ts",
 ]
@@ -176,6 +221,14 @@ def build(df: pd.DataFrame, cfg: C.Config = C.DEFAULT) -> pd.DataFrame:
     feats = pd.concat(parts).sort_index()
     d = pd.concat([d, feats], axis=1)
     d = pd.concat([d, cross_sectional_features(d, p)], axis=1)
+
+    d.attrs["clipped"] = {}
+    for c in Z_FAMILY:
+        if c in d.columns:
+            n = int((d[c].abs() > p.z_clip).sum())
+            if n:
+                d.attrs["clipped"][c] = n
+            d[c] = d[c].clip(-p.z_clip, p.z_clip)
 
     leaked = [c for c in FEATURE_COLUMNS if c.startswith("fwd_")]
     assert not leaked, f"outcome labels leaked into FEATURE_COLUMNS: {leaked}"

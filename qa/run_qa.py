@@ -27,8 +27,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True)
     ap.add_argument("--tag", default="run")
+    ap.add_argument("--frequency", choices=["DAILY", "MINUTE"], default=None,
+                    help="override the bar frequency for this run")
     a = ap.parse_args()
 
+    if a.frequency:
+        C.BAR_FREQUENCY = a.frequency
     p = bio.paths()
     df = bio.load_bars(a.input)
     annotated, exclusions, summary = Q.audit(df, C.DEFAULT)
@@ -42,6 +46,7 @@ def main() -> int:
 
     manifest = bio.write_manifest(f"{a.tag}_qa_manifest.json", {
         "phase": "1_data_foundation",
+        "bar_frequency": C.BAR_FREQUENCY,
         "input": {"path": a.input, "sha256": bio.sha256_file(a.input)},
         "thresholds": C.DEFAULT.qa.__dict__,
         "summary": summary,

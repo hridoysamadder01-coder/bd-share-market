@@ -26,6 +26,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from bdlib import config as C  # noqa: E402
+
 from bdlib import features as F  # noqa: E402
 from bdlib import io as bio  # noqa: E402
 from bdlib import labels as L  # noqa: E402
@@ -73,10 +74,22 @@ def main() -> int:
         "synthetic_minute_bars.parquet"))
     ap.add_argument("--cuts", type=int, default=8)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--frequency", choices=["DAILY", "MINUTE"], default="MINUTE")
+    ap.add_argument("--symbols", type=int, default=0,
+                    help="test on a random subsample of N symbols (0 = all). "
+                         "Causality is a per-symbol + same-timestamp property, so a "
+                         "subsample is a valid proof; the sample is reported.")
     a = ap.parse_args()
 
+    C.BAR_FREQUENCY = a.frequency
     rng = np.random.default_rng(a.seed)
     raw = bio.load_bars(a.input)
+    if a.symbols:
+        syms = np.sort(raw["symbol"].unique())
+        pick = rng.choice(syms, size=min(a.symbols, len(syms)), replace=False)
+        raw = raw[raw["symbol"].isin(pick)].reset_index(drop=True)
+        print(f"subsample: {len(pick)} of {len(syms)} symbols, {len(raw):,} bars — "
+              f"{', '.join(sorted(pick)[:8])}...")
     from bdlib import qa as Q
     annotated, _, _ = Q.audit(raw, C.DEFAULT)
 

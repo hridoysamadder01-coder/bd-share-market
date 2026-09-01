@@ -50,6 +50,7 @@ bd_research/
   data/           raw/ (owner drops real DSE data) · synthetic/ (test fixture)
   qa/             run_qa.py · verify_detectors.py · EXCLUSIONS.csv
   features/       run_features.py · leakage_test.py
+  prior_rounds/   Round 2 script + full output, preserved verbatim
   state_engine/   Phase 3 — designed, not built (STATE_ENGINE_DESIGN.md)
   experiments/    Phase 4–5 — not built
   results/        parquet/csv outputs
@@ -70,12 +71,25 @@ python3 features/leakage_test.py                     # proves no lookahead
 
 Requires `numpy`, `pandas`, `pyarrow`.
 
-## With real DSE data
+## Real DSE data (in place since 2026-09-01)
 
-Drop minute bars in `data/raw/` as CSV or parquet with columns
+Owner-supplied end-of-day CSVs live in `data/raw/merged_eod/` (git-ignored — 36 MB
+of the owner's own data; `data/raw/RAW_MANIFEST.json` carries a sha256 per file so
+any result is traceable to the exact input).
+
+```bash
+python3 data/ingest_dse_eod.py                       # 424 CSVs → 392 equity symbols
+python3 run_phase1_2.py --input data/raw/dse_eod.parquet --tag dse_eod \
+                        --frequency DAILY --leak-symbols 25
+```
+
+**It is daily (EOD) data, not minute.** Every window in the feature layer is
+therefore in days. 861,256 usable bars, 2012-10-01 → 2026-01-22.
+
+To add a different dataset, drop CSV/parquet with columns
 `symbol, ts, open, high, low, close, volume` (+ `turnover`, `trades` if the
 exchange reports them — a derived `close×volume` turnover is marked as derived in
-every report). Then run the same commands with `--input data/raw/<file>`.
+every report) and pass `--input`.
 
 **Before any conclusion**, the unverified-convention flags in `bdlib/config.py`
 (session hours, holiday calendar, corporate actions, tick rules, brokerage) must
@@ -86,3 +100,11 @@ be confirmed against official DSE sources. Every QA report prints them.
 `RESEARCH_STATUS.md` — current phase, what is proved, what is not.
 `REJECTED_CANDIDATES.md` — permanent, append-only.
 `SURVIVING_RESEARCH_LEADS.md` — currently, and honestly, empty.
+
+## What Round 2 already settled (do not re-propose without a reason)
+
+Volume-spike + breakout: **never worked** (~11,000 trades, negative in every
+period). Panic-day rebound: **not capturable** — it lives entirely in the
+overnight gap. The best outside candidate: **closed by T+2** — its profit sat at
+an exit the settlement rule forbids. Details and numbers in
+`REJECTED_CANDIDATES.md`.

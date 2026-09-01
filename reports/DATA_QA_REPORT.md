@@ -5,10 +5,11 @@
 
 ## Source
 
-- file: `data/synthetic/synthetic_minute_bars.parquet`
-- sha256: `3e35dc84133d3cb40e3f03027d334dfa2f1a29d13dde8720ddce897b4cc2114e`
-- rows: 65,668 · symbols: 10 · observed trading days: 25
-- date range: 2026-01-04 10:00:00 → 2026-02-05 14:29:00
+- bar frequency: **DAILY**
+- file: `data/raw/dse_eod.parquet`
+- sha256: `1ea29090ba0d67e94caf96cc17824bcb1ed73d3a377b383a3ac9c3b3327fba3d`
+- rows: 862,073 · symbols: 392 · observed trading days: 3172
+- date range: 2012-10-01 00:00:00 → 2026-01-22 00:00:00
 - turnover column derived (close×volume) rather than exchange-reported: **False**
 
 ## ⚠ Unverified market conventions
@@ -22,37 +23,51 @@ Any conclusion that depends on one of these is provisional until the flag is tru
 | CORP_ACTIONS_AVAILABLE | ❌ **NO** |
 | TICK_RULES_VERIFIED | ❌ **NO** |
 | BROKERAGE_VERIFIED | ❌ **NO** |
+| STRUCTURE_VERIFIED | ❌ **NO** |
 
-Assumed session 10:00–14:30, 1-minute bars ⇒ 270 bars/day expected.
+Daily bars: one bar per symbol per trading session. Intraday session-window checks do not apply; the assumed trading weekdays (Sun–Thu) still do.
 
 ## Exclusions (rows that cannot be trusted as observations)
 
-Total excluded: **21** of 65,668
+Total excluded: **817** of 862,073
 
 | Code | Rows | Meaning |
 |---|---|---|
-| `DUP_BAR` | 8 | duplicate (symbol, ts) |
-| `OHLC_INCONSISTENT` | 5 | high < max(open,close) or low > min(open,close) or high < low |
-| `NAN_FIELD` | 3 | missing/non-numeric OHLCV field |
-| `OUT_OF_SESSION` | 3 | timestamp outside the ASSUMED session window (unverified) |
-| `NONPOS_PRICE` | 2 | price <= 0 |
+| `NON_TRADING_WEEKDAY` | 775 | timestamp on an assumed non-trading weekday (unverified) |
+| `OHLC_INCONSISTENT` | 41 | high < max(open,close) or low > min(open,close) or high < low |
+| `NONPOS_PRICE` | 3 | price <= 0 |
 
 ## Market-state flags (kept in the dataset, never excluded)
 
 | Flag | Bars | Meaning |
 |---|---|---|
-| `zero_volume` | 40 | bar with zero volume |
-| `locked_bar` | 15 | open==high==low==close (locked / one-price bar) |
-| `locked_run` | 15 | part of a run of >= threshold locked bars (circuit/floor proxy) |
-| `stale_run` | 44 | part of a run of >= threshold identical closes |
-| `large_overnight_gap` | 1 | |log(open/prev_close)| above threshold — possible corporate action |
+| `zero_volume` | 82 | bar with zero volume |
+| `locked_bar` | 81,474 | open==high==low==close (locked / one-price bar) |
+| `locked_run` | 68,235 | part of a run of >= threshold locked bars (circuit/floor proxy) |
+| `stale_run` | 54,075 | part of a run of >= threshold identical closes |
+| `large_overnight_gap` | 309 | |log(open/prev_close)| above threshold — possible corporate action |
+| `floor_era` | 119,520 | inside the price-floor regime — separate, never pool with free-market periods |
+
+## ⚠ Coverage regime breaks
+
+Reporting symbols per day — min 86 · median 297 · max 384 · latest 91.
+
+A day where the reporting universe jumps is not a market event: it is the
+dataset changing basis. Every cross-sectional feature (`xs_*`, `market_ret`)
+means something different on either side, and a period straddling a break
+cannot be compared with one that does not.
+
+| Date | Symbols before | after | change |
+|---|---|---|---|
+| 2020-03-25 | 327 | 243 | -84 |
+| 2024-02-22 | 381 | 88 | -293 |
 
 ## Coverage, listing and survivorship
 
-- days with fewer than half the expected bars: **1**
-- symbols below the coverage threshold: **1** [('SYN09', 0.76)]
-- late listings (first bar after the global start): 1 [('SYN09', '2026-01-12 10:00:00')]
-- early endings (last bar before the global end): 0 []
+- days with fewer than half the expected bars: **0**
+- symbols below the coverage threshold: **180** [('SHARPIND', 0.093), ('TECHNODRUG', 0.115), ('CRAFTSMAN', 0.126), ('HIMADRI', 0.136), ('WONDERTOYS', 0.137), ('WEBCOATS', 0.138), ('ASIATICLAB', 0.14), ('BENGALBISC', 0.141), ('NRBBANK', 0.142), ('MKFOOTWEAR', 0.142)]
+- late listings (first bar after the global start): 155 [('AAMRANET', '2017-10-02 00:00:00'), ('ACFL', '2018-08-06 00:00:00'), ('ACHIASF', '2024-01-28 00:00:00'), ('ACMELAB', '2016-06-07 00:00:00'), ('ACMEPL', '2021-11-14 00:00:00')]
+- early endings (last bar before the global end): 301 [('AAMRATECH', '2024-02-20 00:00:00'), ('ABBANK', '2024-02-20 00:00:00'), ('ACI', '2024-02-20 00:00:00'), ('ACIFORMULA', '2024-02-20 00:00:00'), ('ACMELAB', '2024-02-20 00:00:00')]
 
 > Survivorship note: any cross-sectional statistic computed over symbols that
 > exist for the whole range is biased. Research must either include partial-life

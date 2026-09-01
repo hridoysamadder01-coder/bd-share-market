@@ -13,10 +13,23 @@ For symbol *s* at bar *t*:
 - **Trailing baseline** = the window **[t−W, t−1]** — it *excludes bar t*, implemented as
   `series.shift(1).rolling(W)`. The current bar never dilutes the baseline it is judged against.
 - **Robust z**: `z_t = (x_t − med) / scale`, `med` = median of the trailing window,
-  `scale = max(1.4826·MAD, 0.01·|med|)`. **NaN** when `scale ≈ 0` — a locked or
+  `scale = max(1.4826·MAD, rel_floor·|med|)`. **NaN** when `scale ≈ 0` — a locked or
   zero-volume stretch has no dispersion, so "unusual" is undefined rather than infinite.
   (Without that rule z reached 4·10¹³ on the fixture; the numeric-sanity gate in
   `run_features.py` now fails the build if any |value| exceeds 10⁶.)
+- **Activity z is taken in LOG SPACE** (`_robust_z_log`, `log1p`). Volume, turnover
+  and impact are multiplicative and span orders of magnitude. On real DSE data,
+  z-scoring raw levels gave `rel_volume_z ≈ 5·10⁶` for an illiquid symbol whose
+  trailing median volume was ~1 share — a number describing the denominator floor,
+  not the market (`REJECTED_CANDIDATES.md` I-004).
+- **Validity guards** (not signal thresholds — they decide when a measurement is
+  *defined*): fewer than `min_active_baseline` = 20 traded days in the trailing
+  window ⇒ activity z-scores are NaN; trailing σ or median range below
+  `min_meaningful_vol` = 1e-4 (price pinned at grid resolution) ⇒ `vol_regime_ratio`
+  and `range_z` are NaN.
+- **Winsorisation**: the unbounded z-family is clipped to ±20, and the number of
+  clipped values is reported per feature on every run (real DSE data: 2,827 cells
+  = 0.011%). "Clipped at 20" reads as "at least 20", never as "exactly 20".
 - Nothing is emitted for a symbol's first `min_history` bars.
 - Cross-sectional features compare symbols **at the same timestamp** — same-time
   information, never later.
@@ -35,8 +48,8 @@ For symbol *s* at bar *t*:
 
 | Feature | Definition | Reads as |
 |---|---|---|
-| `rel_volume_z` | robust z of `v_t` vs trailing W | how unusual **this stock's** volume is **now** — not "> some global X" |
-| `rel_turnover_z` | robust z of `q_t` vs trailing W | same in money terms (size-neutral across price levels) |
+| `rel_volume_z` | robust z of `log1p(v_t)` vs trailing W | how unusual **this stock's** volume is **now** — not "> some global X" |
+| `rel_turnover_z` | robust z of `log1p(q_t)` vs trailing W | same in money terms (size-neutral across price levels) |
 | `range_z` | robust z of `range_pct` | range expansion vs its own norm |
 | `range_compression` | `−range_z` | positive ⇒ tighter than usual (coiling) |
 | `volume_persistence` | share of the last k bars with `v > median(v over trailing W)` | is elevated activity *sustained* or a single print |
@@ -53,7 +66,7 @@ For symbol *s* at bar *t*:
 
 | Feature | Definition | Reads as |
 |---|---|---|
-| `amihud_z` | robust z of `\|ret_1\| / q_t` (NaN when `q_t = 0`) | price move bought per unit of money — rising = thinning book |
+| `amihud_z` | robust z of `log(\|ret_1\| / q_t)` (NaN when `q_t = 0`) | price move bought per unit of money — rising = thinning book |
 | `hl_spread_proxy` | `2(h_t − l_t)/(h_t + l_t)` | crude spread/friction proxy from bars alone |
 | `illiquidity_persistence` | share of the last k bars with `amihud_z > 2` | is the thinness sustained |
 
@@ -83,6 +96,7 @@ For symbol *s* at bar *t*:
 |---|---|---|
 | `abnormal_persistence` | consecutive bars **ending at t** with `rel_volume_z > 2` | transient spike vs a state that is *holding* |
 | `bars_since_abnormal` | consecutive bars ending at t **without** abnormality | age of the current quiet state |
+| `baseline_active_days` | traded days inside the trailing window | validity meter — how much of the baseline is real |
 
 ## Outcome labels — NEVER features
 
@@ -102,7 +116,7 @@ every time nothing happened, which is the failed-footprint denominator.
 ## Data-quality flags carried alongside (from Phase 1)
 
 `flag_zero_volume` · `flag_locked_bar` · `flag_locked_run` · `flag_stale_run` ·
-`flag_large_overnight_gap` · `flag_session_first_bar`. These are **market states**,
+`flag_large_overnight_gap` · `flag_session_first_bar` · `flag_floor_era`. These are **market states**,
 not errors: research must be able to condition on them (e.g. exclude locked
 stretches from a baseline, or study them deliberately).
 

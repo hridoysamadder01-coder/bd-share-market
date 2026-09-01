@@ -69,8 +69,13 @@ def main() -> int:
     bad_big = {c: v for c, v in exploded.items() if v > 1e6}
     if bad_inf or bad_big:
         raise SystemExit(f"FEATURE SANITY FAILED — infinite: {bad_inf}; |value|>1e6: {bad_big}")
-    print(f"feature sanity: no infinities, max |value| = "
-          f"{max(exploded.values()):.4g} ({max(exploded, key=exploded.get)})")
+    top = sorted(exploded.items(), key=lambda kv: -kv[1])[:5]
+    clipped = feat.attrs.get("clipped", {})
+    tot = int(sum(clipped.values()))
+    print("feature sanity: no infinities · largest |values|: "
+          + ", ".join(f"{c}={v:.4g}" for c, v in top))
+    print(f"winsorised at ±{C.DEFAULT.features.z_clip:g}: {tot:,} values "
+          f"({tot / max(len(feat) * len(fcols), 1):.4%} of cells) {clipped}")
 
     manifest = bio.write_manifest(f"{a.tag}_features_manifest.json", {
         "phase": "2_adaptive_features",
@@ -81,6 +86,8 @@ def main() -> int:
         "rows_in": int(len(df)),
         "rows_after_qa_exclusion": int(len(feat)),
         "n_features": len(fcols),
+        "winsorised_counts": feat.attrs.get("clipped", {}),
+        "z_clip": C.DEFAULT.features.z_clip,
         "n_label_columns": len(L.label_columns(C.DEFAULT)),
         "outputs": [os.path.basename(features_out), os.path.basename(labels_out),
                     os.path.basename(cov_out)],
