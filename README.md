@@ -75,6 +75,23 @@ python3 features/leakage_test.py                     # proves no lookahead
 
 Requires `numpy`, `pandas`, `pyarrow`.
 
+## Minute-level data (QA only, 2026-09-02)
+
+A public trade-minute dataset ([Muntasib-creator/DSE_dataset](https://github.com/Muntasib-creator/DSE_dataset),
+MIT, 2015-10 → 2024-01, 417 symbol files, 43.1 M rows) was put through Phase-1 QA
+**only** — no signal, footprint or hypothesis was tested on it. The data is not in
+this repo (2.2 GB); clone it and run:
+
+```bash
+git clone --depth 1 https://github.com/Muntasib-creator/DSE_dataset /path/to/dse_minute_data
+python3 qa/run_minute_qa.py --input /path/to/dse_minute_data --eod data/raw/dse_eod.parquet
+```
+
+Report: `reports/MINUTE_DATA_QA_REPORT.md` · machine-readable: `qa/MINUTE_QA_ISSUES.json`.
+It is **irregular trade-minute data**, carries board-snapshot rows with whole-session
+volumes, has 25 whole-market capture gaps, and revealed a **first floor-price regime
+from 2020-03-19** that `config.FLOOR_ERA` does not contain (owner action D-11).
+
 ## Real DSE data (in place since 2026-09-01)
 
 Owner-supplied end-of-day CSVs live in `data/raw/merged_eod/` (git-ignored — 36 MB
