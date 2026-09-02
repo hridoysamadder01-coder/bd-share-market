@@ -173,6 +173,95 @@ row, so a single year or the penny end cannot carry a candidate unnoticed.
 `PHASE5_CANDIDATES.csv` = tier A only. The funnel counts (frozen → fresh →
 tier A) are printed on every run and written to the manifest.
 
+## v2 — after the adversarial review of the amended run (2026-09-02)
+
+The amended run above was reviewed by five independent lenses (lookahead,
+mechanical artefacts, independent recomputation, statistical validity,
+sceptical reader). The recomputation lens reproduced every published number
+exactly; the other four converged on defects in what those numbers *measure*.
+All of the following were changed after seeing results, and none of them makes
+anything look better.
+
+**Defect 1 — the fresh filter was one-sided.** For down-outcomes it removed
+only rows with a recent DOWN door, so a footprint firing on or just after a
+limit-UP day was scored as a doorstep for the limit-down that followed. That
+reversal carried essentially all of the amended run's down-door candidates:
+F14 → limit_down k=5 had 38 of its 42 hits on rows with an up-door open in
+t−5…t; with no door open either way it had 4 hits in 708 rows (lift 1.65,
+t 0.8). **Fix:** a `fresh_both` population (no door of either direction in
+t−5…t, applied to occurrences and base) is now the candidacy population. The
+`any` and one-sided `fresh` results are still computed and written.
+
+**Defect 2 — the limit proxy had no far bound.** A drop of −20% or −33% is
+impossible under a daily price limit; on this data such days open at the new
+level, do not close at the low, and are followed by an up day — ex-date /
+bonus reference-price resets (no corporate-action table exists, D-4). They
+were 27–50% of the "limit-down" days. **Fix:** a limit hit is counted only *at*
+the band (95%…100%+0.25% of it); a beyond-band day is a corporate-action
+suspect, never a hit, and any window containing one is unmeasurable. Rows with
+such a day in t−5…t are excluded from every population.
+
+**Defect 3 — F08 and F16 were unsigned.** An idiosyncratic *drop* was being
+scored as a doorstep for a limit-*up* (a bounce), and the "already moved"
+reference was a mixture. **Fix:** F08u/F08d and F16u/F16d; a signed footprint
+must beat the same-sign reference, an unsigned one must beat the *stronger* of
+the two.
+
+**Defect 4 — today's shock was not in the match.** σ_prev excludes session t,
+so a row selected on today's return sat in a stratum whose comparators had not
+just moved; F08's lift fell from 2.0 to 1.2 when today's |ret|/σ quintile was
+added to the match. **Fix:** a third, shock-matched base (date × σ quintile ×
+|ret_1|/σ quintile); a candidate must clear it too.
+
+**Defect 5 — serial correlation.** Per-date excess series had lag-1
+autocorrelation up to 0.63 for k ≥ 5 and persistent footprints; the iid t was
+overstated by 20–50%. **Fix:** Newey-West t (Bartlett, L = 10) is the gated
+statistic; the iid t is kept beside it.
+
+**Defect 6 — one door counted many times.** A persistent footprint fires on
+several sessions before one crash; F12 → limit_down k=10 had 102 "hits" that
+were 28 distinct (symbol, door-date) events on 25 symbols. **Fix:** distinct
+door events are counted, reported, and gated (≥ 30).
+
+**Defect 7 — nested horizons.** limit_up within 10 contains within 5 contains
+within 1; for up-doors the k=3/5/10 rows were the k=1 row diluted. **Fix:**
+the *incremental* outcome (first door in (k_prev, k]) is scored, and a horizon
+above 1 stands as a finding only if its increment passes lift and t on its
+own.
+
+**Defect 8 — "beats both references" was a point comparison** (21 of 63 rows
+passed by < 10%). **Fix:** a date-block bootstrap lower 2.5% bound of the lift
+ratio must exceed 1, and footprints that are subsets of a reference (F07, F17,
+F01, F14 ⊂ F15; F08u ⊂ F16u; …) also report a within-parent paired increment.
+
+**Also added:** a placebo (every footprint shifted +20 sessions) to calibrate
+what the gates pass on stale information; unmeasurable-share per row; FDR
+restricted to door outcomes and non-reference footprints and reported as
+non-binding; `activity` measurability aligned with the price outcomes; the
+recall base restricted to pre-door rows; survivorship stated (no symbol in the
+universe ends before 2019 — discovery is conditioned on survival); the
+`turnover derived` line in the Phase-1 QA report corrected; three footprints
+renamed to what they measure (F03/F04 "dip recovered on volume", F12
+"volume-weighted closing strength, 10 sessions", F14 "volume without range
+expansion").
+
+**Pre-registration, honestly stated.** The frozen sections above were written
+before the first run, but design, code and results were committed together
+after it (commit `56fa8ab`), so pre-registration rests on the author's word,
+not on version history. Every amendment and every v2 change was made after
+seeing results. The sealed holdout — which Round 2 and Phase 4 both inspected
+descriptively before this seal existed, both ledgered — is the only real test.
+
+### v2 candidate criterion (frozen before the v2 run)
+
+On `fresh_both`, DISCOVERY, door outcomes, non-reference footprints:
+n ≥ 200 · dates ≥ 30 · **distinct doors ≥ 30** · vol-matched **and**
+shock-matched lift ≥ 1.5 · Newey-West t ≥ 3 on both · bootstrap lower bound of
+the lift ratio > 1 vs F15 **and** vs the signed / stronger F16 · k = 1 or the
+incremental window passes. `PHASE5_CANDIDATES.csv` carries one primary row per
+(footprint, direction) — the shortest passing horizon — with every other
+passing horizon listed, and a fixed Phase-5 test specification per row.
+
 ## What Phase 4.5 does NOT do
 
 - No BUY/SELL, no position, no direction, no size.

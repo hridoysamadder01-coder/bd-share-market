@@ -10,7 +10,7 @@
 - sha256: `1ea29090ba0d67e94caf96cc17824bcb1ed73d3a377b383a3ac9c3b3327fba3d`
 - rows: 862,073 · symbols: 392 · observed trading days: 3172
 - date range: 2012-10-01 00:00:00 → 2026-01-22 00:00:00
-- turnover column derived (close×volume) rather than exchange-reported: **False**
+- turnover column derived (close×volume) rather than exchange-reported: **True** — `data/ingest_dse_eod.py` derives it; the source CSVs carry no turnover column. *(This line originally printed **False** because the QA loader saw a `turnover` column in the ingested parquet and could not tell it was derived. Corrected 2026-09-02 after the Phase 4.5 review caught the inconsistency; `rel_turnover_z` is therefore a near-copy of `rel_volume_z`, correlation 0.988.)*
 
 ## ⚠ Unverified market conventions
 

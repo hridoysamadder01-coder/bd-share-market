@@ -93,6 +93,13 @@ CIRCUIT_BANDS_UNVERIFIED = (          # (previous close ≤ X, ± band)
     (200.0, 0.10), (500.0, 0.0875), (1000.0, 0.075),
     (2000.0, 0.0625), (5000.0, 0.05), (float("inf"), 0.0375))
 CIRCUIT_PROXY_FRACTION = 0.95         # close-to-close move ≥ 95% of the band ⇒ limit-proxy hit
+# A close-to-close move BEYOND the band (+ tolerance) is impossible under a
+# daily price limit; on this data such days behave like ex-date reference-price
+# resets (open already at the new level, close not at the low, next day up).
+# They are CORPORATE-ACTION SUSPECTS, never doors, and a window containing one
+# is unmeasurable. Review of the first Phase 4.5 run found 27–50% of the
+# unbounded "limit-down" days were of this kind.
+LIMIT_BAND_TOLERANCE = 0.0025
 
 REQUIRED_COLUMNS = ("symbol", "ts", "open", "high", "low", "close", "volume")
 OPTIONAL_COLUMNS = ("turnover", "trades")

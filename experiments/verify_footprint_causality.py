@@ -89,7 +89,7 @@ def main() -> int:
         n_before = int(before.sum())
         # A. footprints
         bad = []
-        for c in PH.FP_IDS + ["guard"]:
+        for c in PH.FP_IDS + ["PLACEBO_" + x for x in PH.FP_IDS] + ["guard"]:
             a, b = base_fp.loc[before, c].to_numpy(), fp.loc[before, c].to_numpy()
             if not np.array_equal(a, b):
                 bad.append(c)
@@ -103,7 +103,8 @@ def main() -> int:
         dates = np.array(sorted(d["ts"].unique()))
         safe_cut = dates[max(0, np.searchsorted(dates, np.datetime64(cut)) - (max(PH.HORIZONS) + 6))]
         rows = fwd_base.index[fwd_base.index.get_level_values("ts") <= safe_cut]
-        ycols = [c for c in fwd_base.columns if c.startswith(("y_", "door_", "recent_"))]
+        ycols = [c for c in fwd_base.columns
+                 if c.startswith(("y_", "off_", "door_", "recent_", "ca_day"))]
         bad_y = []
         for c in ycols:
             a = fwd_base.loc[rows, c].to_numpy(dtype=float)
@@ -123,11 +124,55 @@ def main() -> int:
               f"({len(rows):,} rows): {'YES' if not bad_y else 'NO — ' + str(bad_y)}"
               f" · unbounded control caught: {'YES' if unbounded_caught else 'NO'}")
 
+    # C. SINGLE-CELL LOCALITY (review LK-5): perturb ONE close at (symbol, D)
+    #    and assert the exact change-set — outcomes may change only at grid
+    #    offsets [D-k, D] for that symbol (windows containing D or D+1, or
+    #    based at D), door/ca flags only at D or D+1, recent_* only at
+    #    [D, D+6], and nothing at all for any other symbol.
+    dates = np.array(sorted(d["ts"].unique()))
+    sym = syms[len(syms) // 2]
+    D = dates[len(dates) // 2]
+    dc = d.copy()
+    cell = (dc["symbol"] == sym) & (dc["ts"] == D)
+    assert cell.sum() == 1, "perturbation cell not found"
+    dc.loc[cell, "close"] = dc.loc[cell, "close"] * 1.37
+    fwd_c = PH.forward_outcomes(dc.join(base_fp.drop(columns=["symbol", "ts", "LEAKY_control"])))
+    fwd_c = fwd_c.set_index(["symbol", "ts"]).reindex(real_rows)
+    Dpos = int(np.searchsorted(dates, D))
+    viol = []
+    for c in ycols:
+        a = np.nan_to_num(fwd_base[c].to_numpy(dtype=float), nan=-9)
+        b = np.nan_to_num(fwd_c[c].to_numpy(dtype=float), nan=-9)
+        changed = np.where(a != b)[0]
+        if len(changed) == 0:
+            continue
+        idx = fwd_base.index[changed]
+        other = [x for x in idx if x[0] != sym]
+        if other:
+            viol.append((c, f"{len(other)} rows of other symbols changed"))
+            continue
+        offs = np.array([int(np.searchsorted(dates, np.datetime64(x[1]))) - Dpos for x in idx])
+        if c.startswith(("y_", "off_")):
+            k = int(c.rsplit("_", 1)[1])
+            lo, hi = -k, 0
+        elif c.startswith(("door_", "ca_day")):
+            lo, hi = 0, 1
+        else:                                   # recent_*
+            lo, hi = 0, PH.FP["win"] + 1
+        if offs.min() < lo or offs.max() > hi:
+            viol.append((c, f"changed at offsets {sorted(set(offs.tolist()))}, allowed [{lo},{hi}]"))
+    c_ok = not viol
+    failures += 0 if c_ok else 1
+    print(f"\nsingle-cell perturbation ({sym} @ {pd.Timestamp(D).date()}, close ×1.37):")
+    print("  C change-set confined to the expected offsets: "
+          + ("YES" if c_ok else "NO — " + "; ".join(f"{c}: {m}" for c, m in viol)))
+
     bio.write_manifest("phase45_causality_manifest.json", {
         "phase": "4.5_footprint_causality_proof", "symbols": N_SYMBOLS, "cuts": list(CUTS),
         "footprints_checked": PH.FP_IDS + ["guard"],
-        "positive_controls": ["F01 shifted -1 (leaky footprint)",
+        "positive_controls": ["next session's close as a footprint (leaky)",
                               "max future close (unbounded outcome)"],
+        "single_cell_locality": "PASS" if c_ok else "FAIL",
         "result": "PASS" if failures == 0 else f"FAIL ({failures} cuts)",
     })
     print("\nRESULT:", "PASS — every footprint is causal, every outcome is bounded, "
