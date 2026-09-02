@@ -1,0 +1,49 @@
+{
+  "phase": "4.5_footprint_causality_proof",
+  "symbols": 25,
+  "cuts": [
+    "2014-06-30",
+    "2016-03-31",
+    "2017-12-28"
+  ],
+  "footprints_checked": [
+    "F01_quiet_volume",
+    "F02_quiet_volume_persistent",
+    "F03_absorption",
+    "F04_absorption_persistent",
+    "F05_departure_calm",
+    "F06_departure_any",
+    "F07_idio_activity",
+    "F08_idio_move",
+    "F09_idio_quiet_volume",
+    "F10_coil_then_volume",
+    "F11_closing_strength",
+    "F12_accumulation_proxy",
+    "F13_volume_price_divergence",
+    "F14_turnover_no_range",
+    "F15_REF_abnormal_volume",
+    "F16_REF_already_moved",
+    "F17_abnormal_volume_persistent",
+    "F18_quiet_volume_repeat",
+    "guard"
+  ],
+  "positive_controls": [
+    "F01 shifted -1 (leaky footprint)",
+    "max future close (unbounded outcome)"
+  ],
+  "result": "PASS",
+  "written_at_utc": "2026-09-02T16:36:33.545938+00:00",
+  "git_commit": "ef95effdc50cefc075aac63659f760df70e05812",
+  "python": "3.11.15",
+  "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
+  "pandas": "3.0.5",
+  "unverified_flags": {
+    "SESSION_VERIFIED": false,
+    "CALENDAR_VERIFIED": false,
+    "CORP_ACTIONS_AVAILABLE": false,
+    "TICK_RULES_VERIFIED": false,
+    "BROKERAGE_VERIFIED": true,
+    "STRUCTURE_VERIFIED": false,
+    "SALEABILITY_VERIFIED": false
+  }
+}

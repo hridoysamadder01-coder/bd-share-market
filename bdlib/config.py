@@ -72,6 +72,28 @@ COVERAGE_BREAK_DATE = "2024-02-22"
 PANEL_PRIMARY = ("2012-10-01", "2024-02-20")   # full universe — primary panel
 PANEL_POSTBREAK = ("2024-02-22", "2030-01-01")  # ~88 symbols — separate panel
 
+# --- PHASE 4.5 SAMPLE DISCIPLINE: discovery on a fixed EARLY window only; the
+# HOLDOUT is sealed and dropped on load by experiments/phase45_footprints.py so
+# that Phase 5 walk-forward has a period no footprint definition has ever been
+# tuned against. (Phase 4 ran full-sample DESCRIPTIVE state statistics across
+# this period before the seal existed — recorded, not hidden.) The floor era and
+# the post-break panel are separate regimes, reported apart, never pooled. ---
+DISCOVERY_WINDOW = ("2012-10-01", "2018-12-31")   # pre-floor, pre-COVID
+HOLDOUT_WINDOW = ("2019-01-01", "2022-07-27")     # SEALED until Phase 5
+
+# --- CIRCUIT BREAKER (daily price limit) BANDS — UNVERIFIED against a DSE/BSEC
+# circular, but EMPIRICALLY SUPPORTED: on the 2012–2018 discovery window the
+# daily-return distribution has a distinct mass point at exactly +band in every
+# bucket below (the first schedule tried — 10/7.5/5/3.75/2.5 — was contradicted
+# by the data: 26–71% of moves in the upper buckets exceeded it, and was
+# replaced by the schedule the mass points actually sit on). phase45 prints the
+# per-bucket evidence on every run; the schedule may have changed after 2018,
+# which is one more reason the holdout is a separate test. ---
+CIRCUIT_BANDS_UNVERIFIED = (          # (previous close ≤ X, ± band)
+    (200.0, 0.10), (500.0, 0.0875), (1000.0, 0.075),
+    (2000.0, 0.0625), (5000.0, 0.05), (float("inf"), 0.0375))
+CIRCUIT_PROXY_FRACTION = 0.95         # close-to-close move ≥ 95% of the band ⇒ limit-proxy hit
+
 REQUIRED_COLUMNS = ("symbol", "ts", "open", "high", "low", "close", "volume")
 OPTIONAL_COLUMNS = ("turnover", "trades")
 
