@@ -515,8 +515,10 @@ def analyse(df: pd.DataFrame, regime: str, date_index) -> tuple[pd.DataFrame, di
                                      "within_parent_dates": nd,
                                      "within_parent_diff": float(diff.mean()) if nd else np.nan})
     res = pd.DataFrame(rows)
-    wp = res[res.get("_within_parent", pd.Series(False, index=res.index)).fillna(False)]
-    res = res[~res.get("_within_parent", pd.Series(False, index=res.index)).fillna(False)].copy()
+    flag = (res["_within_parent"].fillna(False).astype(bool) if "_within_parent" in res.columns
+            else pd.Series(False, index=res.index))
+    wp = res[flag]
+    res = res[~flag].copy()
     res = res.drop(columns=[c for c in ("_within_parent", "within_parent", "within_parent_t_nw",
                                         "within_parent_dates", "within_parent_diff")
                             if c in res.columns])
@@ -761,6 +763,8 @@ def load_regimes(tag: str) -> tuple[dict, dict]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", default="dse_eod")
+    ap.add_argument("--max-symbols", type=int, default=None,
+                    help="SMOKE TEST ONLY: restrict every regime to its first N symbols")
     a = ap.parse_args()
     paths = bio.paths()
 
@@ -768,6 +772,10 @@ def main() -> int:
     print("PHASE 4.5 v2 — doorstep footprint research (DISCOVERY only; holdout SEALED)")
     print("=" * 78)
     regimes, meta = load_regimes(a.tag)
+    if a.max_symbols:
+        print(f"*** SMOKE TEST: first {a.max_symbols} symbols per regime — outputs are NOT results ***")
+        regimes = {k: v[v["symbol"].isin(sorted(v["symbol"].unique())[:a.max_symbols])]
+                   for k, v in regimes.items()}
     print(f"sealed holdout {meta['holdout_window']}: {meta['sealed_holdout_rows']:,} rows dropped at load")
     print(f"discovery window {meta['discovery_window']} · survivorship: "
           f"{meta['survivorship']['symbols_ending_before_2019']} of {meta['survivorship']['symbols']} "
@@ -892,14 +900,15 @@ def main() -> int:
         except KeyError:
             return False
         return bool((x["lift_volmatched"] >= CAND_LIFT) and (x["t_volmatched_nw"] >= CAND_T))
-    step5["incremental_passes"] = [inc_pass(r) for _, r in step5.iterrows()]
+    step5["incremental_passes"] = pd.Series([inc_pass(r) for _, r in step5.iterrows()],
+                                            index=step5.index, dtype=bool)
     step5["incremental_lift_vm"] = [
         (inc_key.loc[(r["footprint"], r["outcome"], int(r["horizon"]))]["lift_volmatched"]
          if int(r["horizon"]) > 1 else np.nan) for _, r in step5.iterrows()]
     step5["incremental_t_nw"] = [
         (inc_key.loc[(r["footprint"], r["outcome"], int(r["horizon"]))]["t_volmatched_nw"]
          if int(r["horizon"]) > 1 else np.nan) for _, r in step5.iterrows()]
-    tierA = step5[step5["incremental_passes"]].copy()
+    tierA = step5[step5["incremental_passes"].astype(bool)].copy()
     funnel.append(("6 = 5 and (k=1 or the incremental window (k_prev,k] itself passes) → TIER A", int(len(tierA))))
 
     # context columns for the candidate file
@@ -908,30 +917,41 @@ def main() -> int:
                 & (res["footprint"] == row["footprint"]) & (res["outcome"] == row["outcome"])
                 & (res["horizon"] == row["horizon"])]
         return x[col].iloc[0] if len(x) else np.nan
-    for reg, tag in (("FLOOR", "floor"), ("POSTBREAK", "postbreak")):
-        for col in ("lift_volmatched", "t_volmatched_nw", "n_hit"):
-            tierA[f"{tag}_{col}"] = [ctx(r, reg, "fresh_both", col) for _, r in tierA.iterrows()]
-    tierA["v1_onesided_fresh_lift_vm"] = [ctx(r, "DISCOVERY", "fresh", "lift_volmatched") for _, r in tierA.iterrows()]
-    tierA["anydoor_lift_vm"] = [ctx(r, "DISCOVERY", "any", "lift_volmatched") for _, r in tierA.iterrows()]
     plc_idx = plc.set_index(["footprint", "outcome", "horizon"])
     def plc_get(r, col):
         try:
             return plc_idx.loc[("PLACEBO_" + r["footprint"], r["outcome"], int(r["horizon"]))][col]
         except KeyError:
             return np.nan
-    tierA["placebo_lift_vm"] = [plc_get(r, "lift_volmatched") for _, r in tierA.iterrows()]
-    tierA["placebo_t_nw"] = [plc_get(r, "t_volmatched_nw") for _, r in tierA.iterrows()]
-    stab = stability(dfD, "DISCOVERY", "fresh_both", tierA, date_idx["DISCOVERY"]) if len(tierA) else pd.DataFrame()
+    ctx_cols = ([f"{tag}_{col}" for tag in ("floor", "postbreak")
+                 for col in ("lift_volmatched", "t_volmatched_nw", "n_hit")]
+                + ["v1_onesided_fresh_lift_vm", "anydoor_lift_vm", "placebo_lift_vm", "placebo_t_nw",
+                   "n_years", "n_years_lift_ge_1", "min_year_lift_vm", "min_year_t_nw",
+                   "lift_vm_price_10-50", "lift_vm_price_50-200", "lift_vm_price_>200"])
+    stab = pd.DataFrame()
+    if len(tierA):
+        for reg, tag in (("FLOOR", "floor"), ("POSTBREAK", "postbreak")):
+            for col in ("lift_volmatched", "t_volmatched_nw", "n_hit"):
+                tierA[f"{tag}_{col}"] = [ctx(r, reg, "fresh_both", col) for _, r in tierA.iterrows()]
+        tierA["v1_onesided_fresh_lift_vm"] = [ctx(r, "DISCOVERY", "fresh", "lift_volmatched") for _, r in tierA.iterrows()]
+        tierA["anydoor_lift_vm"] = [ctx(r, "DISCOVERY", "any", "lift_volmatched") for _, r in tierA.iterrows()]
+        tierA["placebo_lift_vm"] = [plc_get(r, "lift_volmatched") for _, r in tierA.iterrows()]
+        tierA["placebo_t_nw"] = [plc_get(r, "t_volmatched_nw") for _, r in tierA.iterrows()]
+        stab = stability(dfD, "DISCOVERY", "fresh_both", tierA, date_idx["DISCOVERY"])
+        if len(stab):
+            yr = stab[stab["split"] == "year"].groupby(["footprint", "outcome", "horizon"]).agg(
+                n_years=("level", "size"),
+                n_years_lift_ge_1=("lift_volmatched", lambda s: int((s >= 1).sum())),
+                min_year_lift_vm=("lift_volmatched", "min"), min_year_t_nw=("t_volmatched_nw", "min"))
+            pb = stab[stab["split"] == "price_bucket"].pivot_table(
+                index=["footprint", "outcome", "horizon"], columns="level", values="lift_volmatched")
+            pb.columns = [f"lift_vm_price_{c}" for c in pb.columns]
+            tierA = tierA.merge(yr.reset_index(), on=["footprint", "outcome", "horizon"], how="left")
+            tierA = tierA.merge(pb.reset_index(), on=["footprint", "outcome", "horizon"], how="left")
+    for c in ctx_cols:
+        if c not in tierA.columns:
+            tierA[c] = np.nan
     stab.to_csv(os.path.join(paths["results"], "DOORSTEP_STABILITY.csv"), index=False)
-    if len(stab):
-        yr = stab[stab["split"] == "year"].groupby(["footprint", "outcome", "horizon"]).agg(
-            n_years=("level", "size"), n_years_lift_ge_1=("lift_volmatched", lambda s: int((s >= 1).sum())),
-            min_year_lift_vm=("lift_volmatched", "min"), min_year_t_nw=("t_volmatched_nw", "min"))
-        pb = stab[stab["split"] == "price_bucket"].pivot_table(
-            index=["footprint", "outcome", "horizon"], columns="level", values="lift_volmatched")
-        pb.columns = [f"lift_vm_price_{c}" for c in pb.columns]
-        tierA = tierA.merge(yr.reset_index(), on=["footprint", "outcome", "horizon"], how="left")
-        tierA = tierA.merge(pb.reset_index(), on=["footprint", "outcome", "horizon"], how="left")
     tierA["direction"] = np.where(tierA["outcome"].isin(UP_OUTCOMES), "up", "down")
     tierA["family"] = tierA["footprint"].map({f[0]: f[1] for f in FOOTPRINTS})
     tierA = tierA.sort_values(["footprint", "direction", "outcome", "horizon"])
