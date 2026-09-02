@@ -187,7 +187,7 @@ construction**; `PHASE5_CANDIDATES.csv` (Phase 4.5) carries **one** row.
 
 | # | Gap | Effect |
 |---|---|---|
-| D-1 | **Minute-level data** — only EOD exists | Intraday structure formation is unobservable; all windows are in days |
+| D-1 | **Minute-level data** — a public trade-minute dataset now exists and has passed Phase-1 QA *only* (`reports/MINUTE_DATA_QA_REPORT.md`); its provenance and capture method are unknown | Intraday research is possible in principle; every phase so far ran on daily bars. Nothing has been tested on minute data |
 | D-2 | The 2024-02-22 coverage break | Handled by panel separation (PRIMARY is primary, POSTBREAK separate, never pooled). Obtaining the missing symbols' post-Feb-2024 history would restore statistical power after the break — POSTBREAK currently yields only 5 usable events for an event study |
 | D-6 | **Earliest saleability UNKNOWN** | Decides whether short holds are tradeable at all. Verify against a real LankaBangla / DSE account: can a position bought today be sold today, tomorrow, or only after settlement? *(Phase 4 note: it did not change any conclusion — nothing was tradeable at ANY horizon, including the unrestricted ones.)* |
 | D-7 | **`open` field provenance** | Mean overnight gap +0.385% vs median 0, 66% of nonzero gaps upward, stable across price buckets. Is this real DSE opening behaviour or a data-construction artefact? Until answered, open-entry numbers are provisional — hence the close-entry variant |
@@ -197,6 +197,24 @@ construction**; `PHASE5_CANDIDATES.csv` (Phase 4.5) carries **one** row.
 | D-8 | No sector table | "sector quiet" is approximated by "market quiet" (≤ 5% of names abnormal) |
 | D-9 | Histories of symbols delisted / suspended 2012–2024 | the universe is survivorship-conditioned (no symbol ends before 2019); collapsed names — the ones most relevant to down-doors — are absent |
 | — | DSE circular for the daily limit schedule (incl. ex-dates, new listings, Z category) | the limit outcomes use an empirically supported but unverified schedule (10 / 8.75 / 7.5 / 6.25 / 5 / 3.75 %) that may have changed after 2018 |
+| D-10 | Official closing-price rule; start date of the single-price closing session | minute data: last print ≠ official close on 20% of days (minute QA §9) |
+| **D-11** | **First DSE floor-price regime — start (2020-03-19 observed market-wide in the minute data) and lift dates** | `config.FLOOR_ERA` carries only 2022-07-28 → 2024-01-31; every daily-data phase treated March 2020 → mid 2021 as a free market. **Affects the regime split of work already done** |
+| D-12 | Daily/EOD history for 19 SME-board symbols from 2022-08-30 | present in the minute files, absent from the daily files and from our EOD data (4,528 symbol-days) |
+
+## Minute-level data — Phase 1 QA only (2026-09-02)
+
+A public trade-minute dataset (417 symbol files, 43.1 M rows, 2015-10 → 2024-01)
+was QA'd and nothing else: `reports/MINUTE_DATA_QA_REPORT.md`,
+`qa/MINUTE_QA_ISSUES.json`. Structurally clean (0 parse failures, 0 duplicates
+within a symbol, 0 OHLC violations; its daily files match our EOD data on
+131,512 of 131,512 days tested), but: irregular trade-minute rows (median 52
+prints per day, 85% single prints); **board-snapshot rows carrying whole-session
+volumes** on 47 non-session dates in 2015–16 and on specific 2019–20 dates; 25
+whole-market capture gaps; one renamed symbol carried twice; a closing-session
+regime appearing 2021–22; and the first floor regime (D-11). Eight loader/QA
+changes are listed in the report and **not implemented**. The v1 report was
+checked by three independent lenses; every count reproduced, several readings
+were corrected (report §17).
 
 ## Honest non-claims
 
