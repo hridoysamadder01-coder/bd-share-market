@@ -28,8 +28,12 @@ Abnormal volume in a stock on a day when the rest of the market is quiet (F07)
 precedes an abnormal up-move within 3 sessions 5.6% of the time vs 2.6% for
 same-day, same-volatility names and 3.0% once today's move size is matched —
 lift 2.2× / 1.8×, 145 distinct events on 101 symbols, every year, every price
-bucket, again in the floor era. It fails 94% of the time and beats plain
-abnormal volume by a thin margin (bootstrap lower bound 1.05).
+bucket, again in the floor era. It fails 94% of the time, and its margin over
+plain abnormal volume is **not established** (pooled-ratio bootstrap lower
+bound 1.05, but the direct between-dates test of the "quiet" condition gives
+t = 0.7). Read plainly: abnormal volume today raises the chance of an abnormal
+up-move within three sessions; whether the quiet-market condition adds to that
+is for the holdout.
 
 **Everything else failed**, including everything the v1 run had claimed: the
 "quiet accumulation" footprints carry *less* than plain abnormal volume;

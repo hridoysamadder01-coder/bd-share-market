@@ -170,9 +170,11 @@ limit_up k=5 falls 1.84 → 1.29 (t 3.1); its increment over any same-sign 2σ
 move is 3–15%. F08d → limit_up was a bounce after a drop. Post-move footprints
 are excluded from candidacy by construction (like F16).
 
-### P45-5 — Persistence (F17, second abnormal-volume day) ❌ DOES NOT BEAT PLAIN VOLUME
-→ abn_down k=3: 2.46 (t 3.6), shock 2.03 (t 3.3), 62 doors — passes size
-gates, fails the bootstrap reference bound vs F15 (F17 ⊂ F15).
+### P45-5 — Persistence (F17, second abnormal-volume day) ❌ DIES AT THE INCREMENTAL GATE
+→ abn_down k=3: 2.46 (t 3.6), shock 2.03 (t 3.3), 62 doors, bootstrap reference
+bounds 1.05 / 1.05 — clears every gate up to step 5, then the incremental
+window (2,3] gives lift 2.39 with NW t 2.67, just under the t ≥ 3 gate; at
+k ≤ 2 F17 does not clear the reference bound. Nearest miss in the whole phase.
 
 ### P45-6 — v1's "down-door" candidates (F14 → limit_down 5.6×, F12 4.2×, F03, F17 → limit_down) ❌ REVERSALS, NOT DOORSTEPS
 The v1 fresh filter was one-sided: for down-outcomes it removed only rows with a

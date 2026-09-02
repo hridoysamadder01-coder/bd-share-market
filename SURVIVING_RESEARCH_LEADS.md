@@ -42,9 +42,13 @@ three**, run once.
 
 **Why the margin matters.** F07 is plain abnormal volume on the 64% of days
 when the rest of the market is quiet. Its edge over abnormal volume on *any*
-day is thin (lower bound 1.05). If Phase 5 shows F07 ≈ F15 on the holdout, the
-honest reading is "abnormal volume raises near-term variance" — already known
-from Phase 4 — and the doorstep question on daily data closes.
+day is **not established**: the pooled ratio's bootstrap lower bound is 1.05,
+but the direct between-dates test of the quiet condition gives t = 0.7 at
+k = 3 (t = 3.0 for run20 k = 5). Phase 5 must therefore also test plain
+abnormal volume (F15) on the holdout with the same gates and report F07 − F15
+explicitly. If F07 ≈ F15 there, the honest reading is "abnormal volume raises
+near-term variance" — consistent with Phase 4 — and the doorstep question on
+daily data closes.
 
 ## What is explicitly NOT carried
 

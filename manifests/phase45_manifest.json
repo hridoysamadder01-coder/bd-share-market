@@ -1,5 +1,5 @@
 {
-  "phase": "4.5_doorstep_footprints",
+  "phase": "4.5_doorstep_footprints_v2",
   "status": "DISCOVERY-WINDOW DESCRIPTIVE \u2014 holdout sealed, nothing validated",
   "sealed_holdout_rows": 274599,
   "holdout_window": [
@@ -10,27 +10,36 @@
     "2012-10-01",
     "2018-12-31"
   ],
-  "primary_rows_outside_all_regimes": 5361,
+  "survivorship": {
+    "symbols": 392,
+    "symbols_ending_before_2019": 0,
+    "note": "the universe contains no symbol whose history ends before 2019: discovery is conditioned on survival to 2019+; delisted / collapsed names are absent"
+  },
+  "pre_registration": "v1 design written before v1 run, but design+code+results committed together (56fa8ab) after the run; rests on the author's statement. All v2 changes were made after seeing v1 results and a five-lens adversarial review. The sealed holdout is the only test.",
+  "holdout_previously_inspected_by": [
+    "Round 2 (P2 2018-01-01..2022-07-27, ledgered)",
+    "Phase 4 (full-sample descriptive, ledgered)"
+  ],
   "footprints": [
     {
       "id": "F01_quiet_volume",
       "family": "quiet volume",
-      "definition": "rel_volume_z \u2265 2 and |ret_1| \u2264 \u03c3_prev \u2014 abnormal volume, price calm"
+      "definition": "rel_volume_z \u2265 2 and |ret_1| \u2264 \u03c3_prev"
     },
     {
       "id": "F02_quiet_volume_persistent",
       "family": "quiet volume",
-      "definition": "\u22653 of the last 5 sessions with rel_volume_z \u2265 1 and |ret_5| \u2264 \u03c3_prev\u00b7\u221a5"
+      "definition": "\u22653 of the last 5 sessions rel_volume_z \u2265 1 and |ret_5| \u2264 \u03c3_prev\u00b7\u221a5"
     },
     {
-      "id": "F03_absorption",
-      "family": "absorption",
-      "definition": "low \u2264 prev_close\u00b7(1\u2212\u03c3_prev) and close \u2265 prev_close and rel_volume_z \u2265 1 \u2014 sellers pushed, price did not fall by the close"
+      "id": "F03_dip_recovered",
+      "family": "dip recovered",
+      "definition": "low \u2264 prev_close\u00b7(1\u2212\u03c3_prev) and close \u2265 prev_close and rel_volume_z \u2265 1 (v1: 'absorption')"
     },
     {
-      "id": "F04_absorption_persistent",
-      "family": "absorption",
-      "definition": "\u22652 absorption sessions within the last 5"
+      "id": "F04_dip_recovered_persistent",
+      "family": "dip recovered",
+      "definition": "\u22652 dip-recovered sessions in the last 5"
     },
     {
       "id": "F05_departure_calm",
@@ -40,67 +49,77 @@
     {
       "id": "F06_departure_any",
       "family": "own-baseline departure",
-      "definition": "rung-2 state \u2208 {DEPARTURE, EXTREME} (Phase-4 cohort, for comparison)"
+      "definition": "rung-2 state \u2208 {DEPARTURE, EXTREME}"
     },
     {
       "id": "F07_idio_activity",
-      "family": "idiosyncratic vs market",
+      "family": "idiosyncratic",
       "definition": "rel_volume_z \u2265 2 while \u22645% of names are abnormal-volume that day"
     },
     {
-      "id": "F08_idio_move",
-      "family": "idiosyncratic vs market",
-      "definition": "|market_relative_ret| \u2265 2\u03c3_prev while |market_ret| \u2264 \u03c3_market_prev"
+      "id": "F08u_idio_move_up",
+      "family": "idiosyncratic (post-move)",
+      "definition": "market_relative_ret \u2265 +2\u03c3_prev while |market_ret| \u2264 \u03c3_market_prev"
+    },
+    {
+      "id": "F08d_idio_move_down",
+      "family": "idiosyncratic (post-move)",
+      "definition": "market_relative_ret \u2264 \u22122\u03c3_prev while |market_ret| \u2264 \u03c3_market_prev"
     },
     {
       "id": "F09_idio_quiet_volume",
-      "family": "idiosyncratic vs market",
-      "definition": "F01 while \u22645% of names are abnormal-volume that day"
+      "family": "idiosyncratic",
+      "definition": "F01 while \u22645% of names are abnormal-volume"
     },
     {
       "id": "F10_coil_then_volume",
       "family": "compression \u2192 activity",
-      "definition": "mean range_z over the prior 5 sessions \u2264 \u22121 and rel_volume_z \u2265 1.5 today"
+      "definition": "mean range_z over the prior 5 \u2264 \u22121 and rel_volume_z \u2265 1.5 today"
     },
     {
       "id": "F11_closing_strength",
-      "family": "absorption",
+      "family": "closing strength",
       "definition": "close_location \u2265 0.8 and rel_volume_z \u2265 1.5 and |ret_1| \u2264 \u03c3_prev"
     },
     {
-      "id": "F12_accumulation_proxy",
-      "family": "quiet volume",
-      "definition": "accumulation_proxy \u2265 0.5 (10-session mean of (close_location\u2212\u00bd)\u00b7rel_volume_z)"
+      "id": "F12_closing_strength_10s",
+      "family": "closing strength",
+      "definition": "accumulation_proxy \u2265 0.5 = 10-session mean of (close_location\u2212\u00bd)\u00b7rel_volume_z (v1: 'accumulation proxy')"
     },
     {
       "id": "F13_volume_price_divergence",
       "family": "quiet volume",
-      "definition": "volume_price_divergence \u2265 2 (= rung1_quiet_accumulation)"
+      "definition": "volume_price_divergence \u2265 2"
     },
     {
-      "id": "F14_turnover_no_range",
+      "id": "F14_volume_no_range",
       "family": "quiet volume",
-      "definition": "rel_turnover_z \u2265 2 and range_z \u2264 0 \u2014 money in, range not expanding"
+      "definition": "rel_turnover_z \u2265 2 and range_z \u2264 0 \u2014 turnover is DERIVED (close\u00d7volume), so this is abnormal volume without range expansion (v1: 'turnover_no_range')"
     },
     {
       "id": "F15_REF_abnormal_volume",
       "family": "REFERENCE",
-      "definition": "rel_volume_z \u2265 2 \u2014 plain abnormal volume; does 'quiet' add anything?"
+      "definition": "rel_volume_z \u2265 2 \u2014 plain abnormal volume"
     },
     {
-      "id": "F16_REF_already_moved",
+      "id": "F16u_REF_moved_up",
       "family": "REFERENCE",
-      "definition": "|ret_1| \u2265 2\u03c3_prev \u2014 the price already moved; the momentum / vol-clustering reference. NOT a doorstep footprint by construction"
+      "definition": "ret_1 \u2265 +2\u03c3_prev \u2014 already moved up"
+    },
+    {
+      "id": "F16d_REF_moved_down",
+      "family": "REFERENCE",
+      "definition": "ret_1 \u2264 \u22122\u03c3_prev \u2014 already moved down"
     },
     {
       "id": "F17_abnormal_volume_persistent",
       "family": "persistence",
-      "definition": "abnormal_persistence \u2265 2 \u2014 second consecutive abnormal-volume session"
+      "definition": "abnormal_persistence \u2265 2 (strict subset of F15)"
     },
     {
       "id": "F18_quiet_volume_repeat",
       "family": "quiet volume",
-      "definition": "F01 today and F01 on \u22651 of the prior 5 sessions"
+      "definition": "F01 today and F01 on \u22651 of the prior 5"
     }
   ],
   "footprint_params": {
@@ -123,12 +142,12 @@
     "run_thresh": 0.2
   },
   "outcomes": {
-    "limit_up": "any session in (t,t+k] with close/close \u2265 95% of the UNVERIFIED upper band",
-    "limit_down": "any session in (t,t+k] with close/close \u2264 \u221295% of the band",
+    "limit_up": "any session in (t,t+k] closing AT the upper band (95%..100%+tol of the band)",
+    "limit_down": "any session in (t,t+k] closing AT the lower band",
     "abn_up": "max cumulative log return over (t,t+k] \u2265 max(2.5\u00b7\u03c3_prev\u00b7\u221ak, 5%)",
     "abn_down": "min cumulative log return over (t,t+k] \u2264 \u2212max(2.5\u00b7\u03c3_prev\u00b7\u221ak, 5%)",
     "run20": "max cumulative log return over (t,t+k] \u2265 ln(1.20)",
-    "activity": "any session in (t,t+k] with rel_volume_z \u2265 2 \u2014 MECHANICAL (volume autocorrelates); reported, never a door"
+    "activity": "any session in (t,t+k] with rel_volume_z \u2265 2 \u2014 MECHANICAL, never a door"
   },
   "horizons": [
     1,
@@ -137,42 +156,123 @@
     5,
     10
   ],
+  "variants": {
+    "any": "guard & no corporate-action suspect in t-5..t",
+    "fresh": "+ no same-direction door in t-5..t (v1 one-sided rule)",
+    "fresh_both": "+ no door of either direction in t-5..t (v2 primary)"
+  },
   "guards": {
     "min_price": 10.0,
     "sigma_defined": true,
     "rel_volume_z_defined": true
   },
-  "base_rates": "same-day leave-one-out; same-day within volatility quintile leave-one-out",
-  "inference": "date-paired excess, t across dates; BH-FDR per regime",
-  "hypotheses_per_regime": 540,
-  "candidate_criterion": {
-    "regime": "DISCOVERY",
-    "door_outcome": true,
-    "eligible": "n\u2265200, dates\u226530",
-    "sameday": "excess>0 and BH-FDR 0.1",
-    "volmatched": "excess>0 and t\u22653.0 and lift\u22651.5",
-    "excluded": "F16_REF_already_moved (post-move by construction); activity outcome"
+  "limit_proxy": {
+    "at_band": "0.95\u00b7band \u2264 |R| \u2264 band + 0.0025",
+    "beyond_band": "corporate-action suspect: never a hit; window unmeasurable"
+  },
+  "base_rates": [
+    "same-day LOO",
+    "same-day \u00d7 \u03c3_prev quintile LOO",
+    "same-day \u00d7 \u03c3_prev quintile \u00d7 |ret_1|/\u03c3_prev quintile LOO (shock-matched)"
+  ],
+  "inference": "date-paired excess; iid t and Newey-West t (Bartlett, L=10); distinct (symbol, door-date) events counted; incremental outcomes (first door in (k_prev,k]); date-block bootstrap of lift ratios (block 10, 500 reps); within-parent paired increment",
+  "fdr": {
+    "DISCOVERY": {
+      "any": {
+        "tests": 425,
+        "survivors": 275,
+        "bh_cutoff_p": 0.06740196078431374
+      },
+      "fresh": {
+        "tests": 425,
+        "survivors": 214,
+        "bh_cutoff_p": 0.05245098039215687
+      },
+      "fresh_both": {
+        "tests": 425,
+        "survivors": 160,
+        "bh_cutoff_p": 0.0392156862745098
+      }
+    },
+    "FLOOR": {
+      "any": {
+        "tests": 425,
+        "survivors": 188,
+        "bh_cutoff_p": 0.04607843137254902
+      },
+      "fresh": {
+        "tests": 425,
+        "survivors": 142,
+        "bh_cutoff_p": 0.03480392156862745
+      },
+      "fresh_both": {
+        "tests": 425,
+        "survivors": 121,
+        "bh_cutoff_p": 0.02972972972972973
+      }
+    },
+    "POSTBREAK": {
+      "any": {
+        "tests": 425,
+        "survivors": 69,
+        "bh_cutoff_p": 0.016995073891625617
+      },
+      "fresh": {
+        "tests": 425,
+        "survivors": 15,
+        "bh_cutoff_p": 0.003703703703703704
+      },
+      "fresh_both": {
+        "tests": 425,
+        "survivors": 1,
+        "bh_cutoff_p": 0.00025
+      }
+    }
+  },
+  "placebo": {
+    "rows": 300,
+    "median_lift_vm": 0.8729483042851454,
+    "p90_lift_vm": 1.227409059601232,
+    "share_t_nw_ge_3": 0.0,
+    "share_pass_lift_and_t": 0.0,
+    "max_t_nw": 2.391570315531467
   },
   "candidate_funnel": [
     [
-      "1 pre-registered criterion, any-door (as frozen)",
-      202
+      "1 v1 pre-registered criterion, any-door",
+      175
     ],
     [
-      "2 same criterion, FRESH-door population",
-      128
+      "2 v1 tier A: one-sided fresh + beats refs (point)",
+      62
     ],
     [
-      "3 = 2 and beats BOTH references (plain volume, already moved)",
-      63
+      "3 same v1 gates on fresh_both",
+      39
+    ],
+    [
+      "4 v2: fresh_both \u00b7 NW t\u22653 \u00b7 shock-matched too \u00b7 distinct doors\u226530",
+      22
+    ],
+    [
+      "5 = 4 and beats BOTH references with bootstrap lower bound > 1",
+      5
+    ],
+    [
+      "6 = 5 and (k=1 or the incremental window (k_prev,k] itself passes) \u2192 TIER A",
+      2
     ]
   ],
-  "post_first_run_amendments": [
-    "fresh-door variant: rows with an up/down door in t-5..t removed from occurrences AND base population (the pre-registered analysis counted already-open doors)",
-    "tier A requires vol-matched lift above BOTH references at the same outcome/horizon",
-    "circuit band schedule replaced by the one the data's mass points sit on"
-  ],
-  "n_candidates_tierA": 63,
+  "tierA_rows": 2,
+  "tierA_primary_rows": 1,
+  "candidate_gates_v2": {
+    "population": "fresh_both",
+    "eligible": "n\u2265200, dates\u226530, distinct doors\u226530",
+    "lift": "vol-matched AND shock-matched \u2265 1.5",
+    "t": "Newey-West t \u2265 3.0 on both",
+    "references": "bootstrap lower 2.5% of ratio > 1 vs F15 and vs signed/max F16",
+    "horizon": "k=1 or incremental window passes lift & t"
+  },
   "circuit_bands": {
     "verified": false,
     "schedule": [
@@ -200,9 +300,9 @@
         Infinity,
         0.0375
       ]
-    ],
-    "proxy_fraction": 0.95
+    ]
   },
+  "turnover_derived": true,
   "uses_open_field": false,
   "emits_orders": false,
   "cost_layer_applied": false,
@@ -214,10 +314,12 @@
     "results/DOORSTEP_PREDOOR_PROFILE.csv",
     "results/DOORSTEP_BAND_EVIDENCE.csv",
     "results/DOORSTEP_STABILITY.csv",
-    "results/PHASE5_CANDIDATES.csv"
+    "results/DOORSTEP_PLACEBO.csv",
+    "results/PHASE5_CANDIDATES.csv",
+    "results/PHASE5_CANDIDATES_ALL_ROWS.csv"
   ],
-  "written_at_utc": "2026-09-02T16:30:14.247629+00:00",
-  "git_commit": "ef95effdc50cefc075aac63659f760df70e05812",
+  "written_at_utc": "2026-09-02T17:42:39.934463+00:00",
+  "git_commit": "cbba54de81d05432c7690d738e72ec702a2000d9",
   "python": "3.11.15",
   "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
   "pandas": "3.0.5",

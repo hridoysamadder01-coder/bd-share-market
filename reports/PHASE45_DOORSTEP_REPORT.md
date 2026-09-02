@@ -36,8 +36,14 @@ against 2.6% for stocks of the same volatility on the same day and 3.0% for
 stocks with the same volatility *and the same size of move today* — a lift of
 2.2× (1.8× shock-matched), on 145 distinct events across 101 symbols, in every
 one of six years, in every price bucket, and again in the floor era (2.8×). It
-beats plain abnormal volume by a thin margin (bootstrap lower bound 1.05). It
-fails 94% of the time. Everything else — quiet accumulation, absorption,
+fails 94% of the time. **Its margin over plain abnormal volume is not
+established:** the pooled lift ratio clears 1 with a bootstrap lower bound of
+1.05, but a direct between-dates test of the "market quiet" condition inside
+plain abnormal volume gives t = 0.7 at this horizon (t = 3.0 for the secondary
+run20-within-5 row). Read plainly, what survives is *abnormal volume today
+raises the chance of an abnormal up-move in the next three sessions*; whether
+the quiet-market condition adds to that is for the holdout to decide.
+Everything else — quiet accumulation, absorption,
 closing strength, persistence, idiosyncratic moves, and every "down door"
 candidate from v1 — is either indistinguishable from plain abnormal volume,
 indistinguishable from volatility clustering, or an artefact of counting doors
@@ -247,8 +253,9 @@ F08 "precedes limit-ups" was a bounce after idiosyncratic drops.
 F03/F04 (dip recovered on volume) → abn_down k=3: 2.11 / 3.25 lift, but
 shock-matched t 2.6 / 2.8 and 60 / 36 distinct doors — below the gates, and
 for F04 only 2013 carries it. F17 (second abnormal-volume day) → abn_down k=3:
-2.46 (t 3.6), shock 2.03 (t 3.3), 62 doors — passes the size gates but its
-margin over plain abnormal volume does not clear the bootstrap bound. F10
+2.46 (t 3.6), shock 2.03 (t 3.3), 62 doors, reference bounds 1.05 / 1.05 —
+clears every gate to step 5, then its incremental window (2, 3] gives lift
+2.39 with NW t 2.67, just under the gate: the nearest miss in the phase. F10
 (coil then volume) fires 213 times: unmeasurable. **No footprint passes for
 limit_up at any horizon**: F07's limit_up lift (1.72) fails shock-matching
 (1.46, t 2.7) and does not beat F16u (1.00×).
@@ -259,22 +266,40 @@ Of the fresh limit-up doors in DISCOVERY, the share preceded by a footprint in
 the prior 5 sessions, against how often that footprint sits in any 5-session
 window of *pre-door* rows (v2 base; v1's base included post-door rows):
 
+3,328 fresh limit-up doors (no door of either direction and no
+corporate-action suspect in the prior 5 sessions):
+
 | Footprint | recall | base | recall lift | median lead |
 |---|---|---|---|---|
-| *(table filled from `DOORSTEP_RECALL_LEADTIME.csv` — see §5.5 note below)* | | | | |
+| F06 departure_any | 44% | 30% | 1.45 | 2 |
+| F16u already moved up | 41% | 19% | 2.16 | 1 |
+| F15 plain abnormal volume | 32% | 14% | 2.26 | 1 |
+| F08u idio_move_up | 31% | 13% | 2.47 | 2 |
+| F02 quiet_volume_persistent | 22% | 16% | 1.35 | 2 |
+| F17 abnormal_volume_persistent | 16% | 6% | 2.58 | 1 |
+| F07 idio_activity | 15% | 6% | 2.63 | 2 |
+| F01 quiet_volume | 12% | 7% | 1.85 | 2 |
+| F14 volume_no_range | 5% | 1% | 3.95 | 2 |
+| F12 closing_strength_10s | 4% | 1% | 4.17 | 1 |
 
-Precision at the same window is 4–6% for every footprint. A median lead of
-1–2 sessions is the volume ramp already inside the door day's run-up, not an
-early warning. **This is not a warning system.**
+No footprint reaches 45% recall. The two with recall lifts near 4 (F12, F14)
+cover 4–5% of doors and have 3–4% precision at the same window (`fresh_both`,
+limit_up k=5: F14 1.68× on 25 doors, F12 1.32× on 13). Precision is 4–6% for
+every footprint. A median lead of 1–2 sessions is the volume ramp already
+inside the door day's run-up, not an early warning. **This is not a warning
+system.**
 
 ### 5.6 What the ten sessions before a limit-up look like on average (post-hoc)
 
 Conditioned on the outcome — description, not evidence. Mean excess over the
-same-day cross-section before fresh limit-up doors (`DOORSTEP_PREDOOR_PROFILE.csv`):
-`rel_volume_z` +0.46 σ at t−1 (t ≈ 13) decaying to ≈ +0.13 by t−10 (t ≈ 3);
-`volume_price_divergence` +0.17 at t−1 fading to ≈ 0 by t−5; Amihud
-illiquidity *below* normal for ten sessions (t −2 to −6); a −0.5% market-relative
-dip at t−2 (t −5); a strong close at t−1 (t ≈ 9). A slow build exists on
+same-day cross-section before the 3,328 fresh limit-up doors
+(`DOORSTEP_PREDOOR_PROFILE.csv`, Newey-West t in brackets): `rel_volume_z`
++0.75 σ at t−1 (16) decaying to +0.20 at t−10 (3.7); `range_z` +0.64 → +0.21;
+`close_location` +0.17 at t−1 (20), ≈ +0.03 thereafter; market-relative return
+**+2.1% at t−1** (13) and +0.3–0.7% on each of the nine sessions before that
+(2–5) — a fresh limit-up is preceded by a *run-up*, not a dip; Amihud
+illiquidity *below* normal throughout (−0.10 to −0.21, t −3 to −5.5);
+`volume_price_divergence` +0.15 at t−1 fading to +0.02. A slow build exists on
 average and is useless as a trigger: the same build appears, weaker, before
 nothing at all, which is what §5.5 says.
 
@@ -292,8 +317,13 @@ nothing at all, which is what §5.5 says.
 | **6 = 5 and (k = 1 or the incremental window passes) → tier A** | **2** |
 
 Two rows, one footprint, one direction. `results/DOORSTEP_FUNNEL_STEP4.csv`
-lists the 22 step-4 rows with their bootstrap bounds so every near-miss is
-visible.
+lists the 13 step-4 rows that also beat both references on the point estimate,
+with their bootstrap bounds, so every near-miss is visible: F08u → limit_up
+k=1 (lift 3.84, but shock-matched 1.76 and reference bound 0.91), F07 → abn_up
+k=1 (2.98; bounds 1.03 / 0.97), F14 → abn_up k=1–2 (bounds 0.73–0.80), F07 →
+abn_down k=2 (bounds 0.83 / 0.77). Three rows cleared step 5 and died at the
+incremental gate: F07 → abn_up k=5 and k=10 (dilutions of k=3) and F17 →
+abn_down k=3 (§5.4).
 
 ### 6.2 The one candidate: F07 idio_activity → abnormal up-move within 3 sessions
 
@@ -310,7 +340,8 @@ visible.
 | vs stronger "already moved" reference (1.67×) | ratio 1.29, bootstrap lower bound **1.08** |
 | Incremental window (2, 3] on its own | lift 1.78, NW t 3.5 |
 | Under the frozen `any` population / v1 one-sided `fresh` | 2.67 / 2.10 |
-| Placebo (F07 shifted 20 sessions) | lift ≈ 1 *(filled from `DOORSTEP_PLACEBO.csv`)* |
+| **Between-dates test of the "quiet" condition inside F15** (F15's per-date excess on quiet vs busy days) | **t = 0.71** (diff +0.5 pp) — not distinguishable; run20 k=5: t = 2.99 |
+| Placebo (F07 shifted 20 sessions) | lift 0.73, t −2.7 (stale activity is, if anything, mean-reverting) |
 | Years with lift ≥ 1 | **6 of 6** (min 1.78; min per-year t 1.8) |
 | Price buckets 10–50 / 50–200 / > 200 | 2.17 / 2.28 / 1.94 |
 | FLOOR era (separate regime) | lift **2.80**, NW t 4.1, 53 hits |
@@ -320,9 +351,14 @@ visible.
 **How to read it.** "Market quiet" is a date-level condition, so F07 is plain
 abnormal volume restricted to the 64% of days when few other names are
 abnormal. The information is real and reproduces, but its margin over plain
-abnormal volume on *any* day is thin — the bootstrap lower bound of 1.05 is
-one bad block away from 1. The between-dates test of F15's excess on quiet vs
-busy days *(filled after run)* is the direct version of that comparison.
+abnormal volume on *any* day is not established: the pooled lift ratio's
+bootstrap lower bound (1.05) is one bad block away from 1, and the direct
+between-dates comparison — F15's per-date excess on quiet days vs busy days —
+gives t = 0.7 at k = 3. (At run20 k = 5 and abn_up k = 10 the same test gives
+t ≈ 3, so the quiet condition may matter at longer horizons; abn_up k = 10 did
+not pass the incremental gate.) Plain abnormal volume itself — a reference,
+so ineligible for candidacy by construction — carries the same information:
+abn_up k=3 lift 1.76 (t 8.2), shock-matched 1.52 (t 6.6), 490 distinct events.
 
 **What it is not.** Not accumulation (the price is not calm: the "calm" variant
 F09 has lower lift and negative within-parent t). Not a signal of intent. Not
@@ -343,11 +379,10 @@ accumulation footprint.
 ### 6.4 Calibration and multiplicity
 
 - **Placebo.** Every footprint shifted +20 sessions, same gates, same
-  population: median lift ≈ 0.89, 90th percentile ≈ 1.27, share reaching
-  t ≥ 3: **0%**, max t ≈ 2.4 *(final numbers from `DOORSTEP_PLACEBO.csv`)*.
-  The gates pass nothing on stale information.
+  population, 300 rows: median lift 0.87, 90th percentile 1.23, share reaching
+  t ≥ 3: **0%**, max t 2.39. The gates pass nothing on stale information.
 - **BH-FDR** over door outcomes and non-reference footprints: on `fresh_both`
-  the cutoff is p ≈ 0.03 and about 180 of 425 tests survive — it removes
+  the cutoff is p = 0.039 and 160 of 425 tests survive — it removes
   nothing the lift and shock gates do not, and is reported so that nobody
   mistakes it for the binding control. The binding controls are the
   shock-matched base, the distinct-door count, the bootstrap reference bound
