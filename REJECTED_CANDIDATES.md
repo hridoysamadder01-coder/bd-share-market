@@ -138,10 +138,72 @@ These now live in `bdlib/config.py` and constrain every future candidate:
 - Capital-gains tax **unknown**, modelled as 0 — so every net figure above is
   optimistic by an unknown amount.
 
+## Phase 4.5 — doorstep footprints rejected (2026-09-02)
+
+Question: does a pre-defined footprint at the close of *t* precede an abnormal
+price event in *t+1 … t+k* beyond chance, the same-day market, volatility
+clustering and today's shock? DISCOVERY window 2012–2018 only; holdout sealed;
+full detail in `reports/PHASE45_DOORSTEP_REPORT.md`. All lifts below are
+vol-matched on the `fresh_both` population (no door of either direction open in
+t−5 … t), Newey-West t.
+
+### P45-1 — "Quiet accumulation" (abnormal volume with a calm price) ❌ SUBTRACTS INFORMATION
+F01 quiet_volume → abn_up k=3: lift 1.59 vs plain abnormal volume 1.76; inside
+F15 the "calm" condition lowers the hit rate (paired t −2.6). F05
+departure_calm: lift 0.98 (none) — inside F06 the calm condition subtracts
+(t −6.8). F02, F13, F18: ratios to plain volume 0.68–0.91. On daily bars the
+quiet part of "quiet accumulation" removes the informative occurrences.
+
+### P45-2 — "Absorption" / dip-recovered-on-volume (F03, F04) ❌ BELOW THE GATES
+→ abn_down k=3: 2.11 / 3.25 lift but shock-matched t 2.6 / 2.8 and 60 / 36
+distinct doors; F04 carried by 2013 alone. → up-doors: ≤ 1.6, below plain
+volume. Renamed from "absorption": a hammer bar is indistinguishable from a
+bounce on EOD data.
+
+### P45-3 — Closing strength (F11 single-session; F12 ten-session) ❌ NO INFORMATION
+F11 → abn_up k=3 1.38 (÷F15 0.79); F12 1.04. F12's v1 limit-down "lift 4.2"
+was a reversal after an open up-door (P45-6).
+
+### P45-4 — Idiosyncratic move (F08u / F08d) ❌ IS "ALREADY MOVED"
+93% of F08 lies inside F16. Once today's |ret|/σ enters the match, F08u →
+limit_up k=5 falls 1.84 → 1.29 (t 3.1); its increment over any same-sign 2σ
+move is 3–15%. F08d → limit_up was a bounce after a drop. Post-move footprints
+are excluded from candidacy by construction (like F16).
+
+### P45-5 — Persistence (F17, second abnormal-volume day) ❌ DOES NOT BEAT PLAIN VOLUME
+→ abn_down k=3: 2.46 (t 3.6), shock 2.03 (t 3.3), 62 doors — passes size
+gates, fails the bootstrap reference bound vs F15 (F17 ⊂ F15).
+
+### P45-6 — v1's "down-door" candidates (F14 → limit_down 5.6×, F12 4.2×, F03, F17 → limit_down) ❌ REVERSALS, NOT DOORSTEPS
+The v1 fresh filter was one-sided: for down-outcomes it removed only rows with a
+recent DOWN door, so a footprint on or just after a limit-UP day was scored as a
+doorstep for the limit-down that followed. F14 → limit_down k=5: 38 of 42 hits
+had an up-door open; 4/708 otherwise. On `fresh_both`: F14 1.30 (t 0.3, 2 hits),
+F12 2.39 (t 0.8, 3 hits), F03 1.62 (t 1.3), F17 1.05 (t 0.9). Also ~30–50% of
+the unbounded "limit-down" days were beyond-band ex-date resets (I-008).
+
+### P45-7 — Compression → volume (F10) ❌ UNMEASURABLE (213 occurrences)
+
+### P45-8 — Any footprint → limit_up ❌ NONE PASSES
+Best: F08u 1.84 (shock 1.29), F07 1.72 (shock 1.46, t 2.7, 1.00× F16u), F15
+1.55. Limit-up doors at 1–10 sessions are not anticipated by any footprint here
+beyond what today's activity and today's move already say.
+
+**Survived (one, to Phase 5):** F07 idio_activity → abn_up k=3 — see
+`SURVIVING_RESEARCH_LEADS.md`.
+
 ## Rejected implementation choices (kept so they are not retried)
 
 | # | Date | Choice | Why rejected | Evidence |
 |---|---|---|---|---|
+| I-007 | 2026-09-02 | **One-sided "fresh door" filter** (remove only same-direction prior doors) | A footprint firing on a limit-UP day counted as a doorstep for the limit-DOWN reversal that followed; produced every v1 down-door "candidate" | Review M1/R1/S-01/LK-1; F14 → limit_down 38/42 hits with an up-door open. Replaced by `fresh_both` |
+| I-008 | 2026-09-02 | **Unbounded limit proxy** (`\|R\| ≥ 0.95·band` with no far bound) | Ex-date / bonus reference-price resets (−15%, −20%, −33%) counted as limit-downs: 27–50% of "limit-down" days; they open at the new level, do not close at the low, next day up | Review M3/R2/S-02/LK-4. Now at-band only; beyond-band = corporate-action suspect, window unmeasurable |
+| I-009 | 2026-09-02 | **Unsigned F08 / F16** | An idiosyncratic drop scored as a doorstep for a limit-up (bounce); the "already moved" reference was a mixture that the fresh filter truncated asymmetrically | Review LK-1/LK-2/M4/S-03/S-10. Now signed, reference matched by sign |
+| I-010 | 2026-09-02 | **σ_prev-only volatility match for footprints defined on today's return** | σ_prev excludes t, so a row selected on today's shock sat among comparators that had not just moved; F08 lift 2.0 → 1.2 when today's \|ret\|/σ entered the match | Review SV-5. Shock-matched base added and gated |
+| I-011 | 2026-09-02 | **iid t across dates with overlapping k-session windows** | Per-date excess ACF1 up to 0.63 at k=10 for persistent footprints; t overstated 20–50% | Review LK-3/SV-1. Newey-West (L=10) gated |
+| I-012 | 2026-09-02 | **Counting every occurrence-hit as an event** | F12 → limit_down k=10: 102 "hits" were 28 distinct (symbol, door-date) events on 25 symbols | Review M7/SV-2. Distinct doors counted, gated ≥ 30 |
+| I-013 | 2026-09-02 | **Point comparison "lift ratio > 1" as the reference gate** | 21 of 63 v1 rows passed by < 10%, 11 by < 5% | Review SV-4. Date-block bootstrap lower bound > 1 required |
+| I-014 | 2026-09-02 | **Nested horizons counted as separate findings** | For up-doors, k=3/5/10 rows were the k=1 row diluted (F08 limit_up (0,1] lift 3.4; (5,10] 1.25) | Review SV-3/M5. Incremental outcome gate |
 | I-001 | 2026-09-01 | Robust z with denominator `1.4826·MAD + eps` | Locked / zero-volume stretches give MAD = 0, so z reached 4·10¹³ and would have poisoned every downstream mean, threshold and model | Observed on the synthetic fixture; replaced by a relative scale floor plus NaN when the baseline is degenerate |
 | I-002 | 2026-09-01 | Amihud impact as `\|ret\| / (turnover + eps)` | Zero-turnover bars produced 1.7·10¹⁷ | Caught by the numeric-sanity gate; now NaN when turnover = 0 |
 | I-003 | 2026-09-01 | Fixture that set a stale close without re-bracketing high/low | Planted a second, unintended defect and corrupted the planted-vs-detected accounting (39 detected vs 5 planted) | `qa/verify_detectors.py` now reconciles counts exactly |

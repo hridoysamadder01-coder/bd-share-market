@@ -1,18 +1,52 @@
 # RESEARCH_STATUS — Bangladesh (DSE) market-structure track
 
-> Snapshot **2026-09-01**. Only what is true today.
+> Snapshot **2026-09-02**. Only what is true today.
 
 ## Headline
 
 | | |
 |---|---|
-| Phase | 1–2 complete · Phase 3 rungs 1–2 built · **Phase 4 complete** |
-| Data | 392 equity-like symbols · 861,256 usable daily bars · 2012-10-01 → 2026-01-22 |
+| Phase | 1–2 complete · Phase 3 rungs 1–2 built · Phase 4 complete · **Phase 4.5 complete (v2, after adversarial review)** |
+| Data | 392 equity-like symbols · 861,256 usable daily bars · 2012-10-01 → 2026-01-22 · **survivorship-conditioned: no symbol ends before 2019** |
 | Bar frequency | **DAILY (EOD)** — minute data was requested; what exists is end-of-day |
-| Research claims | **zero tradeable**; one unvalidated NEGATIVE information finding |
-| Tradeable candidates | **none** — 0 of 750 pre-registered hypotheses survived verified brokerage + FDR |
+| Holdout | **2019-01-01 → 2022-07-27 SEALED** for Phase 5 (dropped at load, asserted) |
+| Research claims | **zero tradeable**; one unvalidated negative-mean finding (Phase 4); one unvalidated door-probability footprint (Phase 4.5) |
+| Tradeable candidates | **none** |
 | Prior rounds | Round 2 preserved verbatim (`prior_rounds/`, ledgered in `REJECTED_CANDIDATES.md`) |
 | Isolation from the OYSHE HFT system | ✅ no shared file, import or build |
+
+## Phase 4.5 — the corrected question, and its answer (complete)
+
+The track's question was never "is there alpha after costs"; it is **whether a
+footprint can be seen in public EOD data before the abnormal price event**.
+Phase 4.5 tested 18 pre-registered footprints against 5 door outcomes at 5
+horizons on the 2012–2018 discovery window, then had the design, code and
+results reviewed by five independent adversarial lenses, and rebuilt (v2).
+
+**Answer: one footprint survives, and it is not an accumulation footprint.**
+Abnormal volume in a stock on a day when the rest of the market is quiet (F07)
+precedes an abnormal up-move within 3 sessions 5.6% of the time vs 2.6% for
+same-day, same-volatility names and 3.0% once today's move size is matched —
+lift 2.2× / 1.8×, 145 distinct events on 101 symbols, every year, every price
+bucket, again in the floor era. It fails 94% of the time and beats plain
+abnormal volume by a thin margin (bootstrap lower bound 1.05).
+
+**Everything else failed**, including everything the v1 run had claimed: the
+"quiet accumulation" footprints carry *less* than plain abnormal volume;
+"absorption" and "closing strength" carry nothing; idiosyncratic moves are
+volatility clustering of the shock day; and every v1 "down-door" candidate
+(F14 → limit-down 5.6×, F12 4.2×) was a **reversal after an already-open
+limit-up** let through by a one-sided filter — on the corrected population
+those rows have 2–3 hits and t < 1. About 30–50% of the unbounded "limit-down"
+days were ex-date reference-price resets, not price events.
+
+Full report: `reports/PHASE45_DOORSTEP_REPORT.md`. Design and every post-hoc
+amendment: `DOORSTEP_FOOTPRINT_DESIGN.md`. Rejections: `REJECTED_CANDIDATES.md`
+P45-1…P45-8 and I-007…I-014.
+
+**What Phase 5 tests:** three pre-registered tests on the sealed holdout — the
+Phase-4 negative-mean family and the Phase-4.5 F07 footprint (two horizons).
+`SURVIVING_RESEARCH_LEADS.md` fixes the pass criteria now.
 
 ## What the real data turned out to be
 
@@ -140,10 +174,10 @@ was also run with a close-entry variant that avoids `open` entirely.
 ## What is NOT built
 
 Phase 3 rungs **2b–5** — and Phase 4 gave a positive reason NOT to build them
-(rung 1 matches rung 2). Phase 5 (walk-forward) and Phase 6 (economics) are not
-built; `WALK_FORWARD_RESULTS.csv` does not exist and has not been fabricated.
-`PRECURSOR_CANDIDATES.csv` exists but is **empty by construction** — nothing
-qualified.
+(rung 1 matches rung 2). Phase 5 (walk-forward on the sealed holdout) and Phase
+6 (economics) are not built; `WALK_FORWARD_RESULTS.csv` does not exist and has
+not been fabricated. `PRECURSOR_CANDIDATES.csv` (Phase 4) is **empty by
+construction**; `PHASE5_CANDIDATES.csv` (Phase 4.5) carries **one** row.
 
 ## Open gaps (owner action)
 
@@ -154,14 +188,20 @@ qualified.
 | D-6 | **Earliest saleability UNKNOWN** | Decides whether short holds are tradeable at all. Verify against a real LankaBangla / DSE account: can a position bought today be sold today, tomorrow, or only after settlement? *(Phase 4 note: it did not change any conclusion — nothing was tradeable at ANY horizon, including the unrestricted ones.)* |
 | D-7 | **`open` field provenance** | Mean overnight gap +0.385% vs median 0, 66% of nonzero gaps upward, stable across price buckets. Is this real DSE opening behaviour or a data-construction artefact? Until answered, open-entry numbers are provisional — hence the close-entry variant |
 | D-3 | Session hours + holiday calendar unverified | 775 Saturday rows are excluded on an *assumption*; if DSE held special Saturday sessions, those are real bars |
-| D-4 | No corporate-action table | 309 gap suspects unadjusted |
+| D-4 | No corporate-action table | 309 gap suspects unadjusted; in Phase 4.5 every beyond-band drop (27–50% of "limit-down" days) is a corporate-action *suspect* and 1,628 discovery rows are excluded on that suspicion — a table would turn suspects into adjustments |
 | D-5 | Brokerage/charges + capital-gains tax unverified | Phase 6 economics cannot be finalised |
+| D-8 | No sector table | "sector quiet" is approximated by "market quiet" (≤ 5% of names abnormal) |
+| D-9 | Histories of symbols delisted / suspended 2012–2024 | the universe is survivorship-conditioned (no symbol ends before 2019); collapsed names — the ones most relevant to down-doors — are absent |
+| — | DSE circular for the daily limit schedule (incl. ex-dates, new listings, Z category) | the limit outcomes use an empirically supported but unverified schedule (10 / 8.75 / 7.5 / 6.25 / 5 / 3.75 %) that may have changed after 2018 |
 
 ## Honest non-claims
 
-No pattern · no precursor · no edge · no profitability. Phases 1–2 are a
-measuring apparatus. The only market statements in this workspace are Round 2's,
-and all of them are **negative**.
+No edge · no profitability · no BUY/SELL · nothing validated. Phases 1–3 are a
+measuring apparatus. The market statements in this workspace are: Round 2's
+(all negative), Phase 4's (one negative-mean effect, unvalidated), and Phase
+4.5's (one door-probability footprint, unvalidated, thin margin over plain
+abnormal volume). The pre-registration of Phase 4.5 rests on the author's
+statement, not on version history; the sealed holdout is the only test.
 
 ## Reproduce
 
@@ -175,4 +215,6 @@ python3 state_engine/verify_state_causality.py       # state-layer no-lookahead 
 python3 experiments/rerun_saleability_killed.py      # the withdrawn-T+2 re-measurement
 python3 experiments/phase4_precursors.py --entry open    # Phase 4
 python3 experiments/phase4_precursors.py --entry close   # robustness variant
+python3 experiments/phase45_footprints.py --tag dse_eod  # Phase 4.5 v2 (holdout sealed at load)
+python3 experiments/verify_footprint_causality.py        # footprint/outcome causality proof
 ```

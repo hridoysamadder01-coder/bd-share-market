@@ -473,7 +473,7 @@ def analyse(df: pd.DataFrame, regime: str, date_index) -> tuple[pd.DataFrame, di
                     df["bs"] = loo_base(df, ys, m, ["ts", "volq", "shockq"])
                     dpop = df[m]
                     fp_list = list(fps)
-                    if variant == "fresh_both" and o in DOOR_OUTCOMES and k in (1, 5) \
+                    if variant == "fresh_both" and o in DOOR_OUTCOMES and k in (1, 3, 5) \
                             and not oname.endswith("(first)"):
                         fp_list += ["PLACEBO_" + f for f in FP_IDS]
                     for fp in fp_list:
@@ -508,25 +508,46 @@ def analyse(df: pd.DataFrame, regime: str, date_index) -> tuple[pd.DataFrame, di
                         a = par[inF].groupby("ts")[y].mean()
                         b = par[~inF].groupby("ts")[y].mean()
                         diff = (a - b).dropna()
-                        _, t_nw, nd = nw_t(diff)
+                        if len(diff) >= 2:
+                            _, t_nw, nd = nw_t(diff)
+                            dmean, test = float(diff.mean()), "paired-by-date"
+                        else:
+                            # A DATE-LEVEL condition (e.g. "market quiet") never
+                            # shares a date with its complement, so the paired
+                            # test is empty by construction. Compare the parent's
+                            # per-date vol-matched excess on condition-dates vs
+                            # other dates instead (Welch t over dates).
+                            exF = (a - par[inF].groupby("ts")["bv"].mean()).dropna()
+                            exN = (b - par[~inF].groupby("ts")["bv"].mean()).dropna()
+                            if len(exF) > 1 and len(exN) > 1:
+                                se = np.sqrt(exF.var(ddof=1) / len(exF) + exN.var(ddof=1) / len(exN))
+                                dmean = float(exF.mean() - exN.mean())
+                                t_nw = float(dmean / se) if se > 0 else np.nan
+                                nd = int(len(exF) + len(exN))
+                            else:
+                                dmean, t_nw, nd = np.nan, np.nan, 0
+                            test = "between-dates (Welch)"
                         rows.append({"regime": regime, "variant": variant, "footprint": fp,
                                      "outcome": oname, "horizon": k, "_within_parent": True,
                                      "within_parent": parent, "within_parent_t_nw": t_nw,
-                                     "within_parent_dates": nd,
-                                     "within_parent_diff": float(diff.mean()) if nd else np.nan})
+                                     "within_parent_dates": nd, "within_parent_diff": dmean,
+                                     "within_parent_test": test})
     res = pd.DataFrame(rows)
     flag = (res["_within_parent"].fillna(False).astype(bool) if "_within_parent" in res.columns
             else pd.Series(False, index=res.index))
     wp = res[flag]
     res = res[~flag].copy()
     res = res.drop(columns=[c for c in ("_within_parent", "within_parent", "within_parent_t_nw",
-                                        "within_parent_dates", "within_parent_diff")
+                                        "within_parent_dates", "within_parent_diff",
+                                        "within_parent_test")
                             if c in res.columns])
     if len(wp):
         res = res.merge(wp[["regime", "variant", "footprint", "outcome", "horizon",
                             "within_parent", "within_parent_t_nw", "within_parent_dates",
-                            "within_parent_diff"]],
+                            "within_parent_diff", "within_parent_test"]],
                         on=["regime", "variant", "footprint", "outcome", "horizon"], how="left")
+    for c in ("door_outcome", "placebo"):          # object dtype after the concat ⇒ cast
+        res[c] = res[c].fillna(False).astype(bool)
     # ALL rows: the leave-one-out identity makes every excess exactly 0 → no t.
     allm = res["footprint"].str.startswith("ALL")
     for c in [c for c in res.columns if c.startswith("t_") or c.startswith("lift_")]:
@@ -885,6 +906,7 @@ def main() -> int:
         lows_m.append(boot_ratio_lower(dfD, pop, fp, mref, y, bv, date_idx["DISCOVERY"]))
     cand["boot_lower_ratio_vs_volume"] = lows_v
     cand["boot_lower_ratio_vs_moved"] = lows_m
+    cand.to_csv(os.path.join(paths["results"], "DOORSTEP_FUNNEL_STEP4.csv"), index=False)
     step5 = cand[(cand["boot_lower_ratio_vs_volume"] > 1) & (cand["boot_lower_ratio_vs_moved"] > 1)].copy()
     funnel.append(("5 = 4 and beats BOTH references with bootstrap lower bound > 1", int(len(step5))))
     # step 6: a horizon > 1 stands only if its INCREMENTAL window passes
@@ -978,7 +1000,7 @@ def main() -> int:
                  "base_shockmatched", "lift_shockmatched", "t_shockmatched_nw",
                  "lift_vm_vs_ref_volume", "boot_lower_ratio_vs_volume", "ref_moved_used",
                  "lift_vm_vs_ref_moved", "boot_lower_ratio_vs_moved",
-                 "within_parent", "within_parent_t_nw", "within_parent_diff",
+                 "within_parent", "within_parent_test", "within_parent_t_nw", "within_parent_diff",
                  "incremental_lift_vm", "incremental_t_nw",
                  "anydoor_lift_vm", "v1_onesided_fresh_lift_vm", "placebo_lift_vm", "placebo_t_nw",
                  "n_years_lift_ge_1", "min_year_lift_vm", "min_year_t_nw",
@@ -994,8 +1016,15 @@ def main() -> int:
     print("candidate funnel (DISCOVERY):")
     for label, n in funnel:
         print(f"  {label:<78} {n:>4}")
-    print(f"\nplacebo calibration (footprints shifted +{PLACEBO_SHIFT} sessions, fresh_both, door outcomes, k∈{{1,5}}): "
+    print(f"\nplacebo calibration (footprints shifted +{PLACEBO_SHIFT} sessions, fresh_both, door outcomes, k∈{{1,3,5}}): "
           f"{placebo_summary}")
+    with pd.option_context("display.float_format", lambda v: f"{v:.2f}", "display.width", 260):
+        print("\n--- funnel step 4 rows (fresh_both, all gates except references/increment) ---")
+        print(cand[["footprint", "outcome", "horizon", "n_hit", "n_distinct_doors", "lift_volmatched",
+                    "t_volmatched_nw", "lift_shockmatched", "t_shockmatched_nw",
+                    "lift_vm_vs_ref_volume", "boot_lower_ratio_vs_volume",
+                    "lift_vm_vs_ref_moved", "boot_lower_ratio_vs_moved"]].to_string(index=False)
+              if len(cand) else "  → NONE.")
     show = ["footprint", "outcome", "horizon", "n_measured", "n_hit", "n_distinct_doors", "hit_rate",
             "base_volmatched", "lift_volmatched", "t_volmatched_nw", "lift_shockmatched",
             "t_shockmatched_nw", "boot_lower_ratio_vs_volume", "boot_lower_ratio_vs_moved",

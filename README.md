@@ -46,15 +46,16 @@ any fixed rule. No indicator library appears in the feature layer.
 
 ```
 bd_research/
-  bdlib/          config · io · qa · features · labels   (shared library)
-  data/           raw/ (owner drops real DSE data) · synthetic/ (test fixture)
+  bdlib/          config · io · qa · features · labels · panels · costs
+  data/           raw/ (owner's DSE EOD CSVs, git-ignored) · synthetic/ (test fixture)
   qa/             run_qa.py · verify_detectors.py · EXCLUSIONS.csv
   features/       run_features.py · leakage_test.py
   prior_rounds/   Round 2 script + full output, preserved verbatim
-  state_engine/   Phase 3 — designed, not built (STATE_ENGINE_DESIGN.md)
-  experiments/    Phase 4–5 — not built
-  results/        parquet/csv outputs
-  reports/        DATA_QA_REPORT.md
+  state_engine/   Phase 3 rungs 1–2 (run_states.py · verify_state_causality.py)
+  experiments/    Phase 4 (phase4_precursors.py) · Phase 4.5 (phase45_footprints.py,
+                  verify_footprint_causality.py) · rerun_saleability_killed.py
+  results/        csv ledgers (committed) · parquet (regenerated, git-ignored)
+  reports/        DATA_QA_REPORT · PHASE4_PRECURSOR_REPORT · PHASE45_DOORSTEP_REPORT
   manifests/      one JSON per run: inputs (sha256), params, environment, outputs
 ```
 
@@ -95,16 +96,33 @@ every report) and pass `--input`.
 (session hours, holiday calendar, corporate actions, tick rules, brokerage) must
 be confirmed against official DSE sources. Every QA report prints them.
 
+Phases 3–4.5 on the real data:
+
+```bash
+python3 state_engine/run_states.py --tag dse_eod          # Phase 3 rungs 1–2, per panel
+python3 state_engine/verify_state_causality.py            # state-layer no-lookahead proof
+python3 experiments/phase4_precursors.py --entry open     # Phase 4 (+ --entry close variant)
+python3 experiments/phase45_footprints.py --tag dse_eod   # Phase 4.5 doorstep footprints (v2)
+python3 experiments/verify_footprint_causality.py         # footprint/outcome causality proof
+```
+
+**The Phase 5 holdout (2019-01-01 → 2022-07-27) is sealed** — `phase45_footprints.py`
+drops it at load and asserts. Do not run anything on it until Phase 5.
+
 ## Status
 
 `RESEARCH_STATUS.md` — current phase, what is proved, what is not.
-`REJECTED_CANDIDATES.md` — permanent, append-only.
-`SURVIVING_RESEARCH_LEADS.md` — currently, and honestly, empty.
+`REJECTED_CANDIDATES.md` — permanent, append-only (Round 2, Phase 4, Phase 4.5).
+`SURVIVING_RESEARCH_LEADS.md` — what goes to Phase 5: **one negative-mean family
+(Phase 4) and one door-probability footprint (Phase 4.5). Nothing tradeable.**
+`DOORSTEP_FOOTPRINT_DESIGN.md` — the Phase 4.5 design, its amendments, and the
+v2 corrections after adversarial review, all disclosed.
 
 ## What Round 2 already settled (do not re-propose without a reason)
 
 Volume-spike + breakout: **never worked** (~11,000 trades, negative in every
 period). Panic-day rebound: **not capturable** — it lives entirely in the
-overnight gap. The best outside candidate: **closed by T+2** — its profit sat at
-an exit the settlement rule forbids. Details and numbers in
-`REJECTED_CANDIDATES.md`.
+overnight gap. The best outside candidate was originally closed by an *assumed*
+T+2 sell block; that assumption is withdrawn (saleability is UNKNOWN) and the
+candidate was re-measured — still not promotable, now on evidence (t = 0.97, no
+replication, contradicted post-break). Details in `REJECTED_CANDIDATES.md`.
