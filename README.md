@@ -137,6 +137,11 @@ drops it at load and asserts. Do not run anything on it until Phase 5.
 (Phase 4) and one door-probability footprint (Phase 4.5). Nothing tradeable.**
 `DOORSTEP_FOOTPRINT_DESIGN.md` — the Phase 4.5 design, its amendments, and the
 v2 corrections after adversarial review, all disclosed.
+`DATA_ACQUISITION_ARCHITECTURE.md` — **design only, nothing implemented**: which
+order-book / tick fields the locked target needs, what a DSE retail account can
+obtain live (evidence-graded per channel), a lossless-recorder architecture on
+free infrastructure, and what the minute data can and cannot validate. Owner
+actions D-13 … D-17 gate any implementation.
 
 ## What Round 2 already settled (do not re-propose without a reason)
 
