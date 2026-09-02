@@ -18,7 +18,7 @@ history — never the full sample.
 Panels are never pooled. The 2024-02-22 coverage break changes what a
 cross-sectional number means, so each panel is fitted and written separately.
 
-  python3 bd_research/state_engine/run_states.py --tag dse_eod
+  python3 state_engine/run_states.py --tag dse_eod
 """
 from __future__ import annotations
 

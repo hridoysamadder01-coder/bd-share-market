@@ -52,7 +52,7 @@ code and results were committed together after the run, so pre-registration
 rests on the author's statement, not on version history. Every v2 change was
 made after seeing v1 results. The sealed holdout is the only real test.
 
-  python3 bd_research/experiments/phase45_footprints.py --tag dse_eod
+  python3 experiments/phase45_footprints.py --tag dse_eod
 """
 from __future__ import annotations
 

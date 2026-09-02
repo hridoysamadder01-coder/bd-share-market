@@ -7,7 +7,7 @@ feature proof — destroy every bar after a cut date, recompute, require the
 prefix to be identical — applied to `novelty`, `novelty_pct`, `state`,
 `state_age` and `elevated_run`, plus a positive control that must be caught.
 
-  python3 bd_research/state_engine/verify_state_causality.py [--symbols 25]
+  python3 state_engine/verify_state_causality.py [--symbols 25]
 """
 from __future__ import annotations
 

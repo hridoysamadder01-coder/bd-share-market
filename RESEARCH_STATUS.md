@@ -210,7 +210,7 @@ statement, not on version history; the sealed holdout is the only test.
 ## Reproduce
 
 ```bash
-cd bd_research
+cd bd-share-market
 python3 data/ingest_dse_eod.py                       # CSVs → normalised parquet + manifest
 python3 run_phase1_2.py --input data/raw/dse_eod.parquet --tag dse_eod \
                         --frequency DAILY --leak-symbols 25

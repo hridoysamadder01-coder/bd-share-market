@@ -24,7 +24,7 @@ Discipline this file is built around
 These are FULL-SAMPLE DESCRIPTIVE statistics. Nothing here is validated until
 Phase 5 walk-forward; a cohort that looks good here has not survived anything.
 
-  python3 bd_research/experiments/phase4_precursors.py --tag dse_eod
+  python3 experiments/phase4_precursors.py --tag dse_eod
 """
 from __future__ import annotations
 

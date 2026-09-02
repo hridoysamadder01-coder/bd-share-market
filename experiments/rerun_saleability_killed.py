@@ -18,7 +18,7 @@ on an unverified assumption, so it is re-measured here with:
 
 This re-opens a MEASUREMENT, not a conclusion. Nothing here is a signal.
 
-  python3 bd_research/experiments/rerun_saleability_killed.py
+  python3 experiments/rerun_saleability_killed.py
 """
 from __future__ import annotations
 

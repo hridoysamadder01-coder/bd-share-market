@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """PHASE 1 runner — audit a bar dataset and write the QA artifacts.
 
-  python3 bd_research/qa/run_qa.py --input <path> [--tag synthetic]
+  python3 qa/run_qa.py --input <path> [--tag synthetic]
 
-Outputs (all under bd_research/):
+Outputs (all under the repo root):
   reports/DATA_QA_REPORT.md      human-readable audit
   qa/EXCLUSIONS.csv              one row per (row, reason code) — nothing hidden
   results/<tag>_bars_annotated.parquet   every input row + flags + qa_exclude

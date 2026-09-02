@@ -1,7 +1,7 @@
 """Configuration for the Bangladesh (DSE) market-structure research workspace.
 
-SCOPE LOCK: nothing in bd_research/ imports from, writes to, or depends on the
-OYSHE HFT system (/hft, /tests, /tools, /docs). This is a separate problem.
+SCOPE LOCK: this repository is independent of the OYSHE HFT system
+(hridoysamadder01-coder/oyshe): no shared file, import or build. Separate problem.
 
 EVERY market-convention constant below is UNVERIFIED until confirmed against an
 official DSE source. Research output must never be interpreted as valid while a

@@ -1,12 +1,15 @@
-# bd_research — Bangladesh (DSE) market-structure research workspace
+# bd-share-market — Bangladesh (DSE) market-structure research
+
+> Moved out of `hridoysamadder01-coder/oyshe` (`bd_research/` at commit `2dc6356`, 2026-09-02) into its own
+> repository, **with its full commit history**, so the international HFT system and this
+> research never share a repo again. Nothing here imports from, builds with, or writes to OYSHE.
 
 ## SCOPE LOCK
 
-This workspace is **isolated from the OYSHE HFT system**. Nothing here imports
-from, writes to, or is imported by `/hft`, `/tests`, `/tools`, `/docs` or any
-root-level OYSHE module. The international HFT track stays exactly where it is,
-paused at its external-access gate (CME CERT, `KNOWN_GAPS.md` B-1/B-2). This is a
-different problem, in a different language, on a different market.
+This repository is **independent of the OYSHE HFT system** (`hridoysamadder01-coder/oyshe`):
+no shared file, import or build. The international HFT track stays in its own repo,
+paused at its external-access gate (CME CERT). This is a different problem, in a
+different language, on a different market.
 
 ## What this is trying to do
 
@@ -45,7 +48,7 @@ any fixed rule. No indicator library appears in the feature layer.
 ## Layout
 
 ```
-bd_research/
+
   bdlib/          config · io · qa · features · labels · panels · costs
   data/           raw/ (owner's DSE EOD CSVs, git-ignored) · synthetic/ (test fixture)
   qa/             run_qa.py · verify_detectors.py · EXCLUSIONS.csv
@@ -62,7 +65,7 @@ bd_research/
 ## Run it
 
 ```bash
-cd bd_research
+cd bd-share-market
 python3 data/make_synthetic.py                       # test fixture with planted defects
 python3 qa/verify_detectors.py                       # proves the QA detectors fire
 python3 qa/run_qa.py --input data/synthetic/synthetic_minute_bars.parquet --tag synthetic

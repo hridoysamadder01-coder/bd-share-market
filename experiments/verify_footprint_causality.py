@@ -13,7 +13,7 @@ Two properties, each with a POSITIVE CONTROL so a pass cannot be vacuous:
      max(k)+6 sessions before the cut must be unchanged. A deliberately
      unbounded outcome (max over the whole future) must be caught.
 
-  python3 bd_research/experiments/verify_footprint_causality.py
+  python3 experiments/verify_footprint_causality.py
 """
 from __future__ import annotations
 

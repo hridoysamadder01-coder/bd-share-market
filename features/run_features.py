@@ -4,7 +4,7 @@
 Features and labels are written to DIFFERENT FILES on purpose: the only way to
 use a label as an input is to load it deliberately, which shows up in a diff.
 
-  python3 bd_research/features/run_features.py --input <annotated.parquet> --tag synthetic
+  python3 features/run_features.py --input <annotated.parquet> --tag synthetic
 """
 from __future__ import annotations
 

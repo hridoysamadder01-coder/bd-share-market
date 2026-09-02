@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Reproducible driver for Phases 1–2 plus both proofs.
 
-  python3 bd_research/run_phase1_2.py                      # synthetic fixture
-  python3 bd_research/run_phase1_2.py --input data/raw/x.parquet --tag dse_v1
+  python3 run_phase1_2.py                      # synthetic fixture
+  python3 run_phase1_2.py --input data/raw/x.parquet --tag dse_v1
 
 Order matters: fixture → detector self-test → QA audit → feature build →
 leakage proof. Any step failing stops the run; a green run means every artifact

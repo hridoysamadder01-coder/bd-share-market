@@ -12,7 +12,7 @@ A test that can only pass is worthless, so the run also includes a POSITIVE
 CONTROL: a deliberately leaky column (`close.shift(-1)`). The suite fails if the
 detector does NOT catch it — that is what makes the passes meaningful.
 
-  python3 bd_research/features/leakage_test.py [--cuts 12] [--seed 7]
+  python3 features/leakage_test.py [--cuts 12] [--seed 7]
 """
 from __future__ import annotations
 

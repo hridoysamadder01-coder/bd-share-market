@@ -13,8 +13,8 @@ import pandas as pd
 
 from . import config as C
 
-REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-BD = os.path.join(REPO, "bd_research")
+BD = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))   # this repository's root
+REPO = BD
 
 
 def paths() -> dict:

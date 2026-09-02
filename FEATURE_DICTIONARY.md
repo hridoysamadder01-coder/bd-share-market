@@ -1,7 +1,7 @@
 # FEATURE_DICTIONARY
 
-> Implementation: `bd_research/bdlib/features.py`. Causality proved by
-> `bd_research/features/leakage_test.py` (future-corruption test + positive control).
+> Implementation: `bdlib/features.py`. Causality proved by
+> `features/leakage_test.py` (future-corruption test + positive control).
 
 ## Notation and the causality contract
 
