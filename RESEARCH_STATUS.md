@@ -200,6 +200,12 @@ construction**; `PHASE5_CANDIDATES.csv` (Phase 4.5) carries **one** row.
 | D-10 | Official closing-price rule; start date of the single-price closing session | minute data: last print ≠ official close on 20% of days (minute QA §9) |
 | **D-11** | **First DSE floor-price regime — start (2020-03-19 observed market-wide in the minute data) and lift dates** | `config.FLOOR_ERA` carries only 2022-07-28 → 2024-01-31; every daily-data phase treated March 2020 → mid 2021 as a free market. **Affects the regime split of work already done** |
 | D-12 | Daily/EOD history for 19 SME-board symbols from 2022-08-30 | present in the minute files, absent from the daily files and from our EOD data (4,528 symbol-days) |
+| **D-13** | **Name the broker/platform and screenshot its Market Depth and Time & Sales screens** (levels; price / quantity / number of orders per level; trade-row columns and timestamp precision; any side or segment flag) | Decides which order-flow quantities exist at all (`DATA_ACQUISITION_ARCHITECTURE.md` §1, §4). Every "?" in the channel matrix closes here |
+| **D-14** | Confirm the platform's terms permit recording your own market-data session for personal research | The DSE-FlexTP terminal is the only real-time source; without permission the design falls back to coarse public polling and the target shrinks |
+| D-15 | Choose the primary capturer (Oracle Always Free needs a card; a home machine needs a UPS) and whether a second capturer exists | Two independent capturers are a design principle |
+| D-16 | **Consolidates D-3, D-11 and the unnumbered limit-schedule row.** Dated rule table: all six limit tiers with sources; lower-limit episodes (2021-04-07 2 % for 66 names; 2024-04-24 3 % → 2024-08-28 10 %); both floor regimes with per-stock exits (2020-03-19 → phased from April 2021; 2022-07-28 → 2024-01-18 most, 2024-08-28 four more, June 2026 the last two — `config.FLOOR_ERA` ends 2024-01-31 and must be reconciled); session hours per date incl. the pre-open start (09:45 from 2020-11-19, 09:55 from 2022-11-15); tick/lot changes. DSE circulars must be pulled from Bangladesh (dsebd.org was unreachable from the research container) | Every order-flow quantity is conditional on the regime of the day |
+| D-17 | Decide whether to buy commercial history: ask ICE whether DSE tick / L2 history exists and at what cost (its page lists a real-time L1/L2 feed; DSE-specific history is not stated) — otherwise the order-book history begins on the recorder's first day. How long a sample Phase 5 needs is an owner / Phase-5 decision (for scale: 3,328 fresh limit-up doors in DISCOVERY, ~1–2 per symbol-year) | Determines when order-flow research can start |
+| D-18 | Whether one-lot passive **probe orders** may ever be placed to measure queue turnover (`DATA_ACQUISITION_ARCHITECTURE.md` Q15). The repository's "no BUY/SELL" rule forbids it today; default **no** | Q15 exists only if yes |
 
 ## Minute-level data — Phase 1 QA only (2026-09-02)
 
@@ -215,6 +221,27 @@ regime appearing 2021–22; and the first floor regime (D-11). Eight loader/QA
 changes are listed in the report and **not implemented**. The v1 report was
 checked by three independent lenses; every count reproduced, several readings
 were corrected (report §17).
+
+## Data-acquisition architecture for the order-book target (2026-09-03, design only)
+
+`DATA_ACQUISITION_ARCHITECTURE.md` maps the locked target (the order-book /
+order-flow footprint before a door) to twelve observable quantities, rates the
+fields each manipulation pattern needs, and records — with an evidence grade on
+every row — what a DSE retail investor can obtain live: the DSE-FlexTP terminals
+(DSE-Mobile, DSE Investor / M-Invest) carry best bid/ask, "top 10" depth and a
+Time & Sales screen; LankaBD exposes a public per-symbol depth endpoint with day
+totals (response saved under `evidence/`); ICE resells the exchange's L1/L2 feed
+commercially. **No public historical order-book or tick data for DSE was found**,
+so the book history starts when a recorder starts. The document specifies a
+lossless recorder (raw-first, dual timestamps, heartbeats, explicit gaps, hashed
+append-only segments, two capturers, replay-only parsing) and compares free
+infrastructure with quoted limits. The minute dataset can validate trade-tape
+behaviour and session structure only; it looks like two capture regimes
+(single-price minutes on ≈ 99 % of rows before 2020, ≈ 75 % from 2020 — a
+hypothesis, `qa/minute_observability_sample.py`) and cannot validate the recorder.
+The document was rewritten (v2) after four independent adversarial reviews; its
+§11 lists what v1 got wrong. **Nothing is implemented; no signal was tested.**
+Owner actions D-13 … D-18 gate the next step.
 
 ## Honest non-claims
 
