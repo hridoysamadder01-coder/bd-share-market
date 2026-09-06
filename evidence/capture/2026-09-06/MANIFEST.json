@@ -469,6 +469,116 @@
    "bytes": 76001,
    "epoch": "28052b83d33d473cac130d0ba8a252b2",
    "closed_utc": "2026-09-06T06:02:50.266450+00:00"
+  },
+  {
+   "source": "lankabd_circuit",
+   "path": "segments/lankabd_circuit__ccr-vm__28052b83__20260906T05__00000006.jsonl",
+   "records": 3,
+   "first_seq": 6,
+   "last_seq": 8,
+   "sha256": "df0313717e974f4e7a84f496bcee182db0bbfde2990296f2134614a84360c451",
+   "bytes": 1549173,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:55:51.539735+00:00"
+  },
+  {
+   "source": "dsebd_latest",
+   "path": "segments/dsebd_latest__ccr-vm__28052b83__20260906T05__00000006.jsonl",
+   "records": 3,
+   "first_seq": 6,
+   "last_seq": 8,
+   "sha256": "a31078abe4983305dfda08d89c13953d5061dfcee860ea7292e7249904961e2b",
+   "bytes": 724077,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:55:54.340661+00:00"
+  },
+  {
+   "source": "dsebd_hts",
+   "path": "segments/dsebd_hts__ccr-vm__28052b83__20260906T05__00000006.jsonl",
+   "records": 3,
+   "first_seq": 6,
+   "last_seq": 8,
+   "sha256": "ddcb16e5c80d1dfa8d5f8dcfdfddd711a537b57f4b5829987ddacfaf9628c4bc",
+   "bytes": 365639,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:55:55.730450+00:00"
+  },
+  {
+   "source": "dsebd_depth",
+   "path": "segments/dsebd_depth__ccr-vm__28052b83__20260906T06__00001915.jsonl",
+   "records": 945,
+   "first_seq": 1915,
+   "last_seq": 2859,
+   "sha256": "4c5bca0ebc54b738906ae643361c913c634794f54f632f8a665129da8960fb72",
+   "bytes": 9997556,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:00:00.672024+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__ccr-vm__28052b83__20260906T06__00000857.jsonl",
+   "records": 448,
+   "first_seq": 857,
+   "last_seq": 1304,
+   "sha256": "83ad99bb56ae5b92ebaf7014017740af25d0609bda8ad6698f23d1182ffddbce",
+   "bytes": 1135338,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:00:00.679902+00:00"
+  },
+  {
+   "source": "lankabd_depth",
+   "path": "segments/lankabd_depth__ccr-vm__28052b83__20260906T06__00001916.jsonl",
+   "records": 945,
+   "first_seq": 1916,
+   "last_seq": 2860,
+   "sha256": "c8d3fc8fb483e655ed3d52a0c9a4ba9121996d083c4c627682fa6c7ed3c40f27",
+   "bytes": 5272780,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:00:01.045146+00:00"
+  },
+  {
+   "source": "lankabd_watch",
+   "path": "segments/lankabd_watch__ccr-vm__28052b83__20260906T06__00000213.jsonl",
+   "records": 110,
+   "first_seq": 213,
+   "last_seq": 322,
+   "sha256": "9a92ced207cbb96e084dc8376cadf6387118d0dcafaec0485e38cdb18da93869",
+   "bytes": 67858150,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:00:22.165207+00:00"
+  },
+  {
+   "source": "lankabd_market",
+   "path": "segments/lankabd_market__ccr-vm__28052b83__20260906T06__00000112.jsonl",
+   "records": 58,
+   "first_seq": 112,
+   "last_seq": 169,
+   "sha256": "6d75e2ad05a1acbd0b46603048e083f36a51d43b9c5a2ffd40074ee1dab4d199",
+   "bytes": 121770,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:00:53.627573+00:00"
+  },
+  {
+   "source": "lankabd_tape",
+   "path": "segments/lankabd_tape__ccr-vm__28052b83__20260906T06__00000524.jsonl",
+   "records": 282,
+   "first_seq": 524,
+   "last_seq": 805,
+   "sha256": "c8e1769ead7264e3be54a6c39c8291e1e4c90673e9883f3f0821c8904fa3fc47",
+   "bytes": 2081074,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:02:12.822352+00:00"
+  },
+  {
+   "source": "lankabd_block",
+   "path": "segments/lankabd_block__ccr-vm__28052b83__20260906T06__00000029.jsonl",
+   "records": 14,
+   "first_seq": 29,
+   "last_seq": 42,
+   "sha256": "3f0c1abc00b64a683559d575f706994fad1ecbff5818ed41b745b9eeb037cd51",
+   "bytes": 101809,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T07:04:19.815910+00:00"
   }
  ],
  "previous_epochs": [
