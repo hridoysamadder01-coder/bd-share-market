@@ -1,0 +1,166 @@
+{
+ "capture": "evidence/capture/2026-09-06",
+ "replay_counts": {
+  "lankabd_cidmap": 2,
+  "lankabd_watch": 475,
+  "lankabd_circuit": 6,
+  "dsebd_hts": 6,
+  "lankabd_market": 244,
+  "lankabd_block": 53,
+  "dsebd_depth": 3796,
+  "lankabd_depth": 4254,
+  "lankabd_tape": 1167,
+  "dsebd_latest": 5
+ },
+ "replay_problems": 8,
+ "denominator": {
+  "n_frames": 4257,
+  "n_symbols": 14,
+  "frames_per_symbol": {
+   "BEXIMCO": 305,
+   "BRACBANK": 304,
+   "BXPHARMA": 304,
+   "GP": 304,
+   "IPDC": 304,
+   "LOVELLO": 304,
+   "MALEKSPIN": 304,
+   "ORIONPHARM": 303,
+   "POWERGRID": 304,
+   "PTL": 305,
+   "SAIHAMCOT": 304,
+   "SAIHAMTEX": 304,
+   "SHARPIND": 304,
+   "SQURPHARMA": 304
+  },
+  "frames_per_split": {
+   "dev": 1696,
+   "holdout": 1287,
+   "val": 1274
+  },
+  "t_range": [
+   "2026-09-06 03:55:51.758161+00:00",
+   "2026-09-06 08:20:00.253120+00:00"
+  ],
+  "median_frame_dt_s": 43.673742,
+  "composite_frames": 8,
+  "composite_episodes_total": 3,
+  "composite_episodes_holdout": 1,
+  "component_frames": {
+   "persistent_bid_pressure": 1845,
+   "ask_thinning": 974,
+   "bid_replenishment": 2324,
+   "multi_level_transition": 441,
+   "spread_stable": 1947,
+   "time_persistence": 294,
+   "price_response_ok": 2231
+  },
+  "score_histogram": {
+   "0": 185,
+   "1": 973,
+   "2": 1214,
+   "3": 1127,
+   "4": 570,
+   "5": 142,
+   "6": 38,
+   "7": 8
+  },
+  "baseline_frames": {
+   "b_imb_l1": 1793,
+   "b_imb_top5": 2244,
+   "b_imb_weighted": 2139,
+   "b_largest_wall_bid": 2525,
+   "b_one_frame_pressure": 418
+  },
+  "bad_book_frames": 499,
+  "stale_book_frames": 367,
+  "dup_payload_frames": 2405,
+  "frames_with_tape_rows": 2215,
+  "frames_with_two_book_sensors": 3793,
+  "book_agree_rate": 0.9651990508832059,
+  "state_frames": {
+   "BID_PRESSURE_BUILDING": 2031,
+   "BALANCED": 1168,
+   "ASK_PRESSURE_BUILDING": 340,
+   "NO_BOOK": 270,
+   "ONE_SIDED": 229,
+   "STALE": 208,
+   "BID_PRESSURE_CONFIRMED": 8,
+   "BID_PRESSURE_FAILED": 2,
+   "BID_PRESSURE_RESOLVED": 1
+  },
+  "valid_outcomes_h2": 3615,
+  "base_p_up_h2": 0.1706777316735823,
+  "valid_outcomes_h4": 3588,
+  "base_p_up_h4": 0.2427536231884058,
+  "valid_outcomes_h8": 3533,
+  "base_p_up_h8": 0.2949334842909708
+ },
+ "design": {
+  "W": 6,
+  "P": 2,
+  "horizons": [
+   2,
+   4,
+   8
+  ],
+  "primary_h": 4,
+  "theta_imb": 0.2,
+  "persist_frac": 0.8,
+  "thinning_ratio": 0.8,
+  "max_spread_ticks": 2.0,
+  "theta_pressure": 0.1,
+  "dev_frac": 0.4,
+  "val_frac": 0.3,
+  "block_len": 20,
+  "n_boot": 1000,
+  "n_perm": 500,
+  "seed": 7,
+  "n_min_episodes": 30,
+  "n_min_frames": 500,
+  "alpha": 0.05,
+  "stale_unchanged_run": 3,
+  "stale_watch_age_s": 120.0,
+  "match_keys": [
+   "symbol",
+   "tod_bucket",
+   "spread_bucket"
+  ],
+  "n_tod_buckets": 5
+ },
+ "written_utc": "2026-09-06T08:46:00.366242+00:00",
+ "git_commit": "00b69043a9fdc3a75a62863be9b179c824aa1734",
+ "outputs": {
+  "FALSIFICATION.csv": {
+   "sha256": "04eff202940ccdac4082cc968da8d4429441af1b893ce4d480aa0770df52f389",
+   "bytes": 4008
+  },
+  "DENOMINATOR.json": {
+   "sha256": "8b6a3832d90e0aa8fd68a000e79a3922fa5e275939d880b09a84b8c605a6e57e",
+   "bytes": 1752
+  },
+  "frames.parquet": {
+   "sha256": "e0d914f6748fefd89c4a483198d33adfeee9516d81ab563c32f27ecc11c99779",
+   "bytes": 1553600
+  },
+  "VERDICT.json": {
+   "sha256": "1d3bec00de4a17d6c72a8f7c5c5aedc972f1bdc42d7c0cac98bb06622cc09c09",
+   "bytes": 1285
+  },
+  "INCREMENTAL_VS_BASELINES.csv": {
+   "sha256": "2e1d0bd31555b509d0ea0aa35114c4280b07b27e6592e409c79bdfa77089472e",
+   "bytes": 6381
+  },
+  "STATE_TRANSITIONS.csv": {
+   "sha256": "e9e40c3a7273c5ec1808fbaf8108ebdaaec4a2577a143a6852507b72ac9c5559",
+   "bytes": 471
+  },
+  "TRUTH_MAP.json": {
+   "sha256": "4aec2e4d676d084f2526745fc5aca8a3d290f5b9d28c902d962d2c3735eaec3b",
+   "bytes": 1807
+  },
+  "EXPERIMENT_RESULTS.csv": {
+   "sha256": "b3e95fca1ac88feaababee24b6a4e0f3326d5503887e82a552110934546660b7",
+   "bytes": 25352
+  }
+ }
+}

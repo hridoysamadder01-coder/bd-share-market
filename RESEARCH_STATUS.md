@@ -1,6 +1,19 @@
 # RESEARCH_STATUS — Bangladesh (DSE) market-structure track
 
-> Snapshot **2026-09-02**. Only what is true today.
+> Snapshot **2026-09-06**. Only what is true today.
+
+## Seeing engine — first live DSE session (2026-09-06) → **BLOCKED** (denominator)
+
+| | |
+|---|---|
+| What ran | `seeing` participant-side market-seeing engine, live 03:50–08:20 UTC (pre-open → close session), 14 symbols, raw hash-chained capture (72 segments, verified `all_ok chain_ok`) |
+| Sources actually captured | LankaBD depth (book sensor 1), dsebd.org load-instrument (book sensor 2), LankaBD cumulative tape (exchange-stamped), LankaBD watch (all-symbol L1), market stats, block board, circuit table, dsebd session times |
+| Synchronized frames | **4,257** (median frame gap 43.7 s); two book sensors on 3,793 frames, agreement **96.5 %**; tape rows on 2,215 frames; forward outcomes valid on 77–83 % |
+| Composite (7 conditions, pre-registered) | 8 frames · 3 episodes · **1 in the holdout** (< n_min 30) |
+| Verdict | **BLOCKED** — the denominator cannot decide KEEP/KILL; the falsification battery ran on that single episode and is reported as such (every test fails on n = 1, which is not evidence either way) |
+| What the day did show | every composite component is populated and varies (pressure 1,845 frames, thinning 974, replenishment 2,324, transition 441, spread-stable 1,947, persistence 294, price-response 2,231); score histogram 0…7 is continuous; simple baselines have hundreds of holdout episodes each with lifts of 0.02–0.09 at h = 4 |
+| Structural limit | public depth changes every ~30–45 s per symbol, no per-trade prints, no order counts, no queue → the design needs ~10+ sessions of unchanged capture, or a richer source (broker L2/T&S export, own-session HAR, FIX), before the composite has a denominator |
+| Report | `reports/SEEING_EXPERIMENT_REPORT_2026-09-06.md`; results `results/seeing/2026-09-06/`; interim (one hour) `results/seeing/2026-09-06_interim/` |
 
 ## Headline
 

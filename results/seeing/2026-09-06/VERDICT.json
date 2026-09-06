@@ -1,0 +1,8 @@
+{
+ "verdict": "BLOCKED",
+ "reasons": [
+  "only 1 distinct composite episodes in the holdout < n_min_episodes 30: the denominator is too small to decide; more sessions are required (capture is designed to run unchanged)"
+ ],
+ "holdout_composite_episodes": 1,
+ "rule": "\nBLOCKED  if the holdout has fewer than n_min_episodes distinct composite episodes or the\n         fused table has fewer than n_min_frames frames (denominator too small to decide).\nKEEP     if, on the HOLDOUT, at the primary horizon:\n           (a) lift(composite) \u2212 lift(best simple baseline) > 0 with block-bootstrap 95 % CI lower bound > 0;\n           (b) timestamp-permutation p < alpha for the composite's lift;\n           (c) the side-flipped (mirrored) composite predicts DOWN (its down-lift > 0);\n           (d) the anchor-shift placebo (signal shifted \u2212h) shows |lift| < \u00bd of the real lift;\n           (e) the sign of the incremental lift is preserved after stale, duplicate, crossed/locked and\n               largest-wall removal;\n           (f) leave-one-symbol-out: the incremental lift stays > 0 for every left-out symbol;\n           (g) the incremental lift is > 0 in both liquidity halves.\nKILL     otherwise. The hypothesis is not protected: failing (a) alone kills it.\n"
+}

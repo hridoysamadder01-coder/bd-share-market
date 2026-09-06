@@ -212,3 +212,29 @@ beyond what today's activity and today's move already say.
 | I-004 | 2026-09-01 | **Z-scoring raw volume / turnover levels** | On REAL DSE data an illiquid symbol with trailing median volume ≈ 1 share produced `rel_volume_z` ≈ 5·10⁶ the first day it traded — the number described the denominator floor, not the market | Now z-scored in **log space** (`_robust_z_log`), plus a validity guard: fewer than 20 traded days in the trailing window ⇒ NaN |
 | I-005 | 2026-09-01 | `vol_regime_ratio = σ_short / (σ_long + eps)` | Floor-era pinning makes σ_long exactly 0 ⇒ ratio 4363 on real data | NaN when σ_long is below price-grid resolution (`min_meaningful_vol`) |
 | I-006 | 2026-09-01 | Unbounded z-family features | A pinned-range symbol that suddenly ranges 16% gives a truthful but unusable `range_z` = 1600; a handful of rows would dominate any downstream statistic | Winsorised at ±20 with per-feature clip counts reported (2,827 cells = 0.011% on the real dataset) — the bound is documented, not hidden |
+
+## Seeing engine — first live DSE session, 2026-09-06 (participant-side market-seeing)
+
+Source: `results/seeing/2026-09-06/` (VERDICT.json, DENOMINATOR.json, EXPERIMENT_RESULTS.csv,
+FALSIFICATION.csv, INCREMENTAL_VS_BASELINES.csv), report `reports/SEEING_EXPERIMENT_REPORT_2026-09-06.md`,
+raw evidence `evidence/capture/2026-09-06/` (hash chain verified). Design pre-registered in
+`seeing/experiment/design.py` (W=6, P=2, θ=0.2, horizons 2/4/8 frames, dev/val/holdout 40/30/30 chronological,
+n_min_episodes 30).
+
+### S-1 — Composite bid-pressure state vs simple imbalance / wall / one-frame baselines ⏸ BLOCKED (not decided)
+4,257 synchronized frames, 14 symbols, one session. Composite fired on 8 frames = 3 episodes, **1 in the holdout**
+(< 30). Not KEEP, not KILL: the denominator cannot decide. The battery ran anyway on that one episode and every
+test "fails" on n = 1, which is not evidence in either direction. Baselines on the same holdout: b_one_frame_pressure
+106 episodes lift +0.093, b_imb_l1 87 episodes +0.082, b_imb_weighted 65 +0.032, b_imb_top5 59 +0.022,
+b_largest_wall_bid 48 +0.018 (h = 4). Decision rule unchanged; the capture is designed to run unchanged on
+further sessions. Re-open only when the holdout carries ≥ 30 distinct composite episodes.
+
+## Rejected implementation choices — seeing / tower build (2026-09-05 → 06)
+
+| # | Date | Choice | Why rejected | Evidence |
+|---|---|---|---|---|
+| I-015 | 2026-09-05 | **Multi-level transition and time-persistence required on the same frame** | The two could not coincide by construction (a crossing is one frame; persistence needs P frames after it), so the composite could never fire | Fixed in design.py: transition = crossing within the last W frames; documented before the live run |
+| I-016 | 2026-09-05 | **First tape row of the day treated as an interval delta** | The first cumulative row has no predecessor; taking Δ against 0 double-counted the day's opening volume as a 1-frame burst | `first_row_of_day` flag; row excluded from rolling windows |
+| I-017 | 2026-09-06 | **Tape pull before the day's first trade applied as today's rows** | LankaBD returns the previous session's rows (exchange stamp on another trading date); 2,777 such rows in the live capture would have become today's opening tape | Engine skips rows whose exchange trading date ≠ receipt trading date; counted, never applied |
+| I-018 | 2026-09-06 | **Engine quote memory (ltp/open/day totals) carried across trading dates** | The first frames of a session showed the previous session's ltp/open until the day's first print; circuit/auction gates on phase could not see a stale same-phase quote | Day-roll reset per symbol; ltp precedence tape row → fused primary quote (provenance) → labelled fallback |
+| I-019 | 2026-09-06 | **Silent zeros for unsized tape rows / FIX levels without MDEntrySize / zero-sentinel quote fields** | 0 was indistinguishable from "observed zero"; flowed into intensity, flow baselines and observed_fields | None + explicit flags (`unsized_rows`, `size_missing`, `zero_fields`) across tape, parsers, adapters, normalize |

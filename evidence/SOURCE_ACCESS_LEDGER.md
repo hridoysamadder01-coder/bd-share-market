@@ -37,3 +37,23 @@ INFERRED: interval trades/volume/VWAP, trade side (quote rule), event classes
 NOT_OBSERVABLE: number of orders per level, individual prints, queue position, order ids,
 intra-interval add/cancel netting — until #12/#13/#14 are attached. Each of those attaches
 through an adapter that already exists and is tested; no new design is needed.
+
+## 2026-09-06 scout — what it takes to obtain per-trade prints and order-count depth (no login attempted)
+
+Method: read-only public GETs, robots.txt first per host, ≤ 15 requests/host, three scouts each adversarially
+re-verified (logs and bodies under the session scratchpad `scout/`). OBSERVED = fetched and seen; INFERRED = read in
+a manual/JS; NOT_VERIFIED = could not be reached.
+
+| finding | truth | evidence |
+|---|---|---|
+| LankaBD public surface has **no** per-trade prints, **no** order counts, **no** push transport; depth is on-demand POST only; polls at 15/30/60/120 s; TradingView datafeed `has_intraday:false` | OBSERVED | 6 JS bundles + 4 pages re-grepped (0 hits for websocket/signalR/SSE); LiveStockFeed needs token+cookie (400 without) |
+| dsebd.org: HTML pages + four AJAX endpoints, nothing finer than the displayed book | INFERRED (host TLS chain broken from here; captured via verify=False fallback) | segments `dsebd_depth__*` 200 |
+| DSE-Investor / DSE-Mobile (Flextrade) terminals: login = username + password + 30-s Security Code from the registered device; one device per account; web-only still needs device registration; screens: Bid-Ask (Market Depth), Last Transaction (last two), Blotter; **no export** in either manual | OBSERVED (manuals: basl-bd.com User_Guide_DSE_Investor_v1.0.pdf Rev. 2017-04-04; islamibanksecurities.com DSE Mobile guide v1.1 2023-03) | terminal host `investor.dsetrade.com` is NXDOMAIN from public DNS (BD/broker-side resolution, NOT_VERIFIED) |
+| Broker-side FlexTP dealer terminal documents "Time and Sales — view each execution", "Export Orders and Executions to Excel", "watch list export to excel" | INFERRED (2014 dealer training deck, third-party mirror) | broker terminal, not investor-facing |
+| No scouted TREC broker (LankaBangla, UCB, EBL, Green Delta, BRAC EPL, IDLC, City, Shanta, Sheltech) publishes a no-login Time & Sales or order-count depth page, nor a client API; app listings mention "Market Depth (Level II) by Price and by Order" (TradeXpress) and "Time & Sale" (UCB UTrade) **behind login** | OBSERVED / INFERRED | bracepl marketdepth: no table; idlc downloads: forms only; lbsbd iBroker manual: Excel/PDF of own trades only |
+| DSE certified 47 brokers for FIX API (BHOMS programme since 2020; 9 more on 2025-11-27 incl. IDLC and LankaBangla) | OBSERVED (BSS news) | broker-only entitlement |
+
+**Exact owner inputs that would move #12/#13/#14 from B to V**
+1. Which broker holds the owner's BO account (selects the DirectFN / XFL Trade / DSE-Mobile route).
+2. A HAR export of one **own** web-terminal session (DevTools → Network → Export HAR) covering a Market Depth + Time & Sale screen, recorded from a network where the terminal host resolves, with the platform's written consent (D-14). Credentials, password and the registered device are prerequisites the owner uses; they are never handed over.
+3. A broker's written reply to a request for a Level-II (with order counts) or Time & Sales CSV/JSON export, or a FIX market-data / drop-copy entitlement (host, port, SenderCompID, TargetCompID, credentials, dictionary).
