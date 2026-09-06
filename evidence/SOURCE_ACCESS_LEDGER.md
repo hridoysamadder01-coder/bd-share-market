@@ -57,3 +57,10 @@ a manual/JS; NOT_VERIFIED = could not be reached.
 1. Which broker holds the owner's BO account (selects the DirectFN / XFL Trade / DSE-Mobile route).
 2. A HAR export of one **own** web-terminal session (DevTools → Network → Export HAR) covering a Market Depth + Time & Sale screen, recorded from a network where the terminal host resolves, with the platform's written consent (D-14). Credentials, password and the registered device are prerequisites the owner uses; they are never handed over.
 3. A broker's written reply to a request for a Level-II (with order counts) or Time & Sales CSV/JSON export, or a FIX market-data / drop-copy entitlement (host, port, SenderCompID, TargetCompID, credentials, dictionary).
+
+### 2026-09-06 addendum — owner's broker terminals (owner disclosed accounts: EcoSoftBD OST, LankaBangla)
+| finding | truth | evidence |
+|---|---|---|
+| EcoSoftBD "Smart Online Share Trading" (OST): host `ost.ecosoftbd.com`, login `/Login`, version 2.3.1038, ASP.NET MVC front + `/core/api/v1/` data API (cookie `CoreAuth`); `/Trader` and the API are login-gated (302 / 404 unauthenticated); no WebSocket/SignalR/SSE URL in the public bundles; no public manual; multi-broker vendor portal ("Development & Management @ Sydney") | OBSERVED (11 public GETs, no login) | scratchpad `scout/ecosoft/` (urls_fetched.log, public.js, bundle_app.js) |
+| LankaBangla TradeXpress web (`itrade.lbsbd.com`): app listing "Market Depth (Level II) by Price and by Order"; page CSP allows `wss://itrade.lbsbd.com/price` (live price push) | INFERRED (listing + page meta) | scout verify3 |
+| Path to VERIFIED for #12/#13: a HAR ("Save all as HAR with content", Chrome, includes `_webSocketMessages`) of the owner's own session with Trader/market watch, one symbol's Market Depth and its Time & Sales / Last Trade open for 10–15 min during 10:00–14:00 Dhaka → `seeing/capture/adapters/har_import.py` | — | owner action; no credentials handled |

@@ -126,6 +126,8 @@ def parse_archive(html: str) -> List[Dict[str, Any]]:
     i_date, i_ltp, i_high, i_low = col("date"), col("ltp"), col("high"), col("low")
     i_open, i_close, i_ycp = col("openp", "open"), col("closep", "close"), col("ycp")
     i_trade, i_value, i_volume = col("trade"), col("value (mn)", "value"), col("volume")
+    # the all-instrument archive carries a trading-code column; a single-instrument pull does not
+    i_code = col("trading code", "trading_code")
     out = []
     for tr in target.find_all("tr")[1:]:
         tds = tr.find_all("td")
@@ -139,7 +141,9 @@ def parse_archive(html: str) -> List[Dict[str, Any]]:
         def cell(i: Optional[int]) -> Optional[str]:
             return tds[i].get_text(strip=True) if (i is not None and i < len(tds)) else None
 
-        out.append({"trade_date": d.isoformat(), "ltp": _to_float(cell(i_ltp)), "high": _to_float(cell(i_high)),
+        code = (cell(i_code) or "").strip().upper() or None
+        out.append({"trade_date": d.isoformat(), "symbol": code, "ltp": _to_float(cell(i_ltp)),
+                    "high": _to_float(cell(i_high)),
                     "low": _to_float(cell(i_low)), "open": _to_float(cell(i_open)), "close": _to_float(cell(i_close)),
                     "yclose": _to_float(cell(i_ycp)), "day_trades": _to_int(cell(i_trade)),
                     "day_value_mn": _to_float(cell(i_value)), "day_volume": _to_int(cell(i_volume))})

@@ -1,0 +1,89 @@
+{
+  "started_utc": "2026-09-06T15:49:14.833227+00:00",
+  "completed_utc": "2026-09-06T15:49:57.599869+00:00",
+  "symbols_discovered": 725,
+  "symbols_pulled": 725,
+  "rows": {
+    "symbols.csv": 725,
+    "market_watch.parquet": 637,
+    "market_grid.parquet": 412,
+    "market_depth.parquet": 0,
+    "market_depth_summary.parquet": 0,
+    "trades_or_tape.parquet": 0,
+    "tape_interval_flow.parquet": 0,
+    "market_stats.parquet": 1,
+    "circuit_limits.parquet": 635,
+    "block_market.parquet": 35,
+    "dse_latest.parquet": 395,
+    "company_fundamentals.parquet": 0,
+    "company_financials.parquet": 0,
+    "company_pe_history.parquet": 0,
+    "company_shareholding.parquet": 0,
+    "historical_prices.parquet": 0,
+    "dse_market_statistics_breadth.parquet": 8,
+    "dse_market_statistics_block.parquet": 35,
+    "dse_market_statistics_totals.parquet": 1,
+    "dse_circuit_breaker_official.parquet": 636,
+    "dse_pe_at_a_glance.parquet": 419,
+    "dse_sector_wise_company_list.parquet": 23,
+    "dse_top_ten_gainer.parquet": 10,
+    "dse_top_ten_loser.parquet": 10,
+    "dse_marginable_securities.parquet": 144,
+    "dse_close_price.parquet": 636,
+    "dse_recent_market_information.parquet": 30
+  },
+  "requests_by_source": {
+    "lankabd_watch": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 591309
+    },
+    "lankabd_grid": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 445286
+    },
+    "lankabd_circuit": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 1777298
+    },
+    "lankabd_market": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 258
+    },
+    "lankabd_block": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 18417
+    },
+    "lankabd_cidmap": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 102477
+    },
+    "dse": {
+      "ok": 2,
+      "failed": 0,
+      "bytes": 852184
+    },
+    "dse_extras": {
+      "ok": 9,
+      "failed": 0,
+      "bytes": 3362406
+    }
+  },
+  "client_stats": {
+    "requests": 18,
+    "errors": 0,
+    "tls_fallbacks": 1
+  },
+  "failures": 0,
+  "duplicate_raw_payload_groups": 0,
+  "depth_symbols_with_levels": 0,
+  "depth_max_levels_seen": 0,
+  "cross_source_best_bid_checked": 0,
+  "cross_source_best_bid_agree": 0,
+  "depth_summary_rows": 0
+}
