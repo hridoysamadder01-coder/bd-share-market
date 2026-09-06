@@ -187,9 +187,10 @@ class Engine:
                 p = ev.payload
                 b.apply_snapshot(ev.t_recv, p.get("bids") or [], p.get("asks") or [],
                                  bid_orders=p.get("bid_orders"), ask_orders=p.get("ask_orders"))
+                zero_fields = set(p.get("zero_fields") or ())          # adapter's 'not populated' 0 sentinels
                 for k in ("ltp", "open", "high", "low", "close_published", "yclose", "day_trades", "day_volume",
                           "day_value_mn"):
-                    if p.get(k) is not None:
+                    if p.get(k) is not None and k not in zero_fields:
                         s.last_quote[k] = p[k]
                 if p.get("day_trades") is not None and p.get("day_volume") is not None:
                     s.tape.on_day_totals(ev.t_recv, p.get("day_trades"), p.get("day_volume"), p.get("day_value_mn"),
@@ -216,9 +217,11 @@ class Engine:
             s.tape.on_cum_totals(ev.t_exch or ev.t_recv, ev.t_recv, p.get("cum_trades"), p.get("cum_volume"),
                                  p.get("cum_value_mn"), p.get("price"), book=b, source=ev.source)
         elif et == EventType.QUOTE:
+            zero_fields = set(ev.payload.get("zero_fields") or ())
             for k, v in ev.payload.items():
-                if v is not None and k in ("ltp", "open", "high", "low", "close_published", "yclose", "day_trades",
-                                           "day_volume", "day_value_mn", "market_category"):
+                if v is not None and k not in zero_fields and k in (
+                        "ltp", "open", "high", "low", "close_published", "yclose", "day_trades",
+                        "day_volume", "day_value_mn", "market_category"):
                     s.last_quote[k] = v
         elif et == EventType.AUCTION:
             s.auction.on_event(ev)
@@ -240,10 +243,13 @@ class Engine:
         ms.session_state["quote"] = dict(s.last_quote)
         if s.block:
             ms.session_state["block"] = s.block
-        s.tape.on_mid(ev.t_recv, ms.mid if ms.mid is not None else ms.ltp)
+        # velocity series takes the book mid only: mixing in ltp on bookless frames produced spurious jumps
+        s.tape.on_mid(ev.t_recv, ms.mid)
         s.tape.fill_state(ms, book)
         if book is not None:
-            s.queue.on_book(ev.t_recv, book, interval_volume=ms.interval_volume)
+            # MarketState path: the tape interval is identified by (feed, kind, row) from session_state["tape"],
+            # so identical consecutive intervals are budgeted once each and a first-of-day day total is not budgeted
+            s.queue.on_book(ms, book)
         s.queue.fill_state(ms)
         self.fuser.fill_state(ms, ev.t_recv)
         s.circuit.on_state(ms, s.hist)

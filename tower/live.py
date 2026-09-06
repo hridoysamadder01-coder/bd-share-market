@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 
 from .engine import Engine, EngineConfig
 from .events import Event, utc
-from .normalize import Normalizer
+from .normalize import Normalizer, record_time
 from .store import StateStore
 
 
@@ -95,7 +95,8 @@ def run(capture: str, out: str, poll_s: float = 2.0, reorder_s: float = 3.0, sym
         if catchup_records is None:
             catchup_records = len(recs)
         # feed in receipt order across sources (as normalize_store does for a whole store)
-        recs.sort(key=lambda r: (str(r.get("t_recv_utc", "")), str(r.get("source")), int(r.get("seq", 0))))
+        # same receipt clock as the batch path (normalize.record_time: last byte for DATA, else write stamp)
+        recs.sort(key=lambda r: (record_time(r), str(r.get("source")), int(r.get("seq", 0))))
         for rec in recs:
             norm.on_record(rec, True)
         if len(norm.events) > drained:

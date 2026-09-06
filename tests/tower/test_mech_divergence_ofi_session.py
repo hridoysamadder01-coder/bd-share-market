@@ -770,7 +770,8 @@ def test_realdata_live_capture_books_when_present():
     if not os.path.isdir(os.path.join(LIVE, "segments")):
         pytest.skip("live capture not present")
     from tower.events import EventType
-    events, eng, states = _run_capture(LIVE)
+    # bounded to the session's first 20 minutes so the test stays O(minutes) while the capture grows
+    events, eng, states = _run_capture(LIVE, t_from="2026-09-06T03:55:00+00:00", t_to="2026-09-06T04:15:00+00:00")
     books = [ev for ev in events if ev.event_type == EventType.BOOK_SNAPSHOT and (ev.payload.get("bids") or ev.payload.get("asks"))]
     if not books:
         pytest.skip("live capture carries no displayed books yet")
