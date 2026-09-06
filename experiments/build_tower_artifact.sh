@@ -14,7 +14,9 @@ cp -r tower tests/tower tests/fixtures "$D/"
 mkdir -p "$D/seeing"; cp -r seeing "$D/"                       # tower reuses seeing.capture (raw store, adapters)
 cp README.md "$D/" 2>/dev/null || true
 [ -d "$STORE" ] && cp -r "$STORE" "$D/store_$(basename "$STORE")"
-[ -d "results/tower/gate" ] && cp -r results/tower/gate/GATE.json "$D/GATE.json"
+[ -f "results/tower/gate/GATE.json" ] && cp results/tower/gate/GATE.json "$D/GATE.json"
+[ -f "results/tower/gate/TESTS.json" ] && cp results/tower/gate/TESTS.json "$D/TESTS.json"
+[ -d "results/tower/$DATE/experiment" ] && mkdir -p "$D/experiment_$DATE" && cp results/tower/$DATE/experiment/*.json results/tower/$DATE/experiment/*.csv "$D/experiment_$DATE/" 2>/dev/null || true
 [ -f "$STORE/../tower_${DATE}.html" ] && cp "$STORE/../tower_${DATE}.html" "$D/"
 if [ -d "evidence/capture/$DATE" ]; then
   mkdir -p "$D/capture_$DATE/segments"
