@@ -149,13 +149,18 @@ def test_machinery_tape_empty_pull_and_price_only_correction(tmp_path):
     st.close()
     ev, s = normalize_store(root)
     tape = [e for e in ev if e.source == "lankabd_tape"]
-    # the seeing tape adapter raises on a non-numeric stamp: that record is a counted, explained failure
-    assert s.totals()["parse_failures"] == 1 and any("parser raised" in p for p in s.problems)
+    # the seeing tape adapter keeps a pull with one unreadable stamp: that row is flagged (an adapter
+    # problem stamped on the pull's events), the pull is not a parse failure and its good row is kept
+    assert s.totals()["parse_failures"] == 0 and any("bad stamp" in p for p in s.problems)
     assert tape[0].event_type is EventType.STATUS and tape[0].status == "no_new_rows"
     assert tape[0].payload == {"rows_in_pull": 0, "new_rows": 0, "repeated_rows": 0} and tape[0].symbol == "GP"
     ct = by_type(ev, EventType.CUM_TOTALS)
-    assert [(e.price, bool(e.flags.get("correction"))) for e in ct] == [(244.1, False), (244.3, True)]
+    assert [(e.price, bool(e.flags.get("correction"))) for e in ct][:2] == [(244.1, False), (244.3, True)]
     assert s.src("lankabd_tape").corrections == 1 and s.src("lankabd_tape").tape_rows_deduped == 0
+    last_pull = [e for e in ct if e.t_recv == ct[-1].t_recv]
+    assert any(e.payload.get("cum_trades") == 2 and e.t_exch is not None for e in last_pull)          # good row kept
+    assert any(e.flags.get("bad_stamp") and e.t_exch is None for e in last_pull)                       # bad row flagged
+    assert all(e.flags.get("parse_problem") for e in last_pull)                                        # pull marked
     # a frame whose stamp cannot be read is kept, unplaced on the exchange clock, and flagged
     from tower.normalize import events_from_frames
     bad = events_from_frames("lankabd_tape", [{"symbol": "GP", "t_source_ms": "bad", "price": 1.0, "cum_trades": 2}],
