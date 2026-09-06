@@ -16,6 +16,7 @@ evidence/capture/*/runner.log
 # tables are committed under evidence/public/<date>/ instead
 data/raw/dse/
 data/raw/dse_company/
+data/raw/dse_extras/
 data/raw/dse_history/
 data/raw/dsebd_depth/
 data/raw/lankabd_*/
