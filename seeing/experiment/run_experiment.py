@@ -52,22 +52,22 @@ def _episodes(mask: pd.Series, symbol: pd.Series) -> int:
 def matched_controls(f: pd.DataFrame, sig: pd.Series, h: int, d: Design, rng: np.random.Generator) -> Tuple[float, float, int]:
     """For each signal frame draw one non-signal frame with the same match keys.
     Returns (P(up | control), mean fwd ticks | control, n matched)."""
-    up, ticks, valid = f[f"fwd_up_h{h}"], f[f"fwd_mid_ticks_h{h}"], f[f"fwd_valid_h{h}"]
+    valid = f[f"fwd_valid_h{h}"]
     pool = f[(~sig) & valid]
     if not len(pool):
         return np.nan, np.nan, 0
-    groups = {k: v.index.values for k, v in pool.groupby(list(d.match_keys))}
-    picks: List[int] = []
-    for _, r in f[sig & valid].iterrows():
-        key = tuple(r[k] for k in d.match_keys)
+    keys = list(d.match_keys)
+    groups = {k: v.index.values for k, v in pool.groupby(keys)}
+    picks: List[np.ndarray] = []
+    for key, g in f[sig & valid].groupby(keys):
         cand = groups.get(key)
         if cand is None or not len(cand):
             continue
-        picks.append(int(rng.choice(cand)))
+        picks.append(rng.choice(cand, size=len(g), replace=True))
     if not picks:
         return np.nan, np.nan, 0
-    c = f.loc[picks]
-    return float(c[f"fwd_up_h{h}"].mean()), float(c[f"fwd_mid_ticks_h{h}"].mean()), len(picks)
+    c = f.loc[np.concatenate(picks)]
+    return float(c[f"fwd_up_h{h}"].mean()), float(c[f"fwd_mid_ticks_h{h}"].mean()), int(len(c))
 
 
 def signal_row(f: pd.DataFrame, name: str, sig: pd.Series, h: int, d: Design, rng: np.random.Generator,
