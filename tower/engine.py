@@ -47,6 +47,8 @@ class EngineConfig:
     strict: bool = False                      # re-raise engine exceptions (tests) instead of counting them
     coalesce_s: float = 6.0
     live: bool = False                        # compute event lag against the wall clock
+    emit_quote_only_states: bool = False      # symbols seen only through the all-symbol watch (no book, no
+                                              # tape) still feed the cross engine but are not stored as states
 
 
 @dataclass
@@ -65,6 +67,7 @@ class _Sym:
     tick: Optional[float] = None
     block: Optional[Dict[str, Any]] = None
     last_quote: Dict[str, Any] = field(default_factory=dict)
+    has_book_or_tape: bool = False
 
 
 class Engine:
@@ -173,6 +176,8 @@ class Engine:
         if et == EventType.BLOCK_PRINT:
             s.block = dict(ev.payload)
             return None
+        if et in BOOK_TYPES or et in (EventType.TRADE, EventType.CUM_TOTALS):
+            s.has_book_or_tape = True
         if et in BOOK_TYPES:
             b = self._book(s, ev.source)
             if ev.flags.get("duplicate") and et == EventType.BOOK_SNAPSHOT:
@@ -262,4 +267,9 @@ class Engine:
         ms.truth = STATE_TRUTH
         s.hist.push(ms)
         self.metrics["states_out"] += 1
+        if not s.has_book_or_tape:
+            ms.session_state["quote_only"] = True
+            if not self.cfg.emit_quote_only_states:
+                self.metrics["quote_only_states_suppressed"] = self.metrics.get("quote_only_states_suppressed", 0) + 1
+                return None
         return ms

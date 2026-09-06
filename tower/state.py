@@ -206,6 +206,6 @@ def _jsonable(x: Any) -> Any:
         return x.isoformat()
     if hasattr(x, "value") and not isinstance(x, (int, float)):
         return x.value
-    if isinstance(x, float) and x != x:   # NaN → null
+    if isinstance(x, float) and (x != x or x in (float("inf"), float("-inf"))):   # NaN / ±inf → null
         return None
     return x
