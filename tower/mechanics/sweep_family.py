@@ -91,7 +91,12 @@ class LiquiditySweep(Mechanism):
     fields are listed under ``missing``.  score = max(ramp(levels, 0.5 → 3),
     ramp(retreat, 0.5 → 3)) × (0.4 + 0.3 × ramp(|mid_jump| in the sweep
     direction, 0.5 → 3) + 0.3 × ramp(volume ratio, 1 → 5 | taken_share,
-    0.2 → 0.8)).  direction: ask swept +1, bid swept −1.
+    0.2 → 0.8)).  A side displayed before the burst and empty now was swept
+    through entirely: retreat = distance to its deepest pre-burst level + 1
+    tick and every pre-burst level is consumed (``side_emptied``).  When the
+    tape is observed and no volume traded inside the burst the vanished levels
+    were pulled, not swept: the score keeps a quarter (``no_trades_in_burst``).
+    direction: ask swept +1, bid swept −1.
     """
 
     name = "liquidity_sweep"
@@ -113,12 +118,20 @@ class LiquiditySweep(Mechanism):
         if pre is None or pre is ms:
             return missing_reading(self, ["history (no state ≥ 5 s before now)"], base)
         retreat: Dict[str, Optional[float]] = {}
+        emptied: Dict[str, bool] = {"bid": False, "ask": False}
         pb, _ = best_of(pre, "bid")
         cb, _ = best_of(ms, "bid")
         pa, _ = best_of(pre, "ask")
         ca, _ = best_of(ms, "ask")
         retreat["bid"] = (pb - cb) / tick if (pb is not None and cb is not None) else None
         retreat["ask"] = (ca - pa) / tick if (pa is not None and ca is not None) else None
+        for sd, p_pre, p_cur in (("bid", pb, cb), ("ask", pa, ca)):
+            # a side displayed before the burst and empty now was swept through entirely: the best
+            # retreated beyond every displayed level (deepest pre-burst price + 1 tick)
+            lv = levels_of(pre, sd)
+            if p_pre is not None and p_cur is None and lv:
+                retreat[sd] = abs(p_pre - lv[-1][0]) / tick + 1.0
+                emptied[sd] = True
         if retreat["bid"] is None and retreat["ask"] is None:
             miss = [k for k in ("best_bid", "best_ask") if getattr(ms, k) is None and not levels_of(ms, k[5:])]
             return missing_reading(self, miss or ["best prices in pre-burst state"], base)
@@ -126,8 +139,11 @@ class LiquiditySweep(Mechanism):
         r = retreat[side] or 0.0
         new_best = cb if side == "bid" else ca
         pre_levels = levels_of(pre, side)
-        consumed = [(p, q) for p, q in pre_levels
-                    if new_best is not None and ((p > new_best + _EPS) if side == "bid" else (p < new_best - _EPS))]
+        if emptied[side]:
+            consumed = list(pre_levels)
+        else:
+            consumed = [(p, q) for p, q in pre_levels
+                        if new_best is not None and ((p > new_best + _EPS) if side == "bid" else (p < new_best - _EPS))]
         levels = len(consumed)
         qty_consumed = float(sum(q for _, q in consumed))
         topk_pre = topk_depth(pre, side)
@@ -150,7 +166,12 @@ class LiquiditySweep(Mechanism):
                 vol_b = base_states[-1].trade_volume - base_states[0].trade_volume
                 burst_span = max((ms.t - pre.t).total_seconds(), 1.0)
                 rate_b = vol_b / span_b
-                vol_ratio = (vol_burst / burst_span) / rate_b if rate_b > 0 else (math.inf if vol_burst > 0 else 0.0)
+                if rate_b > 0:
+                    vol_ratio = (vol_burst / burst_span) / rate_b
+                elif rate_b == 0:
+                    vol_ratio = math.inf if vol_burst > 0 else 0.0
+                else:
+                    vol_ratio = None                          # cumulative volume went backwards: no baseline
             else:
                 vol_ratio = None
         s_flow = ramp(vol_ratio, 1.0, 5.0) if vol_ratio is not None else ramp(taken_share, 0.2, 0.8)
@@ -158,11 +179,17 @@ class LiquiditySweep(Mechanism):
         s_move = ramp(r, 0.5, 3.0)
         s_mid = ramp(mid_along, 0.5, 3.0)
         score = max(s_lv, s_move) * (0.4 + 0.3 * s_mid + 0.3 * s_flow)
+        # the tape is observed and nothing traded inside the burst: the levels were pulled, not swept
+        no_trades = bool(vol_burst is not None and vol_burst <= 0.0)
+        if no_trades:
+            score *= 0.25
         direction = sdir if score > 0 else 0
         ev = {"side": side, "retreat_ticks": r, "levels_consumed": levels, "qty_consumed": qty_consumed,
+              "side_emptied": emptied[side],
               "taken_share": taken_share, "mid_jump_ticks": mid_jump, "volume_burst": vol_burst,
               "volume_ratio": (None if vol_ratio is None or math.isinf(vol_ratio) else vol_ratio),
               "volume_ratio_inf": bool(vol_ratio is not None and math.isinf(vol_ratio)),
+              "no_trades_in_burst": no_trades,
               "pre_t": pre.t.isoformat(), "burst_s": (ms.t - pre.t).total_seconds(), "direction": direction,
               "retreat": retreat}
         if missing:
@@ -200,7 +227,9 @@ class FailedSweep(Mechanism):
         tick = fr.tick
         if not tick:
             return missing_reading(self, ["tick_size"], base)
-        pts = fr.series(mid_of, self.window_s)
+        with_mid = [(s, mid_of(s)) for s in fr.states(self.window_s)]
+        with_mid = [(s, m) for s, m in with_mid if m is not None]
+        pts = [(s.t, m) for s, m in with_mid]
         if len(pts) < 3:
             return missing_reading(self, ["mid history (< 3 points)"], base, {"points": len(pts)})
         pre = pts[0][1]
@@ -212,10 +241,10 @@ class FailedSweep(Mechanism):
             side, exc, t_ext, ext, i_ext, direction = "bid", exc_down, t_lo, lo, i_lo, 1
         else:
             side, exc, t_ext, ext, i_ext, direction = "ask", exc_up, t_hi, hi, i_hi, -1
-        states = fr.states(self.window_s)
-        # best-price retreat on the swept side at the extreme (relative to the window start)
-        st_pre = fr.at_or_before(pts[0][0])
-        st_ext = fr.at_or_before(t_ext)
+        # best-price retreat on the swept side at the extreme (relative to the window start); the
+        # states are taken by index so duplicate timestamps cannot substitute a neighbour
+        st_pre = with_mid[0][0]
+        st_ext = with_mid[i_ext][0]
         retreat = None
         if st_pre is not None and st_ext is not None:
             p0, _ = best_of(st_pre, side)
@@ -250,7 +279,8 @@ class Exhaustion(Mechanism):
       intensity  peak trade_intensity over the last 60 s against the earlier
                  part of the window: z = (peak − mean) / std (≥ 4 earlier
                  points, std > 0) → ramp(z, 0.5 → 2.5); with a degenerate std
-                 the ratio peak / mean → ramp(ratio, 1.2 → 3);
+                 the ratio peak / mean → ramp(ratio, 1.2 → 3); a positive peak
+                 over an all-zero earlier window is the strongest spike (1);
       decay      velocity series (``price_velocity`` or mid change over 60 s in
                  ticks/min): v_peak = the largest |v| in the last 180 s
                  (≥ 0.5 ticks/min), v_now = the latest; decay = 1 − |v_now| /
@@ -288,6 +318,7 @@ class Exhaustion(Mechanism):
         earlier = [v for t, v in ints if (ms.t - t).total_seconds() > self.peak_s]
         peak = max(recent) if recent else ints[-1][1]
         z = ratio = None
+        from_zero = False                                     # a burst out of a silent tape: strongest spike
         if len(earlier) >= 4:
             m = sum(earlier) / len(earlier)
             sd = math.sqrt(sum((x - m) ** 2 for x in earlier) / (len(earlier) - 1))
@@ -295,13 +326,18 @@ class Exhaustion(Mechanism):
                 z = (peak - m) / sd
             elif m > _EPS:
                 ratio = peak / m
+            else:
+                from_zero = peak > _EPS
         elif earlier:
             m = sum(earlier) / len(earlier)
-            ratio = (peak / m) if m > _EPS else None
-        s_int = ramp(z, 0.5, 2.5) if z is not None else ramp(ratio, 1.2, 3.0)
-        # velocity decay
-        t_pk, v_pk, _ = _extreme([(t, abs(v)) for t, v in vels], want_max=True)
-        v_peak_signed = next(v for t, v in vels if t == t_pk)
+            if m > _EPS:
+                ratio = peak / m
+            else:
+                from_zero = peak > _EPS
+        s_int = ramp(z, 0.5, 2.5) if z is not None else (1.0 if from_zero else ramp(ratio, 1.2, 3.0))
+        # velocity decay (the peak is taken by index: duplicate timestamps cannot swap its sign)
+        t_pk, v_pk, i_pk = _extreme([(t, abs(v)) for t, v in vels], want_max=True)
+        v_peak_signed = vels[i_pk][1]
         v_now = vels[-1][1]
         decay = (1.0 - abs(v_now) / v_pk) if v_pk > _EPS else None
         s_dec = ramp(decay, 0.4, 0.95) if v_pk >= 0.5 else 0.0
@@ -318,7 +354,8 @@ class Exhaustion(Mechanism):
         s_reb = ramp(rebuild_share, 0.15, 0.6)
         score = geo_mean([s_int, s_dec, s_reb])
         direction = -mdir if score > 0 else 0
-        ev = {"intensity_peak": peak, "intensity_z": z, "intensity_ratio": ratio, "intensity_now": ints[-1][1],
+        ev = {"intensity_peak": peak, "intensity_z": z, "intensity_ratio": ratio, "intensity_from_zero": from_zero,
+              "intensity_now": ints[-1][1],
               "velocity_peak": v_peak_signed, "velocity_now": v_now, "velocity_decay": decay,
               "t_velocity_peak": t_pk.isoformat(), "against_side": against, "rebuild_share": rebuild_share,
               "depth_against_now": dep[-1][1] if dep else None, "depth_against_min": (min(since) if since else None),
@@ -337,8 +374,10 @@ class LiquidityVacuum(Mechanism):
     depth over [now − 300 s, now − 30 s] (≥ 3 points; a side with no displayed
     level now counts as fully collapsed when it had a baseline): collapse =
     1 − now / median, clipped to [0, 1].  Replenishment = Σ ``depth_added``
-    (else positive visible-depth steps) over the last 60 s on the more
-    collapsed side, as a share of the missing depth (median − now).
+    counted once per change of the displayed book (the field is the last
+    update's diff carried onto every state until the next update; else
+    positive visible-depth steps) over the last 60 s on the more collapsed
+    side, as a share of the missing depth (median − now).
     score = ramp(max collapse, 0.4 → 0.9) × (0.6 + 0.4 × ramp(min collapse,
     0.4 → 0.9)) × (1 − 0.8 × replenish share).  The queue engine's
     ``liquidity_vacuum`` flag and the resilience state are reported as
@@ -375,7 +414,17 @@ class LiquidityVacuum(Mechanism):
             recent = [s for s in states if (ms.t - s.t).total_seconds() <= self.repl_s]
             added = [getattr(s, f"depth_added_{side}") for s in recent]
             if any(a is not None for a in added):
-                added_sum = float(sum(a for a in added if a is not None))
+                # depth_added_* is the book engine's last-update diff and is carried onto every state
+                # until the next book update: count it once per displayed book, not once per state
+                added_sum = 0.0
+                prev_book = None
+                for s, a in zip(recent, added):
+                    book = (tuple(map(tuple, s.bids or [])), tuple(map(tuple, s.asks or [])))
+                    same = prev_book is not None and book == prev_book
+                    prev_book = book
+                    if a is None or same:
+                        continue
+                    added_sum += float(a)
             else:
                 vs = [visible_depth(s, side) for s in recent]
                 vs = [v for v in vs if v is not None]

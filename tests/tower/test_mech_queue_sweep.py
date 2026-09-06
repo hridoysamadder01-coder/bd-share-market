@@ -214,7 +214,7 @@ def _churn_scenario(drift_ticks: int = 0, n: int = 14) -> List[MarketState]:
 def test_machinery_quote_refresh_churn_activates():
     r = run(qf.QuoteRefreshChurn(), _churn_scenario())[-1]
     assert r.score >= 0.6
-    assert r.evidence["rate_per_min"] == pytest.approx(24.0, rel=0.01)   # 22 changes in 55 s
+    assert r.evidence["rate_per_min"] == pytest.approx(24.0, rel=0.01)   # 13 + 13 changes in 65 s
     assert r.evidence["drift_ticks"] == 0.0
     _check_common(r, 0)
 
@@ -270,6 +270,28 @@ def test_machinery_layering_like_touch_activity_is_not_layering():
     st = [S(5 * i, [(10.0, 1000.0 if i % 2 else 400.0)] + BIDS[1:3], ASKS[:3], tv=1000.0) for i in range(14)]
     r = run(qf.LayeringLike(), st)[-1]
     assert r.evidence["cycles"] == 0 and r.score < 0.35
+
+
+def test_machinery_layering_like_touch_stepping_scroll_is_not_layering():
+    """A fixed-depth display (5 levels) whose best steps up and back: the deepest level scrolls
+    out of / into the view each time. That is unobservable display truncation, not appear/cancel
+    cycles — the reading must stay inactive and account the qty as ``scrolled``."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(4)]
+    s = 20.0
+    for _ in range(4):
+        st.append(S(s, [(10.1, 300.0)] + BIDS[:4], ASKS, tv=1000.0))        # best steps up, 9.6 scrolls out
+        st.append(S(s + 5, BIDS, ASKS, tv=1000.0))                           # back: 9.6 scrolls in
+        s += 10
+    r = run(qf.LayeringLike(), st)[-1]
+    assert r.evidence["cycles"] == 0
+    assert r.evidence["sides"]["bid"]["scrolled"] == pytest.approx(8 * 400.0)
+    assert r.evidence["sides"]["bid"]["cancel_away"] == 0.0
+    assert r.score < qf.LayeringLike.build_threshold
+    # a genuine cancel of the deepest displayed level (count shrinks) is still a cancel
+    st2 = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(4)]
+    st2.append(S(20, BIDS[:4], ASKS, tv=1000.0))
+    r2 = run(qf.LayeringLike(), st2)[-1]
+    assert r2.evidence["sides"]["bid"]["cancel_away"] == pytest.approx(400.0)
 
 
 def test_machinery_layering_like_evidence_changes_with_cycles():
@@ -426,6 +448,40 @@ def test_machinery_liquidity_sweep_evidence_changes_and_no_tape():
     assert rn.score >= 0.6
 
 
+def test_machinery_liquidity_sweep_fully_swept_side_is_one_sided_book():
+    """The ask side swept through entirely leaves a one-sided book: every pre-burst level was
+    consumed and the best retreated beyond the deepest displayed level — not a missing reading."""
+    st = _sweep_scenario()
+    st[-1] = S(65, BIDS, [], tv=st[-1].trade_volume)
+    r = run(sf.LiquiditySweep(), st)[-1]
+    assert "missing" not in r.evidence
+    assert r.evidence["side"] == "ask" and r.evidence["side_emptied"] is True
+    assert r.evidence["levels_consumed"] == 5 and r.evidence["qty_consumed"] == pytest.approx(3300.0)
+    assert r.evidence["retreat_ticks"] == pytest.approx(5.0)
+    assert r.score >= 0.6 and r.evidence["direction"] == 1
+
+
+def test_machinery_liquidity_sweep_pulled_levels_with_observed_tape_are_damped():
+    """Levels vanishing while the observed tape shows no trade inside the burst were pulled, not
+    swept: the reading keeps a quarter of the score. Without a tape the same picture is unverified
+    (volume named missing) and scores on the taken share."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0 + 10.0 * min(i, 7)) for i in range(13)]   # tape flat from t = 35 s
+    st.append(S(65, BIDS, ASKS[3:], tv=st[-1].trade_volume))                        # three ask levels vanish
+    r = run(sf.LiquiditySweep(), st)[-1]
+    assert r.evidence["no_trades_in_burst"] is True and r.evidence["volume_burst"] == 0.0
+    assert r.evidence["levels_consumed"] == 3 and r.evidence["retreat_ticks"] == pytest.approx(3.0)
+    assert r.score < sf.LiquiditySweep.build_threshold
+    assert r.score == pytest.approx(0.25 * (0.4 + 0.3 * qf.ramp(r.evidence["mid_jump_ticks"], 0.5, 3.0)))
+    swept = run(sf.LiquiditySweep(), _sweep_scenario(burst_vol=2400.0))[-1]
+    assert swept.evidence["no_trades_in_burst"] is False and swept.score > 4 * r.score
+    # cumulative volume going backwards in the baseline (feed reset) is no baseline, not an infinite burst
+    back = _sweep_scenario()
+    for m in back[:6]:
+        m.trade_volume = 5000.0 - 10.0 * (back.index(m))
+    rb = run(sf.LiquiditySweep(), back)[-1]
+    assert rb.evidence["volume_ratio_inf"] is False
+
+
 # ============================================================================= #4 failed_sweep
 def _failed_sweep_scenario(return_book: bool = True) -> List[MarketState]:
     st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(7)]                 # 0..30 s
@@ -473,6 +529,16 @@ def test_machinery_failed_sweep_without_return_is_null_and_evidence_changes():
     assert rd.evidence["retreat_ticks_at_extreme"] == 0.0 and rd.score == 0.0
 
 
+def test_machinery_failed_sweep_duplicate_timestamp_at_extreme():
+    """Two states at the trough's timestamp: the retreat gate must read the state that carries the
+    extreme mid, not whichever state happens to be last at that timestamp."""
+    st = _failed_sweep_scenario()
+    st.insert(8, S(35, BIDS, ASKS, tv=3000.0))            # same t as the first trough state, pre book
+    r = run(sf.FailedSweep(), st)[-1]
+    assert r.evidence["retreat_ticks_at_extreme"] == pytest.approx(5.0)
+    assert r.score >= 0.6
+
+
 # ============================================================================= #5 exhaustion
 def _exhaustion_scenario(rebuild: bool = True) -> List[MarketState]:
     st = []
@@ -509,6 +575,24 @@ def test_machinery_exhaustion_without_rebuild_is_weaker_and_flat_is_null():
     assert run(sf.Exhaustion(), flat)[-1].score < 0.35
 
 
+def test_machinery_exhaustion_duplicate_timestamp_peak_and_silent_baseline():
+    """A duplicate-timestamp state with a slightly smaller opposite velocity at the peak instant must
+    not flip the peak's sign (direction); a burst out of an all-zero intensity baseline is the
+    strongest intensity spike, not a missing / zero component."""
+    st = _exhaustion_scenario()
+    for m in st:
+        if (m.t - T0).total_seconds() < 240:
+            m.trade_intensity = 0.0
+    i_pk = next(i for i, m in enumerate(st) if m.price_velocity == 5.0)
+    twin = S((st[i_pk].t - T0).total_seconds(), st[i_pk].bids, st[i_pk].asks, tv=st[i_pk].trade_volume,
+             intensity=30.0, vel=-4.9)
+    st.insert(i_pk, twin)
+    r = run(sf.Exhaustion(), st)[-1]
+    assert r.evidence["velocity_peak"] == 5.0 and r.evidence["direction"] == -1
+    assert r.evidence["intensity_from_zero"] is True and r.evidence["components"]["intensity"] == 1.0
+    assert r.score >= 0.6
+
+
 # ============================================================================= #14 liquidity_vacuum
 def _vacuum_scenario(bid_factor: float = 0.05, ask_factor: float = 0.05, refill: bool = False) -> List[MarketState]:
     st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(41)]                # 0..200 s
@@ -536,6 +620,26 @@ def test_machinery_liquidity_vacuum_one_sided_direction_and_refill_damps():
     assert rr.evidence["replenish_share"] > 0.5 and rr.score < rb.score
     mild = run(sf.LiquidityVacuum(), _vacuum_scenario(bid_factor=0.7, ask_factor=0.7))[-1]
     assert mild.evidence["collapse_max"] == pytest.approx(0.3) and mild.score < 0.35
+
+
+def test_machinery_liquidity_vacuum_carried_depth_added_counted_once():
+    """The book engine's depth_added is the last update's diff, carried on every state until the next
+    update: five tape-driven states repeating the same book must not multiply the replenishment."""
+    st = _vacuum_scenario(refill=True)
+    st[-1].depth_added_bid = 400.0
+    st[-1].depth_added_ask = 400.0
+    once = run(sf.LiquidityVacuum(), st)[-1]
+    carried = list(st)
+    for k in range(1, 6):
+        m = S(245 + k, st[-1].bids, st[-1].asks, tv=1000.0 + k)     # tape ticks, same displayed book
+        m.depth_added_bid = 400.0
+        m.depth_added_ask = 400.0
+        carried.append(m)
+    r = run(sf.LiquidityVacuum(), carried)[-1]
+    missing_depth = 3300.0 - 0.6 * 3300.0
+    assert once.evidence["replenish_share"] == pytest.approx(400.0 / missing_depth)
+    assert r.evidence["replenish_share"] == pytest.approx(400.0 / missing_depth)
+    assert r.evidence["sides"]["bid"]["added_60s"] == pytest.approx(400.0)
 
 
 # ============================================================================= #15 vacuum_snapback
@@ -743,6 +847,54 @@ def test_machinery_update_never_raises_on_sparse_states(name):
         assert 0.0 <= r.score <= 1.0
         assert isinstance(r.evidence, dict) and isinstance(r.baseline, dict)
         hist.push(ms)
+
+
+# ============================================================================= causality / determinism
+def _activation_scenario(name: str) -> List[MarketState]:
+    return {
+        "queue_pull_stack": _pull_scenario(), "quote_refresh_churn": _churn_scenario(),
+        "layering_like": _layer_scenario(), "hidden_replenishment": _refill_scenario(),
+        "order_splitting": _prints_scenario([500.0] * 8), "liquidity_sweep": _sweep_scenario(),
+        "failed_sweep": _failed_sweep_scenario(), "exhaustion": _exhaustion_scenario(),
+        "liquidity_vacuum": _vacuum_scenario(), "vacuum_snapback": _snapback_scenario(),
+        "liquidity_run": _run_scenario(), "ignition": _ignition_states(6.0, 4.0, 20.0),
+        "liquidity_depletion": _depletion_scenario(),
+    }[name]
+
+
+def _dump(r) -> str:
+    import json
+    return json.dumps({"score": r.score, "evidence": r.evidence, "baseline": r.baseline}, sort_keys=True,
+                      default=str)
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_reading_is_causal(name):
+    """Future states sitting in the history ring (t > now) must not change the reading at t."""
+    st = _activation_scenario(name)
+    mid_idx = [len(st) - 1, len(st) // 2, max(1, len(st) - 4)]
+    for k in mid_idx:
+        hist_past = StateHistory()
+        for m in st[:k]:
+            hist_past.push(m)
+        hist_all = StateHistory()
+        for m in st:
+            hist_all.push(m)
+        a = REGISTRY[name]().compute(st[k], hist_past)
+        b = REGISTRY[name]().compute(st[k], hist_all)
+        assert _dump(a) == _dump(b), (name, k)
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_reading_is_deterministic_and_active(name):
+    """Two fresh instances over the same scenario produce byte-identical readings, the activation
+    scenario reaches the active threshold, and the evidence is never a constant."""
+    st = _activation_scenario(name)
+    r1 = run(REGISTRY[name](), st)
+    r2 = run(REGISTRY[name](), st)
+    assert [_dump(a) for a in r1] == [_dump(b) for b in r2]
+    assert r1[-1].score >= REGISTRY[name].active_threshold
+    assert len({round(r.score, 6) for r in r1}) > 1
 
 
 # ============================================================================= real data

@@ -161,9 +161,9 @@ class Frame:
     def __init__(self, ms: MarketState, hist: Optional[StateHistory]) -> None:
         self.ms = ms
         buf = list(hist.buf) if hist is not None else []
-        if buf and buf[-1] is ms:
-            buf = buf[:-1]
-        self.past: List[MarketState] = [s for s in buf if s.t <= ms.t]
+        # causal and never self-counting: whatever the ring holds, only states at or before ``ms``
+        # count, and ``ms`` itself (wherever a caller may have pushed it) is added exactly once
+        self.past: List[MarketState] = [s for s in buf if s is not ms and s.t <= ms.t]
         self.tick = tick_of(ms)
 
     def states(self, seconds: float) -> List[MarketState]:
@@ -506,25 +506,43 @@ class QuoteRefreshChurn(Mechanism):
 def _level_diffs(prev: MarketState, cur: MarketState, side: str, tick: float, away_ticks: float = 2.0
                  ) -> Dict[str, Any]:
     """Per-price qty differences between two displayed books of one side, split into
-    additions / removals at the touch (< away_ticks from the best) and away from it."""
-    pm = {p: q for p, q in levels_of(prev, side)}
-    cm = {p: q for p, q in levels_of(cur, side)}
+    additions / removals at the touch (< away_ticks from the best) and away from it.
+
+    A displayed book is a truncated view: when the touch steps, the deepest displayed
+    level scrolls out of / back into the view without anyone cancelling or adding it.
+    A whole level vanishing *beyond* the current deepest displayed price while the
+    level count did not shrink, or appearing beyond the previous deepest price while
+    the count did not grow, is therefore ``scrolled`` (unobservable), not a cancel /
+    appearance.  Prices are visited in sorted order so the sums are order-independent."""
+    pl, cl = levels_of(prev, side), levels_of(cur, side)
+    pm = {p: q for p, q in pl}
+    cm = {p: q for p, q in cl}
     pb, _ = best_of(prev, side)
     cb, _ = best_of(cur, side)
+    deepest_prev = pl[-1][0] if pl else None
+    deepest_cur = cl[-1][0] if cl else None
     out = {"added_away": 0.0, "added_touch": 0.0, "cancel_away": 0.0, "removed_touch": 0.0,
-           "appear": [], "cancel": []}
+           "scrolled": 0.0, "appear": [], "cancel": []}
 
     def dist(p: float, best: Optional[float]) -> Optional[float]:
         if best is None:
             return None
         return (best - p) / tick if side == "bid" else (p - best) / tick
 
-    for p in set(pm) | set(cm):
+    def beyond(p: float, deepest: Optional[float]) -> bool:
+        if deepest is None:
+            return False
+        return (p < deepest - _EPS) if side == "bid" else (p > deepest + _EPS)
+
+    for p in sorted(set(pm) | set(cm)):
         q0, q1 = pm.get(p, 0.0), cm.get(p, 0.0)
         d = q1 - q0
         if abs(d) < _EPS:
             continue
         if d > 0:
+            if q0 <= _EPS and beyond(p, deepest_prev) and len(cl) <= len(pl):
+                out["scrolled"] += d                            # scrolled into the displayed view
+                continue
             dc = dist(p, cb)
             if dc is not None and dc >= away_ticks:
                 out["added_away"] += d
@@ -533,6 +551,9 @@ def _level_diffs(prev: MarketState, cur: MarketState, side: str, tick: float, aw
             else:
                 out["added_touch"] += d
         else:
+            if q1 <= _EPS and beyond(p, deepest_cur) and len(cl) >= len(pl):
+                out["scrolled"] += -d                           # scrolled out of the displayed view
+                continue
             dp = dist(p, pb)
             dc = dist(p, cb)
             still_away = dc is not None and dc >= away_ticks       # the touch never reached the level
@@ -553,7 +574,11 @@ class LayeringLike(Mechanism):
     Qty added at a price ≥ 2 ticks behind the touch is *added_away*; qty removed
     from a price that was and still is ≥ 2 ticks behind the touch (the best
     never reached it, so trades cannot have consumed it) is *cancel_away*;
-    everything else is touch activity.  cycles = Σ over prices of
+    everything else is touch activity.  A whole level vanishing beyond the
+    deepest still-displayed price (or appearing beyond the previously deepest
+    one) while the displayed level count did not shrink (grow) is the display
+    window scrolling as the touch steps — unobservable, counted as ``scrolled``
+    and never as a cycle.  cycles = Σ over prices of
     min(appearances, cancellations) of a whole level away from the touch;
     cancel_away_share = cancel_away / (cancel_away + removed_touch);
     away_churn_share = (added_away + cancel_away) / mean visible depth of the
@@ -582,7 +607,7 @@ class LayeringLike(Mechanism):
         best: Optional[Dict[str, Any]] = None
         sides_ev: Dict[str, Any] = {}
         for side in ("bid", "ask"):
-            agg = {"added_away": 0.0, "added_touch": 0.0, "cancel_away": 0.0, "removed_touch": 0.0}
+            agg = {"added_away": 0.0, "added_touch": 0.0, "cancel_away": 0.0, "removed_touch": 0.0, "scrolled": 0.0}
             appear: Dict[float, int] = {}
             cancel: Dict[float, int] = {}
             for a, b in zip(states, states[1:]):
@@ -593,7 +618,7 @@ class LayeringLike(Mechanism):
                     appear[p] = appear.get(p, 0) + 1
                 for p in d["cancel"]:
                     cancel[p] = cancel.get(p, 0) + 1
-            cycles = sum(min(appear.get(p, 0), cancel.get(p, 0)) for p in set(appear) | set(cancel))
+            cycles = sum(min(appear.get(p, 0), cancel.get(p, 0)) for p in sorted(set(appear) | set(cancel)))
             vis = [visible_depth(s, side) for s in states]
             vis = [v for v in vis if v is not None and v > 0]
             mean_vis = (sum(vis) / len(vis)) if vis else None

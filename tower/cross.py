@@ -51,11 +51,22 @@ of a symbol at time t is its last observation at or before t):
 * sector_pressure: mean of pressure_direction × pressure_strength over sector
   members carrying both; sector_breadth: up/down/flat counts of the members'
   60-s returns.
+* market_volume_60s / market_trades_60s (read by the participation mechanics):
+  the market's cumulative day volume / trade count arrives with the
+  MARKET_STATS polls (``lankabd_market``, ~60 s apart). The value at ``now`` is
+  the increment over the latest COMPLETED poll interval — the last poll at or
+  before ``now`` (age ≤ ``stale_s``) minus the previous distinct poll (span ≤
+  ``stale_s``) — rate-normalised to 60 s: ΔV × 60 / span. The raw span and the
+  poll age are reported alongside (``market_volume_span_s``,
+  ``market_volume_age_s``); a negative increment (day roll / feed reset) or a
+  single poll gives None.
 
 "Current" membership (circuit, liquidity, pressure, velocity) requires the
 member's last state within ``stale_s`` of ``now``. Everything is None when the
 inputs are insufficient — never a silent zero. No wall-clock reads: ``now``
-defaults to the latest event time seen.
+defaults to the latest event time seen. A state that arrives out of order
+(older than the symbol's latest) is inserted into the time-indexed paths but
+never overwrites the latest circuit / pressure snapshot.
 """
 from __future__ import annotations
 
@@ -85,16 +96,18 @@ class _Path:
     Points are kept for ``retain_s`` plus the last point before the retention
     cutoff so the step function stays defined over the whole retained window."""
 
-    __slots__ = ("ts", "vs", "retain_s", "_arr", "_arr_len")
+    __slots__ = ("ts", "vs", "retain_s", "ver", "_arr", "_arr_ver")
 
     def __init__(self, retain_s: float) -> None:
         self.ts: List[float] = []
         self.vs: List[float] = []
         self.retain_s = float(retain_s)
+        self.ver = 0                       # bumped on every push: the cache key of every derived view
         self._arr: Optional[Tuple[np.ndarray, np.ndarray]] = None
-        self._arr_len = -1
+        self._arr_ver = -1
 
     def push(self, t: float, v: float) -> None:
+        self.ver += 1
         if self.ts and t < self.ts[-1]:
             # out-of-order observation: insert to keep the path monotonic in time
             i = bisect.bisect_right(self.ts, t)
@@ -127,10 +140,17 @@ class _Path:
             return None
         return self.ts[i], self.vs[i]
 
+    def before(self, t: float) -> Optional[Tuple[float, float]]:
+        """(t_obs, value) of the last observation strictly before t, None if none."""
+        i = bisect.bisect_left(self.ts, t) - 1
+        if i < 0:
+            return None
+        return self.ts[i], self.vs[i]
+
     def arrays(self) -> Tuple[np.ndarray, np.ndarray]:
-        if self._arr is None or self._arr_len != len(self.ts):
+        if self._arr is None or self._arr_ver != self.ver:
             self._arr = (np.asarray(self.ts, dtype=float), np.asarray(self.vs, dtype=float))
-            self._arr_len = len(self.ts)
+            self._arr_ver = self.ver
         return self._arr
 
     def sample(self, grid: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -163,11 +183,11 @@ class _Sym:
     pressure_direction: Optional[int] = None
     pressure_strength: Optional[float] = None
     updates: int = 0
-    # cache of the sampled path on the current grid: (grid_end, n_points, last_t) → (values, ages)
-    _sample_key: Optional[Tuple[float, int, float]] = None
+    # cache of the sampled path on the current grid: (grid_end, path version) → (values, ages)
+    _sample_key: Optional[Tuple[float, int]] = None
     _sample: Optional[Tuple[np.ndarray, np.ndarray]] = None
-    # cache of the top-decile verdict for the current velocity sample: key → True/False/None(ineligible)
-    _vel_key: Optional[Tuple[int, float, float]] = None
+    # cache of the top-decile verdict for the current velocity sample: (path version, t_cur) → verdict
+    _vel_key: Optional[Tuple[int, float]] = None
     _vel_top: Optional[bool] = None
 
 
@@ -211,6 +231,8 @@ class CrossEngine:
         self._grid_end: Optional[float] = None
         self._breadth: Optional[Dict[str, Any]] = None          # latest breadth (t, up, down, n, ...)
         self._stats: Optional[Dict[str, Any]] = None            # latest MARKET_STATS payload with its t
+        self._mkt_volume = _Path(600.0)                         # cumulative market volume per poll
+        self._mkt_trades = _Path(600.0)                         # cumulative market trade count per poll
         self._last_t: Optional[float] = None
 
     # ------------------------------------------------------------------ inputs
@@ -253,7 +275,14 @@ class CrossEngine:
     def on_market_stats(self, t: datetime, payload: Dict[str, Any]) -> None:
         """Keep the latest MARKET_STATS payload (totals, up/down/flat/unpriced) with its time."""
         self._note_t(t)
-        self._stats = {"t": _secs(t), **{k: v for k, v in (payload or {}).items()}}
+        ts = _secs(t)
+        p = payload or {}
+        self._stats = {"t": ts, **{k: v for k, v in p.items()}}
+        vol, trades = _num(p.get("market_volume")), _num(p.get("market_trades"))
+        if vol is not None:
+            self._mkt_volume.push(ts, vol)
+        if trades is not None:
+            self._mkt_trades.push(ts, trades)
 
     def on_market_breadth(self, t: datetime, up: Optional[float], down: Optional[float],
                           n: Optional[float]) -> None:
@@ -261,14 +290,15 @@ class CrossEngine:
         when the stats payload of the same instant carries ``flat``; else None."""
         self._note_t(t)
         ts = _secs(t)
+        up, down, n = _num(up), _num(down), _num(n)
         if up is None and down is None:
             return
         flat = None
         if self._stats is not None and abs(self._stats.get("t", -1e18) - ts) < 1e-6:
-            flat = self._stats.get("flat")
+            flat = _num(self._stats.get("flat"))
         if n is None and up is not None and down is not None and flat is not None:
             n = up + down + flat
-        self._breadth = {"t": ts, "up": _num(up), "down": _num(down), "n": _num(n), "flat": _num(flat)}
+        self._breadth = {"t": ts, "up": up, "down": down, "n": n, "flat": flat}
 
     def on_state(self, ms: MarketState) -> None:
         """Ingest one symbol state (event order). Records the log-price point,
@@ -277,8 +307,11 @@ class CrossEngine:
         self._note_t(ms.t)
         s = self._sym(ms.symbol)
         t = _secs(ms.t)
-        s.last_t = t
-        s.last_seq = ms.seq
+        # an out-of-order (older) state feeds the time-indexed paths but is not the latest snapshot
+        latest = s.last_t is None or t >= s.last_t
+        if latest:
+            s.last_t = t
+            s.last_seq = ms.seq
         s.updates += 1
         # sector fallback from the watch quote (only when REFERENCE never named one)
         if s.sector is None:
@@ -312,11 +345,12 @@ class CrossEngine:
             s.liq.push(t, float(ms.visible_bid_liq) + float(ms.visible_ask_liq))
         if ms.price_velocity is not None:
             s.velocity.push(t, abs(float(ms.price_velocity)))
-        c = ms.circuit or {}
-        s.circuit = {k: c.get(k) for k in ("locked_up", "locked_down", "dist_up_pct", "dist_down_pct",
-                                            "hit_up", "hit_down")}
-        s.pressure_direction = ms.pressure_direction
-        s.pressure_strength = ms.pressure_strength
+        if latest:
+            c = ms.circuit or {}
+            s.circuit = {k: c.get(k) for k in ("locked_up", "locked_down", "dist_up_pct", "dist_down_pct",
+                                                "hit_up", "hit_down")}
+            s.pressure_direction = ms.pressure_direction
+            s.pressure_strength = ms.pressure_strength
 
     # ------------------------------------------------------------------ accessors
     def sector_of(self, symbol: str) -> Optional[str]:
@@ -360,7 +394,7 @@ class CrossEngine:
         return end, grid
 
     def _sampled(self, s: _Sym, end: float, grid: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        key = (end, len(s.logp), s.logp.last_t() or -1.0)
+        key = (end, s.logp.ver)
         if s._sample is None or s._sample_key != key:
             s._sample = s.logp.sample(grid)
             s._sample_key = key
@@ -461,6 +495,13 @@ class CrossEngine:
             n = self._breadth["n"]
             if n and self._breadth["up"] is not None and self._breadth["down"] is not None:
                 cross["breadth_net"] = (self._breadth["up"] - self._breadth["down"]) / n
+        # ---- market volume / trades over the latest completed poll interval (60-s normalised)
+        mv = self._market_increment(self._mkt_volume, t_now)
+        if mv is not None:
+            cross["market_volume_60s"], cross["market_volume_span_s"], cross["market_volume_age_s"] = mv
+        mt = self._market_increment(self._mkt_trades, t_now)
+        if mt is not None:
+            cross["market_trades_60s"] = mt[0]
         # ---- 60-s returns of every symbol
         rets: Dict[str, float] = {}
         for sym, s in self.syms.items():
@@ -523,6 +564,28 @@ class CrossEngine:
         return cross, sector
 
     # ------------------------------------------------------------------ pieces
+    def _market_increment(self, path: _Path, t_now: float) -> Optional[Tuple[float, float, float]]:
+        """(increment normalised to ret_window_s, span_s, age_s) of a cumulative market
+        total over the latest completed poll interval at or before ``t_now``: the last
+        poll (age ≤ stale_s) minus the previous distinct poll (span ≤ stale_s). None
+        with fewer than two polls, a stale poll, or a negative increment (reset)."""
+        cur = path.at_or_before(t_now)
+        if cur is None:
+            return None
+        age = t_now - cur[0]
+        if age > self.stale_s:
+            return None
+        prev = path.before(cur[0])
+        if prev is None:
+            return None
+        span = cur[0] - prev[0]
+        if span <= 0 or span > self.stale_s:
+            return None
+        delta = cur[1] - prev[1]
+        if delta < 0:
+            return None
+        return delta * self.ret_window_s / span, span, age
+
     def _lead_lag(self, symbol: str, me: _Sym, t_now: float
                   ) -> Tuple[List[Tuple[str, float, float]], List[Tuple[str, float, float]], int]:
         leaders: List[Tuple[str, float, float]] = []
@@ -618,7 +681,7 @@ class CrossEngine:
         None when fewer than min_velocity_samples earlier samples exist or they are
         constant. The verdict depends only on the symbol's own path, so it is cached
         until the symbol receives a new sample."""
-        key = (len(s.velocity), cur[0], s.velocity.last_t() or -1.0)
+        key = (s.velocity.ver, cur[0])
         if s._vel_key != key:
             ts, vs = s.velocity.arrays()
             i0 = bisect.bisect_left(ts, cur[0] - self.corr_window_s)
@@ -658,7 +721,9 @@ class CrossEngine:
     @staticmethod
     def _empty_cross() -> Dict[str, Any]:
         return {"breadth_up": None, "breadth_down": None, "breadth_n": None, "breadth_net": None,
-                "breadth_age_s": None, "market_return_60s": None, "symbol_return_60s": None,
+                "breadth_age_s": None, "market_volume_60s": None, "market_volume_span_s": None,
+                "market_volume_age_s": None, "market_trades_60s": None,
+                "market_return_60s": None, "symbol_return_60s": None,
                 "symbol_vs_market_60s": None, "n_symbols_with_return": None,
                 "leaders": None, "laggers": None, "lead_lag_pairs_evaluated": 0,
                 "basket_sync": None, "basket_sync_n": None, "circuit_cluster": None,

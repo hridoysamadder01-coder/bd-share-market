@@ -154,6 +154,80 @@ def test_machinery_breadth_from_market_stats():
     assert c3["breadth_up"] == 10.0 and c3["breadth_n"] is None and c3["breadth_net"] is None
 
 
+def test_machinery_market_volume_from_polls():
+    """market_volume_60s / market_trades_60s: increment over the latest completed poll
+    interval, normalised to 60 s, with the real span and poll age; None with one poll,
+    after a reset (negative increment) or when the last poll is stale. String payload
+    values (raw feed) are parsed, never summed as text."""
+    eng = CrossEngine()
+    eng.on_state(ms("A", T0, 10.0))
+    t0, t1, t2 = T0, T0 + timedelta(seconds=62), T0 + timedelta(seconds=124)
+    eng.on_market_stats(t0, {"market_volume": 1_000_000.0, "market_trades": 500.0, "up": "127", "down": "227", "flat": "36"})
+    eng.on_market_breadth(t0, "127", "227", None)
+    c = eng.context_for("A", t0 + timedelta(seconds=10))[0]
+    assert c["market_volume_60s"] is None and c["market_trades_60s"] is None      # a single poll: no increment
+    assert (c["breadth_up"], c["breadth_down"], c["breadth_n"]) == (127.0, 227.0, 390.0)
+    eng.on_market_stats(t1, {"market_volume": 1_006_200.0, "market_trades": 562.0})
+    before, _ = eng.context_for("A", t1 - timedelta(seconds=1))                     # causal: poll not yet seen
+    assert before["market_volume_60s"] is None
+    c = eng.context_for("A", t1 + timedelta(seconds=8))[0]
+    assert abs(c["market_volume_60s"] - 6200.0 * 60.0 / 62.0) < 1e-9
+    assert c["market_volume_span_s"] == 62.0 and c["market_volume_age_s"] == 8.0
+    assert abs(c["market_trades_60s"] - 62.0 * 60.0 / 62.0) < 1e-9
+    # the value holds until the next poll (step function), then moves to the new interval
+    eng.on_market_stats(t2, {"market_volume": 1_030_000.0, "market_trades": 700.0})
+    assert abs(eng.context_for("A", t2 - timedelta(seconds=1))[0]["market_volume_60s"] - 6000.0) < 1e-9
+    c2 = eng.context_for("A", t2)[0]
+    assert abs(c2["market_volume_60s"] - 23_800.0 * 60.0 / 62.0) < 1e-9 and c2["market_volume_age_s"] == 0.0
+    # stale last poll → None; a reset (cumulative total went down) → None
+    assert eng.context_for("A", t2 + timedelta(seconds=181))[0]["market_volume_60s"] is None
+    t3 = t2 + timedelta(seconds=60)
+    eng.on_market_stats(t3, {"market_volume": 5_000.0, "market_trades": 3.0})
+    c3 = eng.context_for("A", t3 + timedelta(seconds=1))[0]
+    assert c3["market_volume_60s"] is None and c3["market_trades_60s"] is None
+    # a poll without totals (watch-derived breadth) does not create a volume point
+    eng2 = CrossEngine()
+    eng2.on_state(ms("A", T0, 10.0))
+    eng2.on_market_stats(t0, {"up": 3, "down": 1, "flat": 0, "kind": "breadth_from_watch"})
+    eng2.on_market_stats(t1, {"up": 3, "down": 1, "flat": 0, "kind": "breadth_from_watch"})
+    assert eng2.context_for("A", t1)[0]["market_volume_60s"] is None
+
+
+def test_machinery_out_of_order_state_keeps_latest_snapshot():
+    """An older state arriving after a newer one is inserted into the time-indexed
+    paths (kept sorted) but must not overwrite the latest circuit / pressure snapshot."""
+    eng = CrossEngine()
+    for s in ("A", "B"):
+        eng.on_reference(s, "Bank")
+    t_new, t_old = T0 + timedelta(seconds=100), T0 + timedelta(seconds=30)
+    eng.on_state(ms("B", t_new, 10.0, circuit={"locked_up": False, "dist_up_pct": 9.0}, pressure_direction=1, pressure_strength=0.5))
+    eng.on_state(ms("A", t_new, 11.0, seq=2, circuit={"locked_up": True, "dist_up_pct": 0.0}, pressure_direction=1, pressure_strength=1.0))
+    eng.on_state(ms("A", t_old, 10.0, seq=1, circuit={"locked_up": False, "dist_up_pct": 9.0}, pressure_direction=-1, pressure_strength=1.0))
+    assert eng.syms["A"].logp.ts == sorted(eng.syms["A"].logp.ts) and eng.syms["A"].last_t == (t_new - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
+    cross, sector = eng.context_for("A", t_new)
+    assert cross["circuit_cluster"]["locked"] == 1 and cross["circuit_cluster"]["n"] == 2
+    assert sector["sector_pressure"] == 0.75 and sector["sector_pressure_n"] == 2
+    # the older point is visible to a query at its own time (causal path), not to the snapshot
+    assert eng.return_60s("A", t_new) is not None and abs(eng.return_60s("A", t_new) - math.log(11.0 / 10.0)) < 1e-12
+
+
+def test_machinery_duplicate_timestamp_velocity_uses_last_sample():
+    """Two velocity samples at the same instant: the later one is the current sample and
+    the cached top-decile verdict is refreshed (path version, not length, keys the cache)."""
+    eng = CrossEngine()
+    for i in range(15):
+        t = T0 + timedelta(seconds=10 * i)
+        eng.on_state(ms("A", t, 10.0, seq=i, price_velocity=0.2 + 0.01 * i))
+        eng.on_state(ms("B", t, 10.0, seq=i, price_velocity=0.2 + 0.01 * i))
+    t = T0 + timedelta(seconds=150)
+    eng.on_state(ms("A", t, 10.0, seq=15, price_velocity=0.2))
+    eng.on_state(ms("B", t, 10.0, seq=15, price_velocity=0.2))
+    assert eng.context_for("A", t)[0]["synchronized_expansion"]["own_in_top_decile"] is False
+    eng.on_state(ms("A", t, 10.0, seq=16, price_velocity=9.0))
+    got = eng.context_for("A", t)[0]["synchronized_expansion"]
+    assert got["own_in_top_decile"] is True and got["count"] == 1 and got["n"] == 2
+
+
 def test_machinery_circuit_clustering():
     eng = CrossEngine()
     for s in ("A", "B", "C", "D"):
@@ -305,6 +379,18 @@ def test_realdata_fixture_breadth_and_no_invented_context():
     assert after, "no states after the breadth poll"
     for _, _, cross, _ in after:
         assert (cross["breadth_up"], cross["breadth_down"], cross["breadth_n"]) == (127.0, 227.0, 390.0)
+    # market volume: two identical polls 22.5 s apart → a completed interval with zero increment
+    # (observed, the market is closed) from the second poll on; None before it and once stale
+    polls = sorted(ev.t_recv for ev in events if ev.event_type.value == "MARKET_STATS")
+    assert len(polls) == 2
+    for _, t, cross, _ in states:
+        if t < polls[1]:
+            assert cross["market_volume_60s"] is None and cross["market_volume_span_s"] is None
+        elif (t - polls[1]).total_seconds() <= 180:
+            assert cross["market_volume_60s"] == 0.0 and cross["market_trades_60s"] == 0.0
+            assert abs(cross["market_volume_span_s"] - (polls[1] - polls[0]).total_seconds()) < 1e-6
+        else:
+            assert cross["market_volume_60s"] is None
     for _, _, cross, _ in states:
         assert cross["market_return_60s"] is None or isinstance(cross["market_return_60s"], float)
         assert cross["leaders"] is None and cross["lead_lag_pairs_evaluated"] == 0
