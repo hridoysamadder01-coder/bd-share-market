@@ -138,16 +138,26 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--capture", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--skip-tests", action="store_true")
+    ap.add_argument("--skip-tests", action="store_true", help="replay/placeholder/go checks only; merges <out>/TESTS.json if present")
+    ap.add_argument("--tests-only", action="store_true", help="run the suite only and write <out>/TESTS.json (run in parallel with --skip-tests)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     gate: Dict[str, Any] = {}
+    tests_json = os.path.join(a.out, "TESTS.json")
+    if a.tests_only:
+        t = pytest_counts([]); t["split"] = collect_split()
+        with open(tests_json, "w") as fh:
+            json.dump(t, fh, indent=1, default=str)
+        print(json.dumps(t, indent=1, default=str)[:3000])
+        return 0 if t.get("rc") == 0 else 1
     if not a.skip_tests:
         gate["tests"] = pytest_counts([])
         gate["tests"]["split"] = collect_split()
     gate["replay"] = replay_checks(a.capture, a.out)
     gate["placeholders"] = placeholder_sweep()
     gate["go"] = go_checks()
+    if a.skip_tests and os.path.exists(tests_json):          # a parallel --tests-only run that has finished
+        gate["tests"] = json.load(open(tests_json))
     with open(os.path.join(a.out, "GATE.json"), "w") as fh:
         json.dump(gate, fh, indent=1, default=str)
     print(json.dumps({k: (v if k != "replay" else {kk: vv for kk, vv in v["capture"].items() if kk != "symbols"})
