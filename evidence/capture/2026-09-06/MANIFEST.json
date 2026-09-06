@@ -26,6 +26,17 @@
    "bytes": 55628,
    "epoch": "de0d58682abc47a3b6e0462a041727a6",
    "closed_utc": "2026-09-06T03:00:11.253249+00:00"
+  },
+  {
+   "source": "runner",
+   "path": "segments/runner__ccr-vm__de0d5868__20260906T01__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "c1419b78a38c02ad24b11ee0e7800e0e828eb06c23f1c669d3ff5480217a6e33",
+   "bytes": 1673,
+   "epoch": "de0d58682abc47a3b6e0462a041727a6",
+   "closed_utc": "2026-09-06T03:50:02.231654+00:00"
   }
  ]
 }
