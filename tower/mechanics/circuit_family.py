@@ -555,19 +555,25 @@ class CircuitBreakWeakness(CircuitMechanism):
         fr, base, c, miss = self._prelude(ms, hist)
         if miss is not None:
             return miss
-        pu, pl = int(_num(c.get("prior_upper_streak")) or 0), int(_num(c.get("prior_lower_streak")) or 0)
+        pu_raw, pl_raw = _num(c.get("prior_upper_streak")), _num(c.get("prior_lower_streak"))
+        pu, pl = int(pu_raw or 0), int(pl_raw or 0)
         side = "up" if pu > 0 else "down" if pl > 0 else None
         ss = side_sign(side)
         bd = c.get("break_day")
         beh = c.get("break_behaviour") if isinstance(c.get("break_behaviour"), dict) else {}
         vel = ms.price_velocity if ms.price_velocity is not None else price_velocity_of(fr)
-        inputs = {"prior_upper_streak": pu, "prior_lower_streak": pl, "break_day": bd, "break_behaviour": beh,
+        inputs = {"prior_upper_streak": pu_raw, "prior_lower_streak": pl_raw, "break_day": bd, "break_behaviour": beh,
                   "queue_at_upper": c.get("queue_at_upper"), "queue_at_lower": c.get("queue_at_lower"),
                   "queue_side": c.get("queue_side"), "queue_delta_60s": c.get("queue_delta_60s"),
                   "max_queue_at_limit": c.get("max_queue_at_limit"), "unlock_count": c.get("unlock_count"),
                   "open_price": c.get("open_price"), "price": c.get("price"), "tick": c.get("tick"),
                   "price_velocity": vel, "streak_weakening": c.get("streak_weakening")}
         ev: Dict[str, Any] = {"inputs": inputs, "side": side}
+        if pu_raw is None and pl_raw is None:
+            # no prior-session history was supplied: the streak is NOT observable (never a silent 0)
+            ev["missing"] = ["circuit.prior_upper_streak / prior_lower_streak (no prior-session history supplied)"]
+            ev["regime"] = "unknown"
+            return self._finish(0.0, ms, ev, base, "prior limit streak not observable without day history", 0)
         if side is None:
             ev["regime"] = "no_prior_streak"
             return self._finish(0.0, ms, ev, base, "no prior limit streak: nothing to break", 0)
@@ -647,7 +653,8 @@ class CircuitNextSession(CircuitMechanism):
         fr, base, c, miss = self._prelude(ms, hist)
         if miss is not None:
             return miss
-        pu, pl = int(_num(c.get("prior_upper_streak")) or 0), int(_num(c.get("prior_lower_streak")) or 0)
+        pu_raw, pl_raw = _num(c.get("prior_upper_streak")), _num(c.get("prior_lower_streak"))
+        pu, pl = int(pu_raw or 0), int(pl_raw or 0)
         side = "up" if pu > 0 else "down" if pl > 0 else None
         ss = side_sign(side)
         ns = c.get("next_session")
@@ -655,11 +662,16 @@ class CircuitNextSession(CircuitMechanism):
         gap_raw = _num(beh.get("gap_open_ticks"))
         follow_raw = price_ticks_from(_num(c.get("price")), _num(c.get("open_price")), _num(c.get("tick")))
         elapsed = _num(c.get("session_elapsed_s"))
-        inputs = {"prior_upper_streak": pu, "prior_lower_streak": pl, "next_session": ns, "gap_open_ticks": gap_raw,
+        inputs = {"prior_upper_streak": pu_raw, "prior_lower_streak": pl_raw, "next_session": ns, "gap_open_ticks": gap_raw,
                   "open_price": c.get("open_price"), "price": c.get("price"), "tick": c.get("tick"),
                   "locked_up": c.get("locked_up"), "locked_down": c.get("locked_down"),
                   "locked_share_today": c.get("locked_share_today"), "session_elapsed_s": elapsed}
         ev: Dict[str, Any] = {"inputs": inputs, "side": side}
+        if pu_raw is None and pl_raw is None:
+            # no prior-session history was supplied: the streak is NOT observable (never a silent 0)
+            ev["missing"] = ["circuit.prior_upper_streak / prior_lower_streak (no prior-session history supplied)"]
+            ev["regime"] = "unknown"
+            return self._finish(0.0, ms, ev, base, "prior locked session not observable without day history", 0)
         if side is None:
             ev["regime"] = "no_prior_lock"
             return self._finish(0.0, ms, ev, base, "no prior locked session", 0)

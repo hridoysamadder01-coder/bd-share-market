@@ -46,8 +46,10 @@ def _trim(s: Dict[str, Any]) -> Dict[str, Any]:
     out = {k: s.get(k) for k in KEEP if k in s}
     c = s.get("circuit") or {}
     out["circuit"] = {k: c.get(k) for k in CIRCUIT_KEYS if k in c}
-    out["mechanisms"] = {n: {"score": round(m.get("score", 0.0), 3), "state": m.get("state"), "family": m.get("family"),
-                             "start_time": m.get("start_time"), "duration_s": round(m.get("duration_s", 0.0), 1),
+    # a missing score / duration stays None (never a silent 0.0) — the page renders it as "—"
+    out["mechanisms"] = {n: {"score": (round(m["score"], 3) if isinstance(m.get("score"), (int, float)) else None),
+                             "state": m.get("state"), "family": m.get("family"), "start_time": m.get("start_time"),
+                             "duration_s": (round(m["duration_s"], 1) if isinstance(m.get("duration_s"), (int, float)) else None),
                              "evidence": {k: v for k, v in list((m.get("evidence") or {}).items())[:8]}}
                         for n, m in (s.get("mechanisms") or {}).items()}
     out["sources"] = {n: {"freshness_s": v.get("freshness_s"), "stale": v.get("stale"), "duplicate": v.get("duplicate"),
@@ -83,7 +85,7 @@ def _trim_history(s: Dict[str, Any]) -> Dict[str, Any]:
     full = _trim(s)
     out = {k: full.get(k) for k in HISTORY_KEEP if k in full}
     out["mechanisms"] = {n: {"score": m["score"], "state": m["state"], "family": m["family"]}
-                         for n, m in full["mechanisms"].items() if m["score"] > 0 or m["state"] != "inactive"}
+                         for n, m in full["mechanisms"].items() if (m["score"] or 0) > 0 or m["state"] != "inactive"}
     out["sources"] = {n: {"freshness_s": v.get("freshness_s"), "stale": v.get("stale"), "duplicate": v.get("duplicate")}
                       for n, v in full.get("sources", {}).items()}
     return out
@@ -137,7 +139,6 @@ def render(data: Dict[str, Any], title: str = "DSE Observation Tower") -> str:
 
 
 TEMPLATE = r"""<title>__TITLE__</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
   --bg:#f3f1ec; --bg2:#ffffff; --ink:#1c1f24; --ink2:#5b616b; --line:#d9d4ca; --line2:#ece8df;
@@ -297,9 +298,9 @@ function lanes(){
     return `<div class="lane"><div class="name">${L}</div><div class="track">${segs}</div></div><div class="lane"><div></div><div class="st">${now}</div></div>`; }).join('')+'</div>';
 }
 function mechTable(s){
-  const rows=Object.entries(s.mechanisms||{}).sort((a,b)=>b[1].score-a[1].score);
+  const rows=Object.entries(s.mechanisms||{}).sort((a,b)=>(b[1].score??-1)-(a[1].score??-1));
   if(!rows.length) return '<div class="note">no mechanism readings in this state</div>';
-  return '<div style="overflow-x:auto"><table><tr><th>mechanism</th><th>score</th><th>state</th><th class="num">dur s</th><th>evidence</th></tr>'+rows.slice(0,49).map(([n,m])=>`<tr><td>${n}<div class="ev">${m.family}</div></td><td><div class="bar2"><i style="width:${Math.round(m.score*100)}%"></i></div><span class="num">${m.score.toFixed(2)}</span></td><td><span class="st ${m.state}">${m.state}</span></td><td class="num">${f(m.duration_s,0)}</td><td><details><summary class="ev">${Object.keys(m.evidence||{}).length} values</summary><div class="ev">${Object.entries(m.evidence||{}).map(([k,v])=>k+'='+(typeof v==='number'?f(v,3):JSON.stringify(v))).join(' \u00b7 ')}</div></details></td></tr>`).join('')+'</table></div>';
+  return '<div style="overflow-x:auto"><table><tr><th>mechanism</th><th>score</th><th>state</th><th class="num">dur s</th><th>evidence</th></tr>'+rows.slice(0,49).map(([n,m])=>`<tr><td>${n}<div class="ev">${m.family}</div></td><td><div class="bar2"><i style="width:${Math.round((m.score??0)*100)}%"></i></div><span class="num">${m.score==null?'\u2014':m.score.toFixed(2)}</span></td><td><span class="st ${m.state}">${m.state}</span></td><td class="num">${f(m.duration_s,0)}</td><td><details><summary class="ev">${Object.keys(m.evidence||{}).length} values</summary><div class="ev">${Object.entries(m.evidence||{}).map(([k,v])=>k+'='+(typeof v==='number'?f(v,3):JSON.stringify(v))).join(' \u00b7 ')}</div></details></td></tr>`).join('')+'</table></div>';
 }
 function transitions(){
   const rows=D.timeline.filter(t=>t.symbol===cur).slice(-40).reverse();

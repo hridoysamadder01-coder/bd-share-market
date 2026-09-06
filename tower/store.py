@@ -32,13 +32,13 @@ class StateStore:
             fh = open(os.path.join(self.out, "states", f"{ms.symbol}.jsonl"), "a", encoding="utf-8")
             self._files[ms.symbol] = fh
         d = ms.to_dict()
-        fh.write(json.dumps(d, separators=(",", ":"), default=str) + "\n")
+        fh.write(json.dumps(d, separators=(",", ":"), default=str, allow_nan=False) + "\n")
         self.latest[ms.symbol] = d
         self.hashes[ms.symbol] = ms.state_hash()
         self.counts[ms.symbol] = self.counts.get(ms.symbol, 0) + 1
         for tr in ms.transitions:
             rec = {"symbol": ms.symbol, **_jsonable(asdict(tr))}
-            self._timeline.write(json.dumps(rec, separators=(",", ":"), default=str) + "\n")
+            self._timeline.write(json.dumps(rec, separators=(",", ":"), default=str, allow_nan=False) + "\n")
 
     def flush(self) -> None:
         for fh in self._files.values():

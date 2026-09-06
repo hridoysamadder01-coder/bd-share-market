@@ -1,5 +1,13 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
+10:40 UTC: BOTH verify rounds complete (28 agents, 0 errors; last suite count 604 passed / 0 failed). Round-2 fixes committed
+b2f9ed2. My cross-module follow-ups (uncommitted, under test task byq1ifl0j): engine day-roll also resets tape/queue and
+copies sector_id/sector into the quote memory; store.py writes allow_nan=False; export_static.py self-contained (no Google
+Fonts) and null-safe mechanism score/duration; circuit_family break_weakness/next_session report the prior streak as
+missing when no day history (never 0). SEEING IS FINAL (PR #3 body updated, zip sent, verdict BLOCKED). Scout ledger 07cbb30.
+NEXT: tests green → commit → final gate (results/tower/gate) → PR #4 body → fresh replay → phone page republish (same
+scratchpad path dse_tower_live.html) → experiments/build_tower_artifact.sh → 10-point receipt.
+
 06:10 UTC: FULL GATE on 7f0110a done (results/tower/gate/GATE.json): tests 496 passed / 3 failed (run 05:22–05:40 while verify
 agents edited files; names not captured — gate.py now records failed_tests; full suite rerun on head running, task b0f93scif);
 split 27 realdata / 423 machinery / 49 other; fixture determinism identical; capture replay 135,493 events → 7,004 states

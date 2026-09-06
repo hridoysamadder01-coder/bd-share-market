@@ -179,6 +179,10 @@ class Engine:
             for k in _SESSION_QUOTE_FIELDS:
                 s.last_quote.pop(k, None)
             s.has_book_or_tape = False
+            # the tape and queue engines are per-session: a fresh day's first cumulative row must not be
+            # differenced against yesterday's totals (circuit/auction/resilience keep their own day logic)
+            s.tape = TapeState(s.tick or self.cfg.default_tick)
+            s.queue = QueueState()
             self.metrics["day_rolls"] = self.metrics.get("day_rolls", 0) + 1
         s.tdate = tdate
         touched_book = False
@@ -241,7 +245,7 @@ class Engine:
             for k, v in ev.payload.items():
                 if v is not None and k not in zero_fields and k in (
                         "ltp", "open", "high", "low", "close_published", "yclose", "day_trades",
-                        "day_volume", "day_value_mn", "market_category"):
+                        "day_volume", "day_value_mn", "market_category", "sector_id", "sector"):
                     s.last_quote[k] = v
         elif et == EventType.AUCTION:
             s.auction.on_event(ev)
