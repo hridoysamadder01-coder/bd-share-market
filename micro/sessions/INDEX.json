@@ -1,0 +1,10 @@
+{
+  "accepted_sessions": [],
+  "rejected_sessions": [],
+  "dev_needed": 8,
+  "val_needed": 4,
+  "holdout_min_sessions": 5,
+  "holdout_min_episodes": 100,
+  "calibration_session_excluded": "2026-09-06",
+  "note": "arrival order of ACCEPTED sessions decides the split; holdout outcomes sealed until denominator complete"
+}
