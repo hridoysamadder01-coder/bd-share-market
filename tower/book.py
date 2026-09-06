@@ -37,13 +37,13 @@ from datetime import datetime, timedelta
 from typing import Any, Deque, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .state import MarketState
-from .windows import RollingSeries, curvature, slope
+from .windows import curvature, slope
 
 TOP_K = 5
 WINDOW_S = 60.0                # velocity / acceleration / OFI / migration window
 WALL_PERSIST_SHARE = 0.5       # persistence counts while qty ≥ 50 % of its current size
 _ACTIONS_DELETE = {"DELETE", "REMOVE", "D", "2"}       # FIX MDUpdateAction 2 = Delete
-_ACTIONS_SET = {"NEW", "ADD", "CHANGE", "UPDATE", "N", "C", "0", "1", None}
+_ACTIONS_NEW = {"NEW", "ADD", "N", "0"}                # FIX MDUpdateAction 0 = New (an insertion)
 _SIDES_BID = {"bid", "b", "buy", "0"}                  # FIX MDEntryType 0 = Bid
 _SIDES_ASK = {"ask", "a", "sell", "s", "offer", "o", "1"}   # FIX MDEntryType 1 = Offer
 
@@ -77,16 +77,36 @@ def _side(side: Any) -> str:
 class Level:
     """One displayed price level with its observation history.
 
-    ``history`` holds (t, qty) at every observed change (first observation
-    included) so wall persistence — "since when has this level continuously
-    held ≥ 50 % of its current size" — is exact, not sampled.
+    ``history`` is the exact summary of every observed (t, qty) change needed
+    for wall persistence — "since when has this level continuously held
+    ≥ 50 % of its current size".  It is kept as the *suffix-minimum staircase*
+    of the full change history: entry (t_i, m_i) means "from t_i on, the level
+    never displayed less than m_i (until the next entry)".  Quantities are
+    strictly increasing along the stack, so the persistence walk below is
+    identical to a walk over the full history while the memory is bounded by
+    the number of distinct running minima, not by the number of changes.
+    (A plain bounded deque silently under-reports persistence once a busy
+    level has changed more times than the deque holds.)
     """
     price: float
     qty: float
     orders: Optional[int] = None
     first_seen: Optional[datetime] = None
     last_changed: Optional[datetime] = None
-    history: Deque[Tuple[datetime, float]] = field(default_factory=lambda: deque(maxlen=512))
+    history: List[Tuple[datetime, float]] = field(default_factory=list)
+
+    def record(self, t: datetime, qty: float) -> None:
+        """Push an observed (t, qty) onto the suffix-minimum staircase.
+
+        Every earlier entry whose minimum is ≥ ``qty`` now has ``qty`` as its
+        suffix minimum; they collapse into one entry that keeps the *earliest*
+        of their times (the run start is the earliest instant the bound held).
+        """
+        t_start = t
+        h = self.history
+        while h and h[-1][1] >= qty:
+            t_start = h.pop()[0]
+        h.append((t_start, qty))
 
     def set_qty(self, t: datetime, qty: float, orders: Optional[int]) -> float:
         """Apply a new quantity; returns Δqty. Records history only on change.
@@ -99,7 +119,7 @@ class Level:
         if dq != 0.0:
             self.qty = qty
             self.last_changed = t
-            self.history.append((t, qty))
+            self.record(t, qty)
             if orders is None:
                 self.orders = None
         if orders is not None:
@@ -111,8 +131,8 @@ class Level:
     def persistence_s(self, now: datetime, share: float = WALL_PERSIST_SHARE) -> Optional[float]:
         """Seconds since the level has continuously held ≥ ``share`` × current qty.
 
-        Walks the change history backwards; the first entry below the threshold
-        ends the run. The run start is the time of the earliest surviving entry.
+        Walks the staircase backwards; the first entry below the threshold ends
+        the run. The run start is the time of the earliest surviving entry.
         """
         if not self.history:
             return None
@@ -129,19 +149,26 @@ class Level:
 
 
 class _Track:
-    """Time-stamped ring that keeps ``None`` values (RollingSeries drops them).
-    Used for series where "no value at that time" must remain visible (wall
-    price of an empty side)."""
+    """Time-stamped series answering "value at or before ``t − window``".
 
-    def __init__(self, window_s: float = 600.0, min_keep: int = 8) -> None:
-        self.window_s = window_s
-        self.min_keep = min_keep
-        self.buf: Deque[Tuple[datetime, Any]] = deque(maxlen=5000)
+    Keeps ``None`` values (RollingSeries drops them) so "no value at that time"
+    stays visible (wall price of an empty side).  Retention is tied to the
+    look-back itself: every point younger than the look-back instant plus the
+    newest point at or before it.  So the reference point is never lost to a
+    time- or count-based cap — a sparse feed (one update per ten minutes) or a
+    fast one (thousands per second) both keep exactly what the look-back needs.
+    """
+
+    def __init__(self, window_s: float) -> None:
+        self.window_s = float(window_s)
+        self.buf: Deque[Tuple[datetime, Any]] = deque()
 
     def push(self, t: datetime, v: Any) -> None:
         self.buf.append((t, v))
         cutoff = t - timedelta(seconds=self.window_s)
-        while len(self.buf) > self.min_keep and self.buf[0][0] < cutoff:
+        # drop a point only when a younger point is *also* at or before the cutoff:
+        # the newest point ≤ cutoff must survive, it is the look-back reference
+        while len(self.buf) >= 2 and self.buf[1][0] <= cutoff:
             self.buf.popleft()
 
     def at_or_before(self, t: datetime) -> Tuple[bool, Any]:
@@ -150,6 +177,45 @@ class _Track:
             if pt <= t:
                 return True, v
         return False, None
+
+
+class _WindowSum:
+    """Σ of values observed in (t_last − window, t_last], with a count of the
+    updates in that window whose value was *unobservable* (pushed as None) so a
+    partial sum is never mistaken for a complete one.  Memory is bounded by the
+    number of updates inside one window (no count cap that could silently
+    shorten the window on a fast feed)."""
+
+    def __init__(self, window_s: float) -> None:
+        self.window_s = float(window_s)
+        self.buf: Deque[Tuple[datetime, Optional[float]]] = deque()
+        self.total = 0.0
+        self.n = 0            # observed values in the window
+        self.missing = 0      # unobservable steps in the window
+        self.t: Optional[datetime] = None
+
+    def push(self, t: datetime, v: Optional[float]) -> None:
+        self.buf.append((t, v))
+        self.t = t
+        if v is None:
+            self.missing += 1
+        else:
+            self.total += float(v)
+            self.n += 1
+        cutoff = t - timedelta(seconds=self.window_s)
+        while self.buf and self.buf[0][0] <= cutoff:
+            _, old = self.buf.popleft()
+            if old is None:
+                self.missing -= 1
+            else:
+                self.total -= old
+                self.n -= 1
+        if self.n == 0:
+            self.total = 0.0            # no drift once the window is empty
+
+    def sum(self) -> Optional[float]:
+        """Σ observed values; None when nothing observable lies in the window."""
+        return float(self.total) if self.n else None
 
 
 class EvolvingBook:
@@ -175,14 +241,13 @@ class EvolvingBook:
         self.unchanged_run = 0
         self.velocity: Optional[float] = None
         self.acceleration: Optional[float] = None
-        # ---- rolling trackers (causal; keyed by event time)
-        keep_s = max(600.0, 2 * self.window_s)          # every tracker must outlive one look-back window
-        self._abs_dq = RollingSeries(window_s=keep_s, min_keep=0)
-        self._vel = RollingSeries(window_s=keep_s, min_keep=0)
-        self._ofi = RollingSeries(window_s=keep_s, min_keep=0)
+        # ---- rolling trackers (causal; keyed by event time; retention tied to the look-back itself)
+        self._abs_dq = _WindowSum(self.window_s)         # Σ|Δqty| over (t − W, t]
+        self._ofi = _WindowSum(self.window_s)            # Σ e_n over (t − W, t] (+ unobservable-step count)
+        self._vel = _Track(self.window_s)                # velocity at or before t − W (acceleration reference)
         # wall track holds (price, dist_ticks) so migration in distance is measured against the touch *then*
-        self._wall_px: Dict[str, _Track] = {"bid": _Track(keep_s), "ask": _Track(keep_s)}
-        self._mean_dist: Dict[str, _Track] = {"bid": _Track(keep_s), "ask": _Track(keep_s)}
+        self._wall_px: Dict[str, _Track] = {"bid": _Track(self.window_s), "ask": _Track(self.window_s)}
+        self._mean_dist: Dict[str, _Track] = {"bid": _Track(self.window_s), "ask": _Track(self.window_s)}
 
     # ------------------------------------------------------------------ views
     def levels(self, side: str) -> List[Level]:
@@ -251,8 +316,13 @@ class EvolvingBook:
         if orders is not None:
             if isinstance(orders, dict):
                 ob, oa = orders.get("bid"), orders.get("ask")
-            else:
+            elif isinstance(orders, (list, tuple)) and len(orders) == 2 and \
+                    all(o is None or isinstance(o, (list, tuple)) for o in orders):
                 ob, oa = orders[0], orders[1]
+            else:
+                # a flat list of counts cannot be attributed to a side — refuse loudly rather than
+                # guess (guessing would silently mislabel one side's order counts)
+                raise ValueError("orders must be (bid_orders, ask_orders) or {'bid': [...], 'ask': [...]}")
             bid_orders = ob if bid_orders is None else bid_orders
             ask_orders = oa if ask_orders is None else ask_orders
         prev_state = self._pre_state()
@@ -270,7 +340,7 @@ class EvolvingBook:
             lv = cur.get(p)
             if lv is None:
                 lv = Level(price=p, qty=q, orders=o, first_seen=t, last_changed=t)
-                lv.history.append((t, q))
+                lv.record(t, q)
                 cur[p] = lv
             else:
                 lv.set_qty(t, q, o)
@@ -287,9 +357,12 @@ class EvolvingBook:
         Rule: ``action`` in {DELETE, REMOVE} or ``qty == 0`` removes the price;
         NEW / CHANGE / None set the displayed qty (and order count when given).
         ``level`` (1-based from the touch) resolves the price when the feed is
-        level-keyed and ``price`` is None; a level-keyed NEW inserts *at* that
-        position, which for a price-level book equals setting the resolved
-        price. Returns the level events of this update.
+        level-keyed and ``price`` is None — for a CHANGE / DELETE that is the
+        level currently displayed at that rank.  A level-keyed NEW is an
+        *insertion* at that rank: its price is a new one the feed did not
+        deliver, so it cannot be applied (overwriting the level currently at
+        that rank would corrupt the book); the update is counted and nothing
+        changes.  Returns the level events of this update.
         """
         side = _side(side)
         # an unrecognised action (e.g. the FIX adapter's "UNKNOWN") is governed by the qty rule below
@@ -300,11 +373,10 @@ class EvolvingBook:
             if level is None:
                 raise ValueError("apply_update needs a price or a level")
             ls = self.levels(side)
-            if 1 <= level <= len(ls):
-                price = ls[level - 1].price
-            else:
-                # level beyond the displayed range and no price: nothing observable to change
+            if act in _ACTIONS_NEW or not (1 <= level <= len(ls)):
+                # insertion without a price, or a rank beyond the displayed range: nothing observable to change
                 return self._post_update(t, prev_state)
+            price = ls[level - 1].price
         p = _px(price)
         if p is None:
             raise ValueError(f"apply_update needs a finite price, got {price!r}")
@@ -325,7 +397,7 @@ class EvolvingBook:
                 lv = cur.get(p)
                 if lv is None:
                     lv = Level(price=p, qty=q, orders=order_count, first_seen=t, last_changed=t)
-                    lv.history.append((t, q))
+                    lv.record(t, q)
                     cur[p] = lv
                 else:
                     lv.set_qty(t, q, order_count)
@@ -364,8 +436,7 @@ class EvolvingBook:
                 self.added[s] = float(sum(e["dq"] for e in ev if e["side"] == s and e["dq"] > 0))
                 self.removed[s] = float(-sum(e["dq"] for e in ev if e["side"] == s and e["dq"] < 0))
             self.ofi = self._ofi_step(tb0, tb1, ta0, ta1)
-            if self.ofi is not None:
-                self._ofi.push(t, self.ofi)
+            self._ofi.push(t, self.ofi)                       # None = an unobservable step, counted as such
             # an order-count change with no size change is still a change of the displayed book
             changed = bool(ev) or prev["orders"] != self._orders_image()
             self.unchanged_run = 0 if changed else self.unchanged_run + 1
@@ -460,26 +531,27 @@ class EvolvingBook:
             self.velocity = None
             self.acceleration = None
             return
-        # RollingSeries.values(seconds) anchors on its own last point; anchor on t instead
-        cutoff = t - timedelta(seconds=self.window_s)
-        total = sum(p.v for p in self._abs_dq.buf if p.t > cutoff)
+        total = self._abs_dq.sum()                   # every non-first update pushes Σ|Δqty| (0 when unchanged)
+        if total is None:
+            self.velocity = None
+            self.acceleration = None
+            return
         self.velocity = total / span
-        self._vel.push(t, self.velocity)
         t_then = t - timedelta(seconds=self.window_s)
-        prev_pt = next((p for p in reversed(self._vel.buf) if p.t <= t_then), None)
+        prev_pt = next((pt for pt in reversed(self._vel.buf) if pt[0] <= t_then), None)
+        self._vel.push(t, self.velocity)
         if prev_pt is None:
             self.acceleration = None
         else:
-            gap = (t - prev_pt.t).total_seconds()
-            self.acceleration = (self.velocity - prev_pt.v) / gap if gap > 0 else None
+            t_ref, v_ref = prev_pt
+            gap = (t - t_ref).total_seconds()
+            self.acceleration = (self.velocity - v_ref) / gap if gap > 0 else None
 
     def ofi_window(self) -> Optional[float]:
-        """Rolling Σ e_n over the trailing window (None when no e_n was observable)."""
-        if self.t is None or not len(self._ofi):
-            return None
-        cutoff = self.t - timedelta(seconds=self.window_s)
-        vals = [p.v for p in self._ofi.buf if p.t > cutoff]
-        return float(sum(vals)) if vals else None
+        """Rolling Σ e_n over the trailing window (None when no e_n was observable).
+        ``ofi_window_missing`` in :meth:`geometry` says how many steps of the window
+        were unobservable (a side missing), i.e. how partial this sum is."""
+        return self._ofi.sum()
 
     # --------------------------------------------------------------- geometry
     def _dist_ticks(self, side: str, price: float, touch: float) -> float:
@@ -611,6 +683,7 @@ class EvolvingBook:
             "depth_added_bid": self.added["bid"], "depth_removed_bid": self.removed["bid"],
             "depth_added_ask": self.added["ask"], "depth_removed_ask": self.removed["ask"],
             "ofi": self.ofi, "ofi_window": self.ofi_window(), "unchanged_run": self.unchanged_run,
+            "ofi_window_n": self._ofi.n, "ofi_window_missing": self._ofi.missing,
             "level_events": list(self.last_events),
         }
         if not empty:

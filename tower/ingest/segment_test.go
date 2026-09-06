@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 var isoRe = regexp.MustCompile(`^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}\+00:00$`)
@@ -19,20 +21,20 @@ var isoRe = regexp.MustCompile(`^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}\+00:00$`)
 // readAll returns the records of every manifest segment of a source, in order.
 func readAll(t *testing.T, root, source string) []map[string]any {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(root, "MANIFEST.json"))
+	man, err := ReadManifest(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var man Manifest
-	if err := json.Unmarshal(raw, &man); err != nil {
+	entries, err := man.Entries()
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out []map[string]any
-	for _, s := range man.Segments {
+	for _, s := range entries {
 		if s.Source != source {
 			continue
 		}
-		recs, err := ReadSegment(filepath.Join(root, s.Path))
+		recs, err := ReadSegment(s.DataPath(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -323,5 +325,112 @@ func TestVerifyDetectsTampering(t *testing.T) {
 	rep := VerifySegment(files[0])
 	if rep.OK || rep.BadRecords == 0 || rep.TrailerMatches {
 		t.Fatalf("tampering not detected: %+v", rep)
+	}
+}
+
+// TestManifestRoundTripKeepsPythonFieldsAndVerifiesGzip: the Python store's
+// compress_and_verify replaces a segment with a verified .gz and adds
+// gz_path/gz_sha256/gz_bytes to its manifest entry. A Go restart must keep
+// those fields (it rewrites MANIFEST.json), continue the chain from the
+// entry, and -verify must read the gz like raw_store.verify_store does.
+func TestManifestRoundTripKeepsPythonFieldsAndVerifiesGzip(t *testing.T) {
+	root := t.TempDir()
+	st, _ := OpenStore(root, "cap", "test", 8)
+	st.Writer("s").Put(DataRecord(nil, nil, "transport", Obj{{"type", "test"}}, []byte("<b>&</b>")))
+	if err := st.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// emulate raw_store.compress_and_verify
+	man, err := ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entry map[string]any
+	_ = json.Unmarshal(man.Segments[0], &entry)
+	plain := filepath.Join(root, entry["path"].(string))
+	raw, _ := os.ReadFile(plain)
+	var gzBuf bytes.Buffer
+	zw := gzip.NewWriter(&gzBuf)
+	_, _ = zw.Write(raw)
+	_ = zw.Close()
+	gzPath := plain + ".gz"
+	_ = os.WriteFile(gzPath, gzBuf.Bytes(), 0o644)
+	_ = os.Remove(plain)
+	entry["gz_path"] = entry["path"].(string) + ".gz"
+	entry["gz_sha256"] = sha256Hex(gzBuf.Bytes())
+	entry["gz_bytes"] = gzBuf.Len()
+	entry["python_only_field"] = map[string]any{"kept": true}
+	man.Segments[0], _ = json.Marshal(entry)
+	mraw, _ := json.MarshalIndent(man, "", " ")
+	_ = os.WriteFile(filepath.Join(root, "MANIFEST.json"), mraw, 0o644)
+
+	reports, ok, err := VerifyStore(root)
+	if err != nil || !ok || len(reports) != 1 || reports[0].Records != 2 {
+		t.Fatalf("gz segment must verify through gz_path: %v %v %v", reports, ok, err)
+	}
+	firstSHA := entry["sha256"].(string)
+
+	// restart: new epoch, manifest rewritten — foreign fields intact, chain continued
+	st2, _ := OpenStore(root, "cap", "test", 8)
+	st2.Writer("s").Put(DataRecord(nil, nil, "transport", Obj{{"type", "test"}}, []byte("again")))
+	if err := st2.Close(); err != nil {
+		t.Fatal(err)
+	}
+	mraw, _ = os.ReadFile(filepath.Join(root, "MANIFEST.json"))
+	var back map[string]any
+	if err := json.Unmarshal(mraw, &back); err != nil {
+		t.Fatal(err)
+	}
+	segs := back["segments"].([]any)
+	if len(segs) != 2 {
+		t.Fatalf("segments %d", len(segs))
+	}
+	first := segs[0].(map[string]any)
+	if first["gz_path"] != entry["gz_path"] || first["gz_sha256"] != entry["gz_sha256"] ||
+		first["gz_bytes"].(float64) != float64(gzBuf.Len()) || first["python_only_field"].(map[string]any)["kept"] != true {
+		t.Fatalf("Python-written manifest fields lost on rewrite: %v", first)
+	}
+	if strings.Contains(string(mraw), `<`) {
+		t.Fatal("manifest must not HTML-escape")
+	}
+	recs := readAll(t, root, "s")
+	if len(recs) != 6 || recs[3]["kind"] != "META" || recs[3]["prev_segment_sha256"] != firstSHA {
+		t.Fatalf("chain must continue from the gz-compressed entry: %v", recs[3])
+	}
+	if reports, ok, err := VerifyStore(root); err != nil || !ok || len(reports) != 2 {
+		t.Fatalf("verify after restart: %v %v %v", reports, ok, err)
+	}
+	// a gz whose deflate stream is cut is caught too
+	_ = os.WriteFile(gzPath, gzBuf.Bytes()[:gzBuf.Len()/2], 0o644)
+	if _, ok, _ := VerifyStore(root); ok {
+		t.Fatal("truncated gz must fail verification")
+	}
+}
+
+func TestGapDetailTruncationNeverSplitsARune(t *testing.T) {
+	detail := strings.Repeat("x", 3998) + "টাকা" // 3998 ASCII + 3-byte runes: byte 4000 is inside a rune
+	g := GapRecord("http", detail, nil, "", nil, nil)
+	d, _ := g.Fields.Get("detail")
+	s := d.(string)
+	if len(s) > 4000 || !utf8.ValidString(s) || !strings.HasPrefix(s, strings.Repeat("x", 3998)) {
+		t.Fatalf("len=%d valid=%v", len(s), utf8.ValidString(s))
+	}
+	if truncateRunes("abc", 10) != "abc" || truncateRunes("aé", 2) != "a" {
+		t.Fatal("truncateRunes")
+	}
+}
+
+func TestZeroReceiptTimeIsStampedNotBucketedIntoYearOne(t *testing.T) {
+	root := t.TempDir()
+	st, _ := OpenStore(root, "cap", "test", 4)
+	st.Writer("s").Put(Record{Kind: "DATA", Fields: append(Obj{{"key", nil}, {"src_seq", nil}, {"transport", Obj{{"type", "t"}}}}, bodyFields([]byte("x"))...)})
+	_ = st.Close()
+	files, _ := filepath.Glob(filepath.Join(root, "segments", "*.jsonl"))
+	if len(files) != 1 || strings.Contains(filepath.Base(files[0]), "__00010101T00__") {
+		t.Fatalf("segment bucket: %v", files)
+	}
+	rec := ofKind(readAll(t, root, "s"), "DATA")[0]
+	if !isoRe.MatchString(rec["t_recv_utc"].(string)) || strings.HasPrefix(rec["t_recv_utc"].(string), "0001") {
+		t.Fatalf("t_recv_utc %v", rec["t_recv_utc"])
 	}
 }

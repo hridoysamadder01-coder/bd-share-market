@@ -674,3 +674,173 @@ def test_realdata_closed_capture_empty_books_distances_from_ltp_with_band_fallba
     assert len(recs) == 1 and recs[0]["date"] == "2026-09-06" and recs[0]["close"] == 21.6 and recs[0]["yclose"] == 23.8
     assert recs[0]["upper"] == 26.1 and recs[0]["lower"] == 21.5 and recs[0]["locked_down_close"] is False
     assert day_history_from_tables(tables, "NOPE") == []
+
+
+# ============================================================================ review: edge cases
+def test_machinery_out_of_order_update_is_described_but_never_accumulated():
+    """An update older than the last one processed must not move the session / lock clocks or the
+    transition counters (t_prev going backwards would credit the same interval twice)."""
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim.step(0, bids=[(10.9, 100)], asks=[(11.0, 100)], ltp=10.9)
+    sim.step(60, bids=[(11.0, 5000)], asks=[], ltp=11.0)                     # locked at t=60
+    late = sim.step(120, bids=[(11.0, 5000)], asks=[], ltp=11.0).circuit
+    assert late["time_locked_s"] == 60.0 and late["session_elapsed_s"] == 120.0 and late["out_of_order"] is False
+    # a straggler stamped t=30 arrives after t=120: an unlocked book that is NOT an unlock
+    old = sim.step(0, bids=[(10.8, 100)], asks=[(10.9, 100)], ltp=10.8, t=_t(30)).circuit
+    assert old["out_of_order"] is True and old["locked_up"] is False           # the frame is still described
+    assert old["unlock_count"] == 0 and old["time_locked_s"] == 60.0 and old["session_elapsed_s"] == 120.0
+    assert old["dist_up_ticks"] is not None and old["approach_velocity"] is None
+    # the next in-order update credits only its own interval (120 → 180), still locked
+    nxt = sim.step(180, bids=[(11.0, 5000)], asks=[], ltp=11.0).circuit
+    assert nxt["time_locked_s"] == 120.0 and nxt["session_elapsed_s"] == 180.0
+    assert nxt["unlock_count"] == 0 and nxt["relock_count"] == 0 and nxt["out_of_order"] is False
+    # an event of an EARLIER trading date never rolls the session back or into the history
+    prev_day = sim.step(0, ltp=10.5, t=T0 - timedelta(days=1)).circuit
+    assert prev_day["out_of_order"] is True and sim.eng.day_history("SYN") == []
+    assert sim.eng.day_summary("SYN")["date"] == "2026-09-06" and sim.eng.day_summary("SYN")["time_locked_s"] == 120.0
+
+
+def test_machinery_duplicate_timestamps_do_not_credit_time_or_break_rates():
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim.step(0, bids=[(11.0, 1000)], asks=[], ltp=11.0)
+    a = sim.step(0, bids=[(11.0, 1000)], asks=[], ltp=11.0).circuit           # same stamp, same book
+    assert a["time_locked_s"] == 0.0 and a["session_elapsed_s"] == 0.0 and a["queue_persistence_s"] == 0.0
+    b = sim.step(60, bids=[(11.0, 1500)], asks=[], ltp=11.0).circuit
+    assert b["time_locked_s"] == 60.0 and b["queue_delta_60s"] == 500.0 and b["queue_persistence_s"] == 60.0
+    # two different books at the same stamp: locked → unlocked → locked counts one unlock and one relock
+    c = sim.step(60, bids=[(11.0, 1500)], asks=[(11.0, 10)], ltp=11.0).circuit
+    d = sim.step(60, bids=[(11.0, 1500)], asks=[], ltp=11.0).circuit
+    assert c["unlock_count"] == 1 and d["relock_count"] == 1 and d["time_between_unlock_relock_s"] == 0.0
+    assert d["time_locked_s"] == 60.0
+
+
+def test_machinery_velocity_series_restarts_when_the_nearer_limit_flips():
+    """The velocity is signed toward the NEARER limit; when the price crosses the middle of the band
+    the sign flips with it. Without a restart that flip reads as a huge acceleration."""
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    out = []
+    for i in range(13):                       # 30 s steps, mid falls 10.6 → 9.4 at a constant 1 tick / 30 s
+        px = round(10.6 - 0.1 * i, 2)
+        out.append(sim.step(30 * i, bids=[(round(px - 0.05, 2), 100)], asks=[(round(px + 0.05, 2), 100)], ltp=px).circuit)
+    sides = [c["nearer_limit"] for c in out]
+    assert sides[:6] == ["up"] * 6 and sides[-6:] == ["down"] * 6
+    flip = next(i for i, s in enumerate(sides) if s == "down")
+    assert out[flip - 1]["approach_velocity"] < 0                              # moving away from the upper door
+    assert out[flip]["approach_velocity"] > 0                                  # toward the lower door
+    assert out[flip]["approach_acceleration"] is None                         # a fresh series: no Δv yet
+    assert out[-1]["approach_acceleration"] is not None and abs(out[-1]["approach_acceleration"]) < 1e-6
+    assert abs(out[-1]["approach_velocity"] - 2.0) < 1e-6                     # 1 tick / 30 s = 2 ticks / min
+
+
+def test_machinery_queue_persistence_keeps_the_far_side_clock_across_a_flip():
+    # a one-sided book: a 300-share ask queue sits at the lower limit while the (stale) ltp keeps the
+    # nearer limit 'up'; when the ltp catches up the queue's age is 60 s, not 0
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    a = sim.step(0, bids=[], asks=[(9.0, 300), (9.1, 50)], ltp=10.8).circuit
+    assert a["nearer_limit"] == "up" and a["queue_at_lower"] == 300.0
+    # no bids: the queue at the nearer (upper) limit is unobservable — no side, no persistence, not 0
+    assert a["queue_side"] is None and a["queue_at_upper"] is None and a["queue_persistence_s"] is None
+    b = sim.step(60, bids=[], asks=[(9.0, 300), (9.1, 50)], ltp=9.0).circuit
+    assert b["nearer_limit"] == "down" and b["queue_side"] == "down" and b["queue_persistence_s"] == 60.0
+    assert b["max_queue_at_limit"] == 300.0 and b["locked_down"] is True
+
+
+def test_machinery_published_open_replaces_a_carried_ltp_open():
+    """The first continuous frame may still carry the previous close as ltp; the published open,
+    once it appears, is the opening print (and next_session / the gap follow it)."""
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim.eng.set_day_history("SYN", _hist(n_up=1, upper=10.0, lower=8.2))     # prior session locked up at 10.0
+    c0 = sim.step(0, ltp=10.0).circuit                                        # carried previous close
+    assert c0["open_price"] == 10.0 and c0["open_source"] == "ltp" and c0["next_session"] == "continuation"
+    c1 = sim.step(5, bids=[(9.6, 100)], asks=[(9.8, 100)], ltp=9.7, open_px=9.7).circuit
+    assert c1["open_price"] == 9.7 and c1["open_source"] == "published" and c1["next_session"] == "reversal"
+    assert abs(c1["break_behaviour"]["gap_open_ticks"] - (-3.0)) < 1e-9
+    c2 = sim.step(10, ltp=9.9, open_px=9.7).circuit
+    assert c2["open_price"] == 9.7                                             # frozen once published
+    # a published open before the session (the previous session's) is still never taken
+    sim2 = Sim(symbol="Q", yclose=10.0)
+    assert sim2.step(0, ltp=10.0, open_px=10.0, phase="PRE_OPEN", t=T0 - timedelta(minutes=5)).circuit["open_source"] is None
+
+
+def test_machinery_day_roll_replaces_a_history_record_of_the_same_date():
+    # the history was built from the same capture and already carries today's (partial) record: the
+    # roll must replace it, or the session would count twice in the streak
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim.eng.set_day_history("SYN", [
+        {"date": "2026-09-04", "close": 10.0, "yclose": 9.1, "upper": 10.0, "lower": 8.2, "locked_up_close": True,
+         "locked_down_close": False},
+        {"date": "2026-09-06", "close": 11.0, "yclose": 10.0, "upper": 11.0, "lower": 9.0, "locked_up_close": True,
+         "locked_down_close": False},
+    ])
+    sim.step(0, bids=[(11.0, 100)], asks=[], ltp=11.0)
+    sim.step(60, bids=[(11.0, 100)], asks=[], ltp=11.0)
+    c = sim.step(0, bids=[(11.5, 100)], asks=[(11.6, 100)], ltp=11.5, yclose=11.0, t=T0 + timedelta(days=1)).circuit
+    h = sim.eng.day_history("SYN")
+    assert [r["date"] for r in h] == ["2026-09-04", "2026-09-06"]
+    assert h[1]["time_locked_s"] == 60.0 and h[1]["locked_up_close"] is True     # the engine's own summary won
+    assert c["prior_upper_streak"] == 2 and c["consecutive_upper_streak"] == 2
+
+
+def test_machinery_streak_and_exception_keys_are_always_present():
+    sim = Sim(symbol="K", yclose=10.0)
+    keys = {"prior_upper_streak", "prior_lower_streak", "streak_history_observed", "locked_share_today",
+            "exception_detail", "open_source", "out_of_order", "first_hit_up_time", "max_queue_at_limit"}
+    c = sim.step(0, ltp=10.0).circuit
+    assert keys <= set(c) and c["prior_upper_streak"] is None and c["streak_history_observed"] is False
+    sim.eng.set_day_history("K", [])
+    c2 = sim.step(5, ltp=10.0).circuit
+    assert keys <= set(c2) and c2["streak_history_observed"] is True and c2["locked_share_today"] is None
+
+
+def test_machinery_day_history_from_tables_borrows_the_published_tick():
+    import pandas as pd
+    books = pd.DataFrame([
+        {"symbol": "BOND", "t_recv": pd.Timestamp("2026-09-06 08:20:00+00:00"), "ltp": 1057.0, "close_published": 1057.0,
+         "yclose": 1000.0, "open": 1010.0},
+        {"symbol": "BOND", "t_recv": pd.Timestamp("2026-09-07 08:20:00+00:00"), "ltp": 1123.0, "close_published": 1123.0,
+         "yclose": 1057.0, "open": 1100.0},
+        {"symbol": "SHR", "t_recv": pd.Timestamp("2026-09-06 08:20:00+00:00"), "ltp": 10.9, "close_published": 10.9,
+         "yclose": 10.0, "open": 10.2},
+    ])
+    circ = pd.DataFrame([{"symbol": "BOND", "t_recv": pd.Timestamp("2026-09-06 01:06:00+00:00"), "reference_date": "2026-09-03",
+                          "upper_limit": 1075.0, "lower_limit": 925.0, "tick_size": 0.5}])
+    recs = day_history_from_tables({"books": books, "circuit": circ}, "BOND")
+    assert recs[0]["limit_source"] == "circuit_table" and recs[0]["tick"] == 0.5 and recs[0]["tick_assumed"] is False
+    # 09-07 has no row: yclose 1057 (1000 < x ≤ 2000 → ±6.25 %) on the 0.5 grid:
+    # floor(1123.0625/0.5)·0.5 = 1123.0, ceil(990.9375/0.5)·0.5 = 991.0
+    assert recs[1]["limit_source"] == BANDS_RULE_SOURCE and recs[1]["tick"] == 0.5 and recs[1]["tick_assumed"] is False
+    assert recs[1]["upper"] == 1123.0 and recs[1]["lower"] == 991.0 and recs[1]["locked_up_close"] is True
+    shr = day_history_from_tables({"books": books, "circuit": circ}, "SHR")
+    assert shr[0]["tick"] == 0.1 and shr[0]["tick_assumed"] is True and shr[0]["upper"] == 11.0
+    assert shr[0]["locked_up_close"] is False and shr[0]["limit_source"] == BANDS_RULE_SOURCE
+
+
+def test_machinery_auction_open_print_prefers_the_published_open():
+    a = AuctionEngine()
+    t_pre = datetime(2026, 9, 6, 3, 55, tzinfo=timezone.utc)
+    a.fill_state(MarketState(symbol="SYN", t=t_pre, session_phase="PRE_OPEN", tick_size=0.1))
+    t_open = datetime(2026, 9, 6, 4, 0, 1, tzinfo=timezone.utc)
+    ms = MarketState(symbol="SYN", t=t_open, session_phase="CONTINUOUS", tick_size=0.1, ltp=10.0)   # carried close
+    ms.session_state["quote"] = {"yclose": 10.0}
+    d = a.fill_state(ms)
+    assert d["open_ltp"] == 10.0 and d["open_basis"] == "ltp" and d["open_gap_ticks"] == 0.0
+    ms2 = MarketState(symbol="SYN", t=t_open + timedelta(seconds=20), session_phase="CONTINUOUS", tick_size=0.1, ltp=10.6)
+    ms2.session_state["quote"] = {"yclose": 10.0, "open": 10.4}
+    d2 = a.fill_state(ms2)
+    assert d2["open_ltp"] == 10.4 and d2["open_basis"] == "published" and abs(d2["open_gap_ticks"] - 4.0) < 1e-9
+    ms3 = MarketState(symbol="SYN", t=t_open + timedelta(seconds=40), session_phase="CONTINUOUS", tick_size=0.1, ltp=10.9)
+    ms3.session_state["quote"] = {"yclose": 10.0, "open": 10.4}
+    assert a.fill_state(ms3)["open_ltp"] == 10.4                              # frozen
+    # a zero 'open' (the feed's not-populated sentinel) is not an open
+    b = AuctionEngine()
+    b.fill_state(MarketState(symbol="SYN", t=t_pre, session_phase="PRE_OPEN", tick_size=0.1))
+    ms4 = MarketState(symbol="SYN", t=t_open, session_phase="CONTINUOUS", tick_size=0.1, ltp=10.2)
+    ms4.session_state["quote"] = {"yclose": 10.0, "open": 0}
+    d4 = b.fill_state(ms4)
+    assert d4["open_ltp"] == 10.2 and d4["open_basis"] == "ltp"

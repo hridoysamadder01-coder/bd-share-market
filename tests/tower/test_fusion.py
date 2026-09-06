@@ -533,6 +533,107 @@ def test_machinery_one_sided_and_empty_books_compare_level_by_level():
     assert h.fuse_book("SYN", _t(0))[:2] == ([(9.9, 5.0)], [])
 
 
+# ---------------------------------------------------------------- determinism / sentinels / display
+def test_machinery_primary_is_a_function_of_events_not_of_query_history():
+    # two fusers fed the same sorted stream must answer the same, whether or not earlier frames
+    # were queried: the sticky memory advances at event receipt, queries are pure reads
+    queried, silent = Fuser(coalesce_s=6.0), Fuser(coalesce_s=6.0)
+    for f in (queried, silent):
+        f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS))
+    assert queried.primary_book_source("SYN", _t(0)) == "lankabd_depth"
+    for f in (queried, silent):
+        f.on_event(snap("dsebd_depth", "SYN", 2, BIDS, ASKS))
+    assert silent.fuse_book("SYN", _t(2))[2] == queried.fuse_book("SYN", _t(2))[2] == "lankabd_depth"
+    assert silent.fuse_book("SYN", _t(2))[3] == {"book": True}
+    # a query at an instant where the primary would already count as lagging does not mutate memory:
+    # the next event decides, and both fusers keep agreeing
+    new_bids = [(10.0, 150.0)] + BIDS[1:]
+    for f in (queried, silent):
+        f.on_event(snap("lankabd_depth", "SYN", 6, BIDS, ASKS, dup=True))
+        f.on_event(snap("dsebd_depth", "SYN", 8, new_bids, ASKS))
+    assert queried.primary_book_source("SYN", _t(20)) == "dsebd_depth"       # 12 s old change, image differs
+    assert queried.primary_book_source("SYN", _t(9)) == "lankabd_depth"      # earlier instant: not yet lagging
+    for f in (queried, silent):
+        f.on_event(snap("lankabd_depth", "SYN", 10, new_bids, ASKS))         # lankabd caught up in time
+        assert f.primary_book_source("SYN", _t(10)) == "lankabd_depth"
+        assert f.primary_book_source("SYN", _t(30)) == "lankabd_depth"       # identical images never switch
+    # equal t_recv: the sorted stream feeds the higher-priority sensor first and it becomes sticky
+    g = Fuser()
+    g.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS))
+    g.on_event(snap("dsebd_depth", "SYN", 0, BIDS, ASKS))
+    assert g.primary_book_source("SYN", _t(0)) == "lankabd_depth" and g.fuse_book("SYN", _t(0))[3] == {"book": True}
+
+
+def test_machinery_sentinel_prices_and_impossible_values_are_not_observations():
+    # tape row with a 0 price (the feed's 'not populated' sentinel): totals observed, ltp not
+    f = Fuser()
+    f.on_event(cum("lankabd_tape", "SYN", 2, price=0.0, trades=5, volume=100, value=1.0, t_exch_s=1))
+    values, prov, _, _ = f.fuse_quote("SYN", _t(2))
+    assert values["ltp"] is None and "ltp" not in prov and values["day_trades"] == 5.0
+    assert fill(f, "SYN", 2).ltp is None
+    # a print at price 0 is no price either; a negative day total is a parse artefact, not a count
+    g = Fuser()
+    g.on_event(trade("lankabd_tape", "SYN", 2, price=0.0, qty=10, t_exch_s=1))
+    g.on_event(snap("lankabd_depth", "SYN", 3, BIDS, ASKS, trades=-1, volume=7))
+    values, prov, _, _ = g.fuse_quote("SYN", _t(3))
+    assert values["ltp"] is None and values["day_trades"] is None and values["day_volume"] == 7.0
+    assert set(prov) == {"day_volume"}
+    # levels follow the EvolvingBook's rule: a 0 / negative / missing quantity or a non-finite price
+    # is not a resting level, so the image compared is the image displayed (never a phantom difference)
+    h = Fuser(coalesce_s=6.0)
+    h.on_event(snap("lankabd_depth", "SYN", 0, [(10.0, 0.0), (9.9, -5.0), (9.8, 20.0)], [(float("inf"), 5.0)]))
+    h.on_event(snap("dsebd_depth", "SYN", 1, [(9.8, 20.0)], []))
+    bids, asks, _, agr, dis = h.fuse_book("SYN", _t(1))
+    assert (bids, asks, agr, dis) == ([(9.8, 20.0)], [], {"book": True}, {})
+
+
+def test_machinery_fused_display_derives_l1_fields_from_the_same_image():
+    # one-sided image: flags and derived fields follow the book engine's definitions
+    f = Fuser()
+    f.on_event(snap("lankabd_depth", "SYN", 0, [], ASKS))
+    ms = fill(f, "SYN", 0)
+    assert ms.one_sided is True and ms.empty_book is False and ms.crossed is False and ms.locked is False
+    assert ms.spread is None and ms.mid is None and ms.microprice is None and ms.best_bid is None
+    # two-sided: spread / mid / microprice / spread_ticks from the primary's own levels
+    g = Fuser()
+    g.on_event(snap("lankabd_depth", "SYN", 0, [(10.0, 100.0)], [(10.2, 300.0)]))
+    ms = MarketState(symbol="SYN", t=_t(0), tick_size=0.1)
+    g.fill_state(ms, _t(0))
+    assert ms.spread == pytest.approx(0.2) and ms.spread_ticks == pytest.approx(2.0) and ms.mid == pytest.approx(10.1)
+    assert ms.microprice == pytest.approx((10.2 * 100.0 + 10.0 * 300.0) / 400.0)
+    assert ms.one_sided is False and ms.crossed is False and ms.locked is False and ms.empty_book is False
+    # crossed / locked images are reported as such, never left at the defaults
+    h = Fuser()
+    h.on_event(snap("lankabd_depth", "SYN", 0, [(10.2, 5.0)], [(10.1, 5.0)]))
+    ms = fill(h, "SYN", 0)
+    assert ms.crossed is True and ms.locked is False and ms.spread == pytest.approx(-0.1)
+    k = Fuser()
+    k.on_event(snap("lankabd_depth", "SYN", 0, [(10.1, 5.0)], [(10.1, 5.0)]))
+    ms = fill(k, "SYN", 0)
+    assert ms.locked is True and ms.crossed is False and ms.spread == 0.0 and ms.mid == pytest.approx(10.1)
+    # an upstream-displayed book is left alone (its flags included)
+    m = MarketState(symbol="SYN", t=_t(0), bids=[(9.0, 1.0)], best_bid=9.0, one_sided=True)
+    k.fill_state(m, _t(0))
+    assert m.bids == [(9.0, 1.0)] and m.best_bid == 9.0 and m.one_sided is True and m.spread is None
+
+
+def test_machinery_out_of_order_receipt_never_replaces_a_newer_observation():
+    f = Fuser()
+    f.on_event(snap("lankabd_depth", "SYN", 10, [(10.0, 1.0)], ASKS, ltp=10.5))
+    f.on_event(snap("lankabd_depth", "SYN", 4, BIDS, ASKS, ltp=10.0))        # a late, older frame
+    assert f.out_of_order == 1
+    bids, _, src, _, _ = f.fuse_book("SYN", _t(10))
+    assert src == "lankabd_depth" and bids == [(10.0, 1.0)]
+    assert f.fuse_quote("SYN", _t(10))[0]["ltp"] == 10.5
+    st = f.source_status("lankabd_depth", "SYN", _t(10))
+    assert st.updates == 2 and st.last_update == _t(10) and st.freshness_s == 0.0   # counted, not advanced
+    g = Fuser()
+    g.on_event(cum("lankabd_tape", "SYN", 10, price=10.5, trades=6, volume=60, value=0.6, t_exch_s=9))
+    g.on_event(cum("lankabd_tape", "SYN", 4, price=10.0, trades=5, volume=50, value=0.5, t_exch_s=3))
+    assert g.tape_source("SYN", _t(10)) == ("lankabd_tape", 0.0)
+    assert g.fuse_quote("SYN", _t(10))[0]["day_trades"] == 6.0
+
+
 # ---------------------------------------------------------------- real data
 def test_realdata_fixture_two_depth_sensors_agree_on_closed_books():
     events, _ = normalize_store(FIXTURE)

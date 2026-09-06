@@ -48,6 +48,15 @@ converter takes ``t_recv`` as None (use the source stamp as the frame clock;
 events received at once), or a per-message sequence. A row with neither a
 source stamp nor a receipt time cannot be placed in time and raises
 ``ValueError`` — it is never silently stamped.
+
+When the source stamp is the frame clock it is held **monotone**: buffer /
+file order is receipt order, so a message cannot have been received before
+the message that precedes it. A stamp that runs backwards keeps its own
+``t_exch`` and is flagged ``out_of_order``, but its ``t_recv`` is clamped to
+the previous frame's and flagged ``t_recv_clamped`` — otherwise the final
+sort (``Event.sort_key`` is ``t_recv`` first) would place a cancel before the
+add it cancels and a replay of the stream would rebuild a book the feed never
+had.
 """
 from __future__ import annotations
 
@@ -215,6 +224,8 @@ class ItchBook:
         o = _Order(stock, side, int(shares), int(price_int))
         self.orders[ref] = o
         q, n = self._adj(o, o.shares, 1)
+        if o.shares <= 0:
+            self.orders.pop(ref, None)       # nothing rests: no live order to execute or cancel later
         return q, n, was_new
 
     def reduce(self, ref: int, shares: int) -> Tuple[_Order, int, int, int]:
@@ -265,6 +276,25 @@ def _t_recv_for(i: int, t_recv: TRecv, t_exch: Optional[datetime], what: str) ->
     return t_exch, False
 
 
+class _FrameClock:
+    """Receipt clock of a message sequence (see the module doc). ``resolve``
+    returns ``(t_recv, receipt_observed, clamped)``: when the receipt time is
+    not observed the source stamp stands in for it, clamped to be no earlier
+    than any earlier message's receipt time — messages are received in order."""
+
+    def __init__(self) -> None:
+        self.last: Optional[datetime] = None
+
+    def resolve(self, i: int, t_recv: TRecv, t_exch: Optional[datetime], what: str) -> Tuple[datetime, bool, bool]:
+        tr, obs = _t_recv_for(i, t_recv, t_exch, what)
+        clamped = False
+        if not obs and self.last is not None and tr < self.last:
+            tr, clamped = self.last, True
+        if self.last is None or tr > self.last:
+            self.last = tr
+        return tr, obs, clamped
+
+
 def itch_to_events(frames: Sequence[Dict[str, Any]], source: str = "itch", t_recv: TRecv = None,
                    t0: Optional[datetime] = None, venue: str = "DSE", book: Optional[ItchBook] = None
                    ) -> List[Event]:
@@ -278,6 +308,8 @@ def itch_to_events(frames: Sequence[Dict[str, Any]], source: str = "itch", t_rec
     base = utc(t0) if t0 is not None else None
     out: List[Event] = []
     seq = 0
+    clock = _FrameClock()
+    cur = {"clamped": False}                 # receipt-clock state of the message being reduced
 
     last_te: Optional[datetime] = None
 
@@ -299,6 +331,8 @@ def itch_to_events(frames: Sequence[Dict[str, Any]], source: str = "itch", t_rec
             if last_te is not None and te < last_te:
                 ev.flags["out_of_order"] = True        # the feed's own clock went backwards
             last_te = te
+        if cur["clamped"]:
+            ev.flags["t_recv_clamped"] = True
         seq += 1
         return ev
 
@@ -314,11 +348,17 @@ def itch_to_events(frames: Sequence[Dict[str, Any]], source: str = "itch", t_rec
     for i, m in enumerate(frames):
         typ = m.get("type")
         te = stamp(m.get("t_ns"))
-        tr, obs = _t_recv_for(i, t_recv, te, f"itch frame {i} type {typ}")
+        tr, obs, cur["clamped"] = clock.resolve(i, t_recv, te, f"itch frame {i} type {typ}")
         if typ == "A":
             q, n, new = book.add(m["order_ref"], m["stock"], m["side"], m["shares"], _price_int(m))
-            out.append(book_update(tr, te, obs, m["stock"], m["side"], _price_int(m), q, n,
-                                   "NEW" if new else "CHANGE", m, +int(m["shares"]), +1))
+            # an add of 0 shares leaves no live order: the level is absent after it (DELETE),
+            # not a NEW level of quantity 0 that a book engine would have to carry
+            action = "DELETE" if n == 0 else ("NEW" if new else "CHANGE")
+            ev = book_update(tr, te, obs, m["stock"], m["side"], _price_int(m), q, n, action, m,
+                             +int(m["shares"]), +1 if n else 0)
+            if int(m["shares"]) <= 0:
+                ev.flags["zero_shares"] = True
+            out.append(ev)
         elif typ == "E":
             if m["order_ref"] not in book.orders:
                 out.append(mk(EventType.TRADE, tr, te, obs, symbol=None, price=None, qty=float(m["shares"]),
@@ -410,14 +450,17 @@ def fix_to_events(messages: Sequence[Union[str, bytes]], source: str = "fix_md",
     seq = 0
     prev_feed: Optional[int] = None
     prev_te: Optional[datetime] = None
+    clock = _FrameClock()
     for i, raw in enumerate(messages):
         s = raw.decode("latin-1") if isinstance(raw, bytes) else raw
         msg = fix_md.parse_fix(s)
         f = msg["fields"]
         te = _fix_time(f.get("52"))
-        tr, obs = _t_recv_for(i, t_recv, te, f"fix message {i}")
+        tr, obs, clamped = clock.resolve(i, t_recv, te, f"fix message {i}")
         seq_feed = int(f["34"]) if f.get("34", "").isdigit() else None
         flags: Dict[str, bool] = {}
+        if clamped:
+            flags["t_recv_clamped"] = True
         if not (msg["valid_checksum"] and msg["valid_length"]):
             flags["checksum_invalid"] = True
         if seq_feed is not None and prev_feed is not None and seq_feed > prev_feed + 1:
@@ -518,12 +561,26 @@ def broker_export_to_events(body: bytes, kind: str = "l2", symbol: Optional[str]
     """Broker Level-II (``kind='l2'``) or Time & Sales (``kind='tns'``) export → Events.
     ``trade_date`` anchors time-only stamps (see :func:`_anchor`)."""
     out: List[Event] = []
+    clock = _FrameClock()
+    prev_te: Optional[datetime] = None
+
+    def flags_for(te: Optional[datetime], clamped: bool) -> Dict[str, bool]:
+        nonlocal prev_te
+        fl: Dict[str, bool] = {}
+        if te is not None:
+            if prev_te is not None and te < prev_te:
+                fl["out_of_order"] = True          # the export's own stamps run backwards
+            prev_te = te
+        if clamped:
+            fl["t_recv_clamped"] = True
+        return fl
+
     if kind == "l2":
         parsed = broker_export.BrokerLevel2Adapter().parse(body, symbol)
         src = source or parsed.source
         for i, fr in enumerate(parsed.frames):
             te, how = _anchor(utc(fr["t_source_utc"]) if fr.get("t_source_utc") else None, i, t_recv, trade_date)
-            tr, obs = _t_recv_for(i, t_recv, te, f"broker L2 frame {i}")
+            tr, obs, clamped = clock.resolve(i, t_recv, te, f"broker L2 frame {i}")
             has_orders = fr.get("bid_orders_per_level") is not None
             fields: Tuple[str, ...] = ("bid_levels", "ask_levels") + (("t_source",) if te else ()) + \
                 (("bid_orders_per_level", "ask_orders_per_level") if has_orders else ())
@@ -535,7 +592,7 @@ def broker_export_to_events(body: bytes, kind: str = "l2", symbol: Optional[str]
                                 "bid_orders": fr.get("bid_orders_per_level"), "ask_orders": fr.get("ask_orders_per_level"),
                                 "orders_per_level": has_orders, "layout": fr.get("layout"), "format": fr.get("format"),
                                 "date_anchor": how},
-                       observed_fields=fields)
+                       observed_fields=fields, flags=flags_for(te, clamped))
             if obs and te is not None:
                 ev.freshness_s = (tr - te).total_seconds()
             out.append(ev)
@@ -544,7 +601,7 @@ def broker_export_to_events(body: bytes, kind: str = "l2", symbol: Optional[str]
         src = source or parsed.source
         for i, fr in enumerate(parsed.frames):
             te, how = _anchor(utc(fr["t_source_utc"]) if fr.get("t_source_utc") else None, i, t_recv, trade_date)
-            tr, obs = _t_recv_for(i, t_recv, te, f"broker T&S print {i} ({fr.get('t_source_str')})")
+            tr, obs, clamped = clock.resolve(i, t_recv, te, f"broker T&S print {i} ({fr.get('t_source_str')})")
             ev = Event(source=src, event_type=EventType.TRADE, t_recv=tr, seq_local=i, venue=venue,
                        symbol=(fr.get("symbol") or symbol or "").upper() or None, t_exch=te,
                        session_phase=session_phase(tr), price=fr.get("price"), qty=fr.get("qty"),
@@ -553,7 +610,7 @@ def broker_export_to_events(body: bytes, kind: str = "l2", symbol: Optional[str]
                                 "t_source_str": fr.get("t_source_str"), "extra": fr.get("extra") or {},
                                 "date_anchor": how},
                        observed_fields=("trade_prints",) + (("t_source",) if te else ()) +
-                       (("trade_side",) if fr.get("side") else ()))
+                       (("trade_side",) if fr.get("side") else ()), flags=flags_for(te, clamped))
             if obs and te is not None:
                 ev.freshness_s = (tr - te).total_seconds()
             out.append(ev)

@@ -154,7 +154,9 @@ def tape_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
         window's first state (a trade must leave the window ``seconds`` after it happened).
     (3) Rows the tape engine flagged as the day's first row (its "interval" is the whole day so
         far) or as a monotone break (a source-side reset) carry no interval information and are
-        dropped (``session_state.tape.last_first_row`` / ``last_monotone_break``)."""
+        dropped (``session_state.tape.last_first_row`` / ``last_monotone_break``); so is any row
+        whose interval volume is negative (a reset the engine did not flag) — a negative volume
+        would otherwise poison every flow sum (Σ v ≤ 0, one-sidedness undefined)."""
     cutoff = fr.ms.t - timedelta(seconds=seconds)
     sts = all_states(fr)
     # start the walk at the last tape-carrying state before the window (its identity seeds the dedupe)
@@ -178,7 +180,7 @@ def tape_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
         if s.trade_volume is not None and ident == last_ident:
             continue                                     # the same interval polled again
         last_ident = ident
-        if s.t < cutoff or _tape_flagged(s):
+        if s.t < cutoff or _tape_flagged(s) or (s.interval_volume is not None and s.interval_volume < 0):
             continue
         out.append({"t": s.t, "volume": s.interval_volume, "trades": s.interval_trades,
                     "direction": s.trade_flow_direction, "vwap": s.interval_vwap, "cum_volume": s.trade_volume,
@@ -191,7 +193,7 @@ def classified_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
     carries the mid of the state it appeared in (``mid``) and that state (``state``)."""
     out: List[Dict[str, Any]] = []
     for r in tape_rows(fr, seconds):
-        if not r["volume"] or r["direction"] is None:
+        if not r["volume"] or r["volume"] < 0 or r["direction"] is None:
             continue
         row = dict(r)
         row["mid"] = mid_of(r["state"])
@@ -199,16 +201,30 @@ def classified_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
     return out
 
 
+def cum_delta(states: Sequence[MarketState]) -> Optional[float]:
+    """Δ cumulative day volume from the first to the last of ``states`` carrying it — only when
+    the total never decreases across the states in between: a reset (day roll / feed restart)
+    inside the span would otherwise turn into a phantom volume (1000 → 100 → 2200 reads as
+    +1200 when 2100 traded) or a negative one.  None when < 2 states carry it or a decrease
+    is seen (the caller falls back to the distinct tape intervals, which drop the reset row)."""
+    cum = [float(s.trade_volume) for s in states if s.trade_volume is not None]
+    if len(cum) < 2 or any(b < a for a, b in zip(cum, cum[1:])):
+        return None
+    return cum[-1] - cum[0]
+
+
 def volume_since(fr: Frame, pre: MarketState) -> Optional[float]:
-    """Traded volume after ``pre`` up to now: Δ cumulative day volume when both carry it, else Σ
-    of the distinct tape intervals first seen after ``pre`` (None when the tape is not observable)."""
+    """Traded volume after ``pre`` up to now: Δ cumulative day volume when both carry it and it
+    never decreased in between, else Σ of the distinct tape intervals first seen after ``pre``
+    (None when the tape is not observable)."""
     ms = fr.ms
-    if ms.trade_volume is not None and pre.trade_volume is not None and ms.trade_volume >= pre.trade_volume:
-        return float(ms.trade_volume - pre.trade_volume)
     sts = all_states(fr)
     idx = next((i for i in range(len(sts) - 1, -1, -1) if sts[i] is pre), None)
     if idx is None:
         return None
+    delta = cum_delta(sts[idx:]) if pre.trade_volume is not None else None
+    if delta is not None:
+        return delta
     after = {id(s) for s in sts[idx + 1:]}
     rows = [r for r in tape_rows(fr, (ms.t - pre.t).total_seconds() + 1.0)
             if id(r["state"]) in after and r["volume"] is not None]
@@ -363,7 +379,11 @@ def _passive(mech: Mechanism, ms: MarketState, hist: StateHistory, side: str) ->
     s_ref = ramp(refill_ratio, 0.3, 0.9) * (1.0 if refill_observed else 0.8)
     s_share = ramp(d_share, 0.0, 0.15)
     core = geo_mean([s_flow, s_abs, s_ref])
-    score = core * (hold if hold is not None else 0.5) * (flat if flat is not None else 0.5) * (0.5 + 0.5 * s_share)
+    # hold / flat / share are None only when their inputs are unobservable (no tick, no mid in
+    # the window, no two-sided visible depth): named in ``missing`` below, so the reading is 0
+    # rather than a constant standing in for the factor
+    score = core * (hold if hold is not None else 0.0) * (flat if flat is not None else 0.0) \
+        * (0.5 + 0.5 * s_share)
     direction = (1 if side == "bid" else -1) if score > 0 else 0
     ev = {"side": side, "absorbed_volume": absorbed, "absorbed_share": absorbed_share, "signed_flow": fs["signed"],
           "total_volume": fs["total"], "rows": fs["rows"], "absorbed_vs_touch": absorbed_vs_touch,
@@ -378,8 +398,15 @@ def _passive(mech: Mechanism, ms: MarketState, hist: StateHistory, side: str) ->
     if q and isinstance(q.get(side), dict):
         ev["engine_replenished"] = q[side].get("replenished")
         ev["engine_stacks_120s"] = q[side].get("stacks_120s")
+    missing = []
     if not tick:
-        ev["missing"] = ["tick_size"]
+        missing.append("tick_size")
+    if flat is None and tick:
+        missing.append("mid (< 2 states with a mid in window)")
+    if d_share is None:
+        missing.append("visible depth on both sides (< 2 states in window)")
+    if missing:
+        ev["missing"] = missing
     return reading(mech, score, ev, base,
                    f"{side} absorbed {absorbed:.0f} ({absorbed_share:.2f} of flow), refill {refill_ratio:.2f}")
 
@@ -457,7 +484,12 @@ class BlockAbsorption(DirectedMechanism):
         fr = Frame(ms, hist)
         base = baselines(fr)
         tick = fr.tick
-        burst_vol = fr.volume_over(self.burst_s)
+        # burst volume: Δ cumulative over the burst states (monotone, else a reset inside would be
+        # a phantom burst), else the distinct tape intervals of the burst
+        burst_vol = cum_delta(fr.states(self.burst_s))
+        if burst_vol is None:
+            b_rows = [r for r in tape_rows(fr, self.burst_s) if r["volume"] is not None]
+            burst_vol = float(sum(r["volume"] for r in b_rows)) if b_rows else None
         if burst_vol is None:
             return missing_reading(self, ["trade_volume/interval_volume"], base)
         t_pre = ms.t - timedelta(seconds=self.burst_s)
@@ -465,10 +497,10 @@ class BlockAbsorption(DirectedMechanism):
         base_states = [s for s in fr.past if t_pre - timedelta(seconds=self.baseline_s) <= s.t <= t_pre]
         base_vol = base_rate = base_span = None
         cum = [s for s in base_states if s.trade_volume is not None]
-        if len(cum) >= 2 and (cum[-1].t - cum[0].t).total_seconds() >= self.min_baseline_span_s \
-                and cum[-1].trade_volume >= cum[0].trade_volume:
+        cum_vol = cum_delta(cum)
+        if cum_vol is not None and (cum[-1].t - cum[0].t).total_seconds() >= self.min_baseline_span_s:
             base_span = (cum[-1].t - cum[0].t).total_seconds()
-            base_vol = float(cum[-1].trade_volume - cum[0].trade_volume)
+            base_vol = cum_vol
             base_rate = base_vol / base_span
         elif len(base_states) >= 2 and (base_states[-1].t - base_states[0].t).total_seconds() >= self.min_baseline_span_s:
             rows = [r for r in tape_rows(fr, self.baseline_s + self.burst_s) if r["t"] <= t_pre and r["volume"] is not None]
@@ -626,12 +658,15 @@ class AdverseRetreat(DirectedMechanism):
         # identity — states sharing a timestamp are told apart); the trade's own state when it is
         # the oldest held (then its volume is already inside that state's cumulative total)
         pre = state_before(fr, last["state"]) or last["state"]
-        traded = volume_since(fr, pre) if pre is not last["state"] else 0.0
-        traded = traded or 0.0
+        # trades after ``pre`` (when ``pre`` is the trade's own state its print is already inside
+        # that state's total, so only later prints — classified or not — are subtracted)
+        traded = volume_since(fr, pre) or 0.0
         k_pre, k_now = topk_depth(pre, side), topk_depth(ms, side)
         _, t_pre = best_of(pre, side)
         _, t_now = best_of(ms, side)
-        if levels_of(ms, "bid") or levels_of(ms, "ask") or ms.best_bid is not None or ms.best_ask is not None:
+        book_now = bool(levels_of(ms, "bid") or levels_of(ms, "ask") or ms.best_bid is not None
+                        or ms.best_ask is not None)
+        if book_now:
             k_now = k_now if k_now is not None else 0.0
             t_now = t_now if t_now is not None else 0.0
         cands: Dict[str, Optional[float]] = {}
@@ -650,13 +685,16 @@ class AdverseRetreat(DirectedMechanism):
         d_spread = (sp_now - sp_pre) if (sp_pre is not None and sp_now is not None) else None
         p_pre, _ = best_of(pre, side)
         p_now, _ = best_of(ms, side)
+        # the hit side vacated entirely (a book is displayed, but nothing on that side): the
+        # spread is unbounded, the strongest widening there is — not an unobservable one
+        vacated = book_now and p_pre is not None and p_now is None
         retreat = None
         if p_pre is not None and p_now is not None and tick:
             retreat = ((p_now - p_pre) if side == "ask" else (p_pre - p_now)) / tick
         dt = (ms.t - last["t"]).total_seconds()
         recency = 1.0 if dt <= self.fresh_s else clamp01(1.0 - (dt - self.fresh_s) / (self.window_s - self.fresh_s))
         s_pull = ramp(pulled_share, 0.2, 0.6)
-        s_sp = ramp(d_spread, 0.5, 2.0)
+        s_sp = 1.0 if (vacated and d_spread is None) else ramp(d_spread, 0.5, 2.0)
         score = s_pull * (0.4 + 0.6 * s_sp) * recency
         direction = sign(d) if score > 0 else 0
         ev = {"hit_side": side, "trade_direction": d, "trade_volume_row": last["volume"], "t_trade": last["t"].isoformat(),
@@ -664,9 +702,10 @@ class AdverseRetreat(DirectedMechanism):
               "touch_pre": t_pre, "touch_now": t_now, "traded_since_pre": traded, "pulled_share": pulled_share,
               "pulled_share_topk": cands["topk"], "pulled_share_touch": cands["touch"], "pull_source": src,
               "spread_ticks_pre": sp_pre, "spread_ticks_now": sp_now, "spread_widening_ticks": d_spread,
-              "best_retreat_ticks": retreat, "components": {"pull": s_pull, "spread": s_sp},
+              "best_retreat_ticks": retreat, "hit_side_vacated": vacated,
+              "components": {"pull": s_pull, "spread": s_sp},
               "direction": direction, "window_s": self.window_s}
-        if d_spread is None:
+        if d_spread is None and not vacated:
             ev["missing"] = ["spread_ticks/tick_size"]
         return reading(self, score, ev, base, f"{side} pulled {pulled_share:.2f} after trade, spread +{d_spread}")
 

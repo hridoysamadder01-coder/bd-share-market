@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,18 +17,18 @@ func TestVerifyPythonWrittenFixtureStore(t *testing.T) {
 	// The committed fixture is trimmed: its manifest lists a few segments whose
 	// files were left out (the Python verify_store raises on them too). Verify
 	// every segment that is present, chain included, with the same rules.
-	raw, err := os.ReadFile(filepath.Join(root, "MANIFEST.json"))
+	man, err := ReadManifest(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var man Manifest
-	if err := json.Unmarshal(raw, &man); err != nil {
+	entries, err := man.Entries()
+	if err != nil {
 		t.Fatal(err)
 	}
 	prev := map[string]string{}
 	present := 0
-	for _, s := range man.Segments {
-		path := filepath.Join(root, filepath.FromSlash(s.Path))
+	for _, s := range entries {
+		path := s.DataPath(root)
 		if _, err := os.Stat(path); err != nil {
 			continue
 		}

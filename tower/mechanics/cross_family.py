@@ -124,11 +124,13 @@ class BasketRebalance(DirectedMechanism):
     Own burst: rate_now = volume over the last 300 s per minute; base rate =
     volume over [now − 2100 s, now − 300 s) per minute, needing ≥ 5 states
     over ≥ 300 s (else missing); burst = ramp(rate_now / base, 1.5 → 4.0)
-    (a positive rate against a zero base counts as a full burst).
+    (a positive rate against a zero base counts as a full burst, the ratio
+    reported as ``volume_rel`` None with ``volume_rel_inf`` True).
     Basket simultaneity (cross engine, market-wide, ≥ 2 symbols): simult =
     max(ramp(share of symbols whose visible liquidity changed ≥ 20 % over
     60 s, 0.2 → 0.6), ramp(share of symbols in their own velocity top decile,
-    0.2 → 0.6)); missing when the engine delivers neither.  Sector sync =
+    0.2 → 0.6)); missing when the engine delivers neither (or no share in
+    either).  Sector sync =
     ramp(basket_sync, 0.6 → 1.0) over ≥ 2 peers (dropped when there is no
     sector).  score = window × blend(0.40 burst, 0.35 simult, 0.25 sync).
     direction = sign of the symbol's combined pressure (|p| ≥ 0.2), else of
@@ -180,21 +182,27 @@ class BasketRebalance(DirectedMechanism):
         if base_rate is None:
             return missing_reading(self, ["volume baseline (≥ 5 states over ≥ 300 s before the last 300 s)"], base,
                                    dict(ev, baseline_states=n_base, baseline_span_s=span_base, rate_now_per_min=rate_now))
+        # a positive rate against a zero base is a full burst; the ratio itself is not a finite number
+        # (never Infinity in the evidence — it is neither JSON nor a measurement): None + a flag
+        vol_rel_inf = False
         if base_rate > _EPS:
             vol_rel: Optional[float] = rate_now / base_rate
             burst = ramp(vol_rel, 1.5, 4.0)
         else:
-            vol_rel = float("inf") if rate_now > 0 else None
+            vol_rel, vol_rel_inf = None, rate_now > 0
             burst = 1.0 if rate_now > 0 else 0.0
+        burst_ev = {"rate_now_per_min": rate_now, "base_rate_per_min": base_rate, "volume_rel": vol_rel,
+                    "volume_rel_inf": vol_rel_inf, "burst": burst}
         # ---- basket-wide simultaneity from the cross engine
         if not isinstance(slc, dict) and not isinstance(sx, dict):
-            return missing_reading(self, ["cross.simultaneous_liquidity_change"], base,
-                                   dict(ev, rate_now_per_min=rate_now, base_rate_per_min=base_rate, volume_rel=vol_rel,
-                                        burst=burst))
+            return missing_reading(self, ["cross.simultaneous_liquidity_change"], base, dict(ev, **burst_ev))
         liq_share, exp_share = _share_of(slc), _share_of(sx)
         f_liq = ramp(liq_share, 0.2, 0.6) if liq_share is not None else None
         f_exp = ramp(exp_share, 0.2, 0.6) if exp_share is not None else None
         cands = [(v, b) for v, b in ((f_liq, "liquidity_change"), (f_exp, "synchronized_expansion")) if v is not None]
+        if not cands:
+            # the engine delivered the dicts but no share in either (no current symbol to compare)
+            return missing_reading(self, ["cross.simultaneous_liquidity_change.share"], base, dict(ev, **burst_ev))
         simult, simult_basis = max(cands, key=lambda x: x[0])
         # ---- sector basket synchronisation
         bsync, bsn = cross.get("basket_sync"), cross.get("basket_sync_n")
@@ -214,8 +222,8 @@ class BasketRebalance(DirectedMechanism):
             direction, basis = sign(float(net)), "sector_breadth_net"
         if score <= 0:
             direction = 0
-        ev.update({"volume_300s": vol_now, "rate_now_per_min": rate_now, "base_rate_per_min": base_rate,
-                   "baseline_states": n_base, "baseline_span_s": span_base, "volume_rel": vol_rel, "burst": burst,
+        ev.update(burst_ev)
+        ev.update({"volume_300s": vol_now, "baseline_states": n_base, "baseline_span_s": span_base,
                    "liquidity_change_share": liq_share, "liquidity_change_n": slc.get("n") if isinstance(slc, dict) else None,
                    "own_liquidity_rel_change": slc.get("own_rel_change") if isinstance(slc, dict) else None,
                    "expansion_share": exp_share, "own_in_top_decile": sx.get("own_in_top_decile") if isinstance(sx, dict) else None,
@@ -224,7 +232,8 @@ class BasketRebalance(DirectedMechanism):
         if dropped:
             ev["unverified"] = dropped
         return _reading(self, score, ev, base,
-                        f"{phase} {mtc:.1f} min to close, vol_rel {vol_rel}, simultaneity {simult:.2f} ({simult_basis})")
+                        f"{phase} {mtc:.1f} min to close, vol_rel {'inf' if vol_rel_inf else vol_rel}, "
+                        f"simultaneity {simult:.2f} ({simult_basis})")
 
 
 # ============================================================================ #18

@@ -179,10 +179,20 @@ def _f(x: Any) -> Optional[float]:
     return float(x) if _finite(x) else None
 
 
+def _same_instant(a: Any, b: Any) -> bool:
+    """True when two serialised timestamps name the same instant (False when either is missing/unparseable)."""
+    if a is None or b is None:
+        return False
+    try:
+        return bool(pd.Timestamp(a) == pd.Timestamp(b))
+    except (TypeError, ValueError):
+        return False
+
+
 # ---------------------------------------------------------------------------- loading
 def _flatten_state(d: Dict[str, Any], families: Dict[str, str]) -> Dict[str, Any]:
     row: Dict[str, Any] = {"symbol": d.get("symbol"), "t": d.get("t"), "seq": _num(d.get("seq")),
-                           "session_phase": d.get("session_phase") or "CLOSED",
+                           "session_phase": d.get("session_phase") or "UNKNOWN",   # never a silent phase
                            "book_source": d.get("book_source")}
     for k in SCALAR_FIELDS:
         row[k] = _num(d.get(k))
@@ -198,8 +208,15 @@ def _flatten_state(d: Dict[str, Any], families: Dict[str, str]) -> Dict[str, Any
     row["day_value_mn"] = _num(quote.get("day_value_mn"))
     src = d.get("book_source")
     st = (d.get("sources") or {}).get(src) if src else None
-    row["book_src_duplicate"] = (bool(st.get("duplicate")) if isinstance(st, dict) else None)
-    row["book_src_stale"] = (bool(st.get("stale")) if isinstance(st, dict) else None)
+    row["book_src_duplicate"] = None
+    row["book_src_stale"] = None
+    if isinstance(st, dict):
+        row["book_src_stale"] = bool(st.get("stale"))
+        # The source's ``duplicate`` flag describes its LAST receipt and persists until its next one. It
+        # applies to this row only when that receipt produced the row (last_update == t); a row produced
+        # by another source's event (a trade, a quote) is a new observation even if the book source's last
+        # payload was a repeat.
+        row["book_src_duplicate"] = bool(st.get("duplicate")) and _same_instant(st.get("last_update"), d.get("t"))
     for name, m in (d.get("mechanisms") or {}).items():
         if not isinstance(m, dict):
             continue
@@ -324,8 +341,9 @@ def add_exclusions(df: pd.DataFrame, cfg: ExperimentConfig = DEFAULT_CONFIG, h: 
       no_book                    empty_book or mid None
       crossed_locked             crossed or locked book
       stale_book                 the book source's status says stale, or book_age_s > stale_age_s
-      duplicate                  the book source's status says duplicate payload, or the row's observable
-                                 content (bids, asks, ltp, day trades/volume) is identical to the previous row
+      duplicate                  the book source's status says duplicate payload for the receipt that produced
+                                 this row (last_update == t), or the row's observable content (bids, asks, ltp,
+                                 day trades/volume) is identical to the previous row of the symbol
       no_forward_outcome         no complete forward window at the primary horizon
       outside_continuous_session session_phase ≠ CONTINUOUS
       circuit_locked             circuit.locked_up or circuit.locked_down"""
@@ -403,7 +421,8 @@ def denominator(df: pd.DataFrame, cfg: ExperimentConfig = DEFAULT_CONFIG, h: Opt
                 "p_move": _f(ev[f"fwd_move_h{hh}"].mean()) if len(ev) else None,
                 "mean_ticks": _f(ev[f"fwd_mid_ticks_h{hh}"].mean()) if len(ev) else None}
         out["mechanism_active_rows"] = {m: int(df[f"mech_{m}_state"].isin(ACTIVE_STATES).sum()) for m in mechanism_names(df)}
-        out["mechanism_active_rows_eligible"] = {m: int(elig[f"mech_{m}_state"].isin(ACTIVE_STATES).sum()) for m in mechanism_names(df)} if len(elig) else {}
+        out["mechanism_active_rows_eligible"] = {m: (int(elig[f"mech_{m}_state"].isin(ACTIVE_STATES).sum()) if len(elig) else 0)
+                                                 for m in mechanism_names(df)}
     return out
 
 
@@ -480,7 +499,8 @@ def baseline_signal(df: pd.DataFrame, name: str, outcome: str, cfg: ExperimentCo
       imb_l1 / imb_topk / imb_weighted:  up: x ≥ θ; down: x ≤ −θ; move: |x| ≥ θ
       depth_ratio (bid share):           centred as 2·x − 1, then the same θ rule
       price_only_response (ticks):       up: x > 0; down: x < 0; move: x ≠ 0   (momentum)
-      volume_only_response:              x ≥ the symbol's median over ``scope`` rows (activity; undirected)
+      volume_only_response:              x ≥ the symbol's running (causal) median over the ``scope`` rows at or
+                                         before the row (activity; undirected)
     NaN → False (a baseline that cannot be computed never fires)."""
     x = pd.to_numeric(df[col or name], errors="coerce").astype(float)
     th = cfg.theta_imb
@@ -501,9 +521,12 @@ def baseline_signal(df: pd.DataFrame, name: str, outcome: str, cfg: ExperimentCo
         else:
             s = x.abs() > EPS
     elif name == "volume_only_response":
-        base = x[scope.astype(bool)] if scope is not None else x
-        med = base.groupby(df.loc[base.index, "symbol"]).median()
-        s = x >= df["symbol"].map(med).astype(float)
+        # causal threshold: the symbol's running median over the scoped rows at or before this row
+        # (rows are in (symbol, t, seq) order); a whole-series median would read the future.
+        inscope = x.where(scope.reindex(df.index).fillna(False).astype(bool)) if scope is not None else x
+        med = inscope.groupby(df["symbol"]).expanding(min_periods=1).median()
+        med = med.reset_index(level=0, drop=True).reindex(df.index).astype(float)
+        s = x >= med
     else:
         raise ValueError(f"unknown baseline {name}")
     return s.fillna(False).astype(bool)
@@ -803,7 +826,8 @@ def run_mechanism(df: pd.DataFrame, name: str, cfg: ExperimentConfig = DEFAULT_C
     base_by_outcome = {oc: baseline_signals(df, oc, cfg) for oc in {outcome, mirror_outcome} if oc}
     results: List[Dict[str, Any]] = []
     rng_ctrl = _rng(cfg, name, 1)
-    variants = [("state", sigs["state"], outcome), ("score_ge_0.6", sigs["score"], outcome)]
+    graded_name = f"score_ge_{cfg.score_threshold:g}"
+    variants = [("state", sigs["state"], outcome), (graded_name, sigs["score"], outcome)]
     if sigs["mirror"] is not None:
         variants.append(("mirror", sigs["mirror"], mirror_outcome))
     for split in SPLITS:
@@ -846,7 +870,7 @@ def run_mechanism(df: pd.DataFrame, name: str, cfg: ExperimentConfig = DEFAULT_C
                           f"{ci['n_boot_valid']} resamples)") if np.isfinite(ci["ci_lo"]) else "no valid bootstrap resamples"})
     for b in BASELINES:
         rows.append(_fals_row(name, "baseline", b, hold, bases[b], outcome, h, None, None))
-    rows.append(_fals_row(name, "graded_score", f"score_ge_{cfg.score_threshold:g}", hold, sigs["score"], outcome, h, best_sig, None))
+    rows.append(_fals_row(name, "graded_score", graded_name, hold, sigs["score"], outcome, h, best_sig, None))
 
     # (b) timestamp permutation
     if n_hold_sig and len(hold):
@@ -888,7 +912,9 @@ def run_mechanism(df: pd.DataFrame, name: str, cfg: ExperimentConfig = DEFAULT_C
     wf = baseline_signals(df, outcome, cfg, wall_free=True)
     best_wf = wf[best_b] if best_b else None
     r = _fals_row(name, "removal", "largest_wall_removed", hold, sig, outcome, h, best_wf, None,
-                  f"imbalance baselines recomputed without the largest displayed level; best baseline {best_b} re-derived")
+                  (f"imbalance baselines recomputed without the largest displayed level; best baseline {best_b} re-derived"
+                   if best_b in IMBALANCE_BASELINES else
+                   f"best baseline {best_b} is not an imbalance baseline: unaffected by wall removal"))
     r["passed"] = (bool(np.sign(r["incremental_vs_best_baseline"]) == np.sign(real_inc) and real_inc != 0)
                    if (np.isfinite(r["incremental_vs_best_baseline"]) and np.isfinite(real_inc)) else None)
     wall_ok = r["passed"]
@@ -962,10 +988,14 @@ def decide(v: Dict[str, Any], fdr_pass: Optional[bool], fdr_q: Optional[float]) 
 
 
 def finalize_verdicts(provisional: Dict[str, Dict[str, Any]], cfg: ExperimentConfig) -> Dict[str, Any]:
-    """BH-FDR across the mechanisms' permutation p-values, then the verdict per mechanism."""
+    """BH-FDR across the mechanisms' permutation p-values, then the verdict per mechanism. The FDR family is
+    the set of mechanisms actually tested in the run: a BLOCKED mechanism (denominator too small to decide)
+    is not a tested hypothesis and neither consumes nor contributes to the BH budget."""
     names = sorted(provisional)
-    p = np.array([provisional[n]["permutation"]["p_value"] if provisional[n]["permutation"]["p_value"] is not None else np.nan
-                  for n in names], dtype=float)
+    p_raw = np.array([provisional[n]["permutation"]["p_value"] if provisional[n]["permutation"]["p_value"] is not None else np.nan
+                      for n in names], dtype=float)
+    tested = np.array([not bool(provisional[n]["blocked"]) for n in names], dtype=bool)
+    p = np.where(tested, p_raw, np.nan)
     keep, cutoff = bh_fdr(p, cfg.fdr_q)
     qv = bh_adjusted(p)
     verdicts = {}
@@ -974,7 +1004,8 @@ def finalize_verdicts(provisional: Dict[str, Dict[str, Any]], cfg: ExperimentCon
         verdicts[n] = decide(provisional[n], fp, _f(qv[i]))
     return {"mechanisms": verdicts,
             "fdr": {"q": cfg.fdr_q, "cutoff": _f(cutoff), "n_tested": int(np.isfinite(p).sum()),
-                    "n_pass": int(keep.sum()), "p_values": {n: _f(p[i]) for i, n in enumerate(names)},
+                    "n_pass": int(keep.sum()), "tested": [n for i, n in enumerate(names) if np.isfinite(p[i])],
+                    "p_values": {n: _f(p_raw[i]) for i, n in enumerate(names)},
                     "q_values": {n: _f(qv[i]) for i, n in enumerate(names)}},
             "counts": {k: sum(1 for v in verdicts.values() if v["verdict"] == k) for k in ("KEEP", "KILL", "BLOCKED")},
             "rule": VERDICT_RULE, "config": cfg.describe()}

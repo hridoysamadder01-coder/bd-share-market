@@ -28,13 +28,26 @@
     }
     return r.json();
   }
-  function ms(iso) {                       // ISO (any fraction length) → epoch ms
+  /* ISO (any fraction length) → epoch ms as a float that keeps the sub-millisecond part.
+   * Store times carry microseconds; truncating them would place a state's own time
+   * before the state and make "at or before" comparisons off by one state. */
+  function ms(iso) {
     if (iso === null || iso === undefined) return null;
-    const m = String(iso).replace(/(\.\d{3})\d+/, "$1");
-    const v = Date.parse(m);
-    return Number.isFinite(v) ? v : null;
+    const s = String(iso);
+    const m = /\.(\d+)/.exec(s);
+    let sub = 0, base = s;
+    if (m) {
+      const frac = m[1];
+      base = s.slice(0, m.index) + (frac.length ? "." + frac.slice(0, 3).padEnd(3, "0") : "") + s.slice(m.index + m[0].length);
+      if (frac.length > 3) sub = parseInt(frac.slice(3).padEnd(6, "0").slice(0, 6), 10) / 1e6;   // µs → fraction of a ms
+    }
+    const v = Date.parse(base);
+    return Number.isFinite(v) ? v + sub : null;
   }
-  function iso(t) { return new Date(t).toISOString(); }
+  /* epoch ms (possibly fractional) → ISO for a ?at= query. A continuous position (slider,
+   * play clock) is rounded UP to the millisecond so a state whose time falls inside that
+   * millisecond is included; a known state time is passed through as its exact string. */
+  function iso(t) { return typeof t === "string" ? t : new Date(Math.ceil(t)).toISOString(); }
   function hms(isoOrMs) {
     const t = typeof isoOrMs === "number" ? isoOrMs : ms(isoOrMs);
     if (t === null) return NA;
@@ -169,17 +182,22 @@
   }
   async function loadMetrics() { try { S.metrics = await api("/api/metrics"); } catch (e) { S.metrics = null; } }
 
-  async function showAt(t) {                     // t: epoch ms or null (latest)
+  /* pos: null (latest), epoch ms (slider / play clock), an exact state-time string, or
+   * {index: n} — the exact event-order position. Many consecutive states share one frame
+   * time (several events of one poll), so a time can only address the last of such a group;
+   * the step buttons therefore navigate by index. */
+  async function showAt(pos) {
     if (!S.symbol) return;
     const gen = S.gen;                           // a newer navigation (scrub, symbol change) discards this answer
     S.busy = true;
     try {
-      const q = t === null ? "latest" : encodeURIComponent(iso(t));
       const sym = encodeURIComponent(S.symbol);
-      const [st, cr] = await Promise.all([api(`/api/state/${sym}?at=${q}`), api(`/api/cross/${sym}?at=${q}`).catch(() => null)]);
+      const q = pos === null ? "at=latest" : (pos && typeof pos === "object") ? `index=${pos.index}` : `at=${encodeURIComponent(iso(pos))}`;
+      const [st, cr] = await Promise.all([api(`/api/state/${sym}?${q}`), api(`/api/cross/${sym}?${q}`).catch(() => null)]);
       if (gen !== S.gen) return;
       S.cur = st; S.cross = cr;
-      if (t !== null) { try { fetch(`/api/replay/seek?symbol=${sym}&at=${q}`, { method: "POST" }); } catch (_) { /* cursor is advisory */ } }
+      if (pos && typeof pos === "object") S.virt = ms(st.t);   // index step: the play clock continues from that state (a numeric position must NOT snap back, or play would stall between sparse states)
+      if (pos !== null) { try { fetch(`/api/replay/seek?symbol=${sym}&${q}`, { method: "POST" }); } catch (_) { /* cursor is advisory */ } }
       render();
       setStatus(`ok · ${S.symbol} · ${st.index + 1}/${st.count}`);
     } catch (e) {
@@ -543,7 +561,8 @@
 
   // ------------------------------------------------------------------ replay / live control
   function stopPlay() { S.playing = false; if (S.playTimer) { clearInterval(S.playTimer); S.playTimer = null; } renderReplay(); }
-  function goReplay(t) { S.live = false; S.gen++; stopPoll(); S.virt = t; return showAt(t); }
+  /* pos: epoch ms (slider / play clock) or {index: n} (step buttons); see showAt */
+  function goReplay(pos) { S.live = false; S.gen++; stopPoll(); if (typeof pos === "number") S.virt = pos; return showAt(pos); }
   function sliderTime() {
     if (!S.range) return null;
     const v = parseInt($("#replay-slider").value, 10) / SLIDER_MAX;
@@ -596,10 +615,11 @@
       sel.addEventListener("change", () => setSymbol(sel.value));
       $("#btn-live").addEventListener("click", () => goLive());
       $("#btn-play").addEventListener("click", togglePlay);
-      $("#btn-first").addEventListener("click", () => S.cur && goReplay(ms(S.cur.first_t)));
-      $("#btn-last").addEventListener("click", () => S.cur && goReplay(ms(S.cur.last_t)));
-      $("#btn-prev").addEventListener("click", () => S.cur && S.cur.prev_t && goReplay(ms(S.cur.prev_t)));
-      $("#btn-next").addEventListener("click", () => S.cur && S.cur.next_t && goReplay(ms(S.cur.next_t)));
+      // step state by state by event-order index: a time cannot address a state that shares its t with the next one
+      $("#btn-first").addEventListener("click", () => S.cur && goReplay({ index: 0 }));
+      $("#btn-last").addEventListener("click", () => S.cur && goReplay({ index: S.cur.count - 1 }));
+      $("#btn-prev").addEventListener("click", () => S.cur && S.cur.index > 0 && goReplay({ index: S.cur.index - 1 }));
+      $("#btn-next").addEventListener("click", () => S.cur && S.cur.index + 1 < S.cur.count && goReplay({ index: S.cur.index + 1 }));
       $("#replay-slider").addEventListener("input", () => { const t = sliderTime(); stopPlay(); if (t !== null) goReplay(t); });
       $("#speed").addEventListener("change", () => { /* read on each tick */ });
       $("#mech-all").addEventListener("change", (e) => { S.showAllMech = e.target.checked; renderMech(S.cur && S.cur.state); });

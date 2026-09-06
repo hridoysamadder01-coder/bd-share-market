@@ -134,6 +134,48 @@ def test_machinery_itch_clock_conventions():
     assert ev3[0].freshness_s == 0.25
 
 
+def _replay_book(events):
+    """Rebuild a per-(symbol, side, price) book by applying BOOK_UPDATEs in stream order."""
+    book = {}
+    for e in events:
+        if e.event_type is not EventType.BOOK_UPDATE:
+            continue
+        k = (e.symbol, e.side, e.price)
+        if e.payload["action"] == "DELETE":
+            book.pop(k, None)
+        else:
+            book[k] = e.qty
+    return book
+
+
+def test_machinery_itch_backwards_stamp_without_receipt_clock_keeps_stream_causal():
+    """No receipt clock: the source stamp is the frame clock. A cancel stamped BEFORE the add
+    it cancels must still come after it in the sorted stream (t_recv clamped, both flagged),
+    so that replaying the stream rebuilds the book the feed actually had (empty)."""
+    msgs = [{"type": "A", "t_ns": T_NS + 1_000, "order_ref": 1, "side": "B", "shares": 100, "stock": "GP", "price": 1.0},
+            {"type": "X", "t_ns": T_NS + 500, "order_ref": 1, "shares": 100},          # stamped 500 ns earlier
+            {"type": "A", "t_ns": T_NS + 2_000, "order_ref": 2, "side": "S", "shares": 7, "stock": "GP", "price": 1.1}]
+    ev = itch_to_events(itch_frames(itch_encode(msgs)))
+    assert [(e.seq_local, e.payload["action"]) for e in ev] == [(0, "NEW"), (1, "DELETE"), (2, "NEW")]
+    assert ev[1].flags == {"out_of_order": True, "t_recv_clamped": True}
+    assert ev[1].t_exch == T0 + timedelta(microseconds=0) and ev[1].t_recv == ev[0].t_recv        # own stamp kept, receipt clamped
+    assert ev[2].flags == {} and ev[2].t_recv == T0 + timedelta(microseconds=2)
+    assert _replay_book(ev) == {("GP", "ask", 1.1): 7.0}
+    # with an observed receipt clock nothing is clamped and freshness is real
+    ev2 = itch_to_events(itch_frames(itch_encode(msgs)), t_recv=T0 + timedelta(seconds=1))
+    assert ev2[1].flags == {"out_of_order": True} and ev2[1].freshness_s == 1.0
+
+
+def test_machinery_itch_zero_share_add_leaves_no_level_and_no_live_order():
+    msgs = [{"type": "A", "t_ns": T_NS, "order_ref": 1, "side": "B", "shares": 0, "stock": "GP", "price": 1.0},
+            {"type": "D", "t_ns": T_NS + 1, "order_ref": 1}]
+    book = ItchBook()
+    ev = itch_to_events(itch_frames(itch_encode(msgs)), book=book)
+    assert (ev[0].payload["action"], ev[0].qty, ev[0].order_count, ev[0].level) == ("DELETE", 0.0, 0, None)
+    assert ev[0].flags == {"zero_shares": True} and ev[0].payload["delta_orders"] == 0
+    assert ev[1].status == "unknown_order_ref" and book.orders == {} and book.levels == {}
+
+
 # ---------------------------------------------------------------------------- FIX
 def _fix(msg_type, body, seq):
     return fix_md.build_message(msg_type, "DSEMDS", "SEEING", seq, body)
@@ -193,6 +235,18 @@ def test_machinery_fix_missing_size_is_none_and_sending_time_regression():
     assert all(e.flags.get("checksum_invalid") for e in bu[2:])       # the edited message no longer checksums
 
 
+def test_machinery_fix_sending_time_regression_without_receipt_clock_stays_ordered():
+    w = _fix("W", [("55", "GP"), ("268", "1"), ("269", "0"), ("270", "244.0"), ("271", "100")], 1)
+    x = _fix("X", [("268", "1"), ("279", "2"), ("269", "0"), ("55", "GP"), ("270", "244.0")], 2)   # DELETE the level
+    import re
+    x_old = re.sub(r"52=\d{8}-\d\d:\d\d:\d\d(\.\d+)?", "52=20200101-00:00:00.000", x)             # stamped years earlier
+    ev = fix_to_events([w, x_old])
+    assert [e.event_type for e in ev] == [EventType.BOOK_SNAPSHOT, EventType.BOOK_UPDATE]        # feed order kept
+    assert ev[1].flags.get("out_of_order") and ev[1].flags.get("t_recv_clamped") and ev[1].t_recv == ev[0].t_recv
+    assert ev[1].t_exch.year == 2020 and ev[1].freshness_s is None
+    assert _replay_book(ev) == {}
+
+
 def test_machinery_fix_without_orders_and_no_receipt_clock():
     w = _fix("W", [("55", "GP"), ("268", "2"), ("269", "0"), ("270", "244.0"), ("271", "100"),
                    ("269", "1"), ("270", "244.2"), ("271", "50")], 1)
@@ -232,6 +286,12 @@ def test_machinery_broker_l2_and_tns_exports():
     assert tr2[0].payload["date_anchor"] == "t_recv_date" and tr2[0].freshness_s == 9.0 and tr2[1].freshness_s == 6.0
     no_side = broker_export_to_events(b"Time,Price,Volume\n2026-09-06 10:15:01,244.2,100\n", "tns", "GP")
     assert no_side[0].aggressor is None and "trade_side" not in no_side[0].observed_fields
+    # a print stamped earlier than the previous row: file order is receipt order, so it stays second
+    back = b"Time,Price,Volume,Trade ID\n10:15:04,244.1,50,T1\n10:15:01,244.2,100,T2\n10:15:09,244.3,10,T3\n"
+    tb = broker_export_to_events(back, "tns", "GP", trade_date=date(2026, 9, 6))
+    assert [t.trade_id for t in tb] == ["T1", "T2", "T3"] and [t.seq_local for t in tb] == [0, 1, 2]
+    assert tb[1].flags == {"out_of_order": True, "t_recv_clamped": True} and tb[1].t_recv == tb[0].t_recv
+    assert tb[1].t_exch == datetime(2026, 9, 6, 4, 15, 1, tzinfo=timezone.utc) and tb[0].flags == {} and tb[2].flags == {}
     with pytest.raises(ValueError):
         broker_export_to_events(b"foo,bar\n1,2\n", "tns", "GP")
     with pytest.raises(ValueError):

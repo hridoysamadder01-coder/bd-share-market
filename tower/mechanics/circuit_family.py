@@ -93,13 +93,17 @@ def _num(v: Any) -> Optional[float]:
     return None if math.isnan(x) else x
 
 
-def circuit_series(fr: Frame, key: str, seconds: float, before_now: bool = True) -> List[Tuple[datetime, float]]:
-    """[(t, circuit[key])] over the window for states whose circuit dict carries a number."""
+def circuit_series(fr: Frame, key: str, seconds: float, before_now: bool = True,
+                   same_side: Optional[str] = None) -> List[Tuple[datetime, float]]:
+    """[(t, circuit[key])] over the window for states whose circuit dict carries a number;
+    ``same_side`` keeps only the states whose ``nearer_limit`` is that side."""
     out: List[Tuple[datetime, float]] = []
     for s in fr.states(seconds):
         if before_now and s is fr.ms:
             continue
         c = s.circuit if isinstance(s.circuit, dict) else {}
+        if same_side is not None and c.get("nearer_limit") != same_side:
+            continue
         v = _num(c.get(key))
         if v is not None:
             out.append((s.t, v))
@@ -175,7 +179,8 @@ class CircuitRegime(CircuitMechanism):
     proximity = 1 − ramp(distance to that limit in % of price, 0 → 3) (1 at
     the limit); approach = ramp(approach velocity, 0 → 3 ticks/min) (0 when
     moving away or unknown).  locked → core = 0.8 + 0.2 × ramp(time locked
-    today, 0 → 600 s), regime "locked_<side>"; hit but not locked → core =
+    today, 0 → 600 s) (term not evaluated and named ``unverified`` when the
+    engine carries no lock time), regime "locked_<side>"; hit but not locked → core =
     0.6 + 0.4 × lock pressure where lock pressure = queue at the limit /
     (queue + shares still displayed to the door) (0 when unknown, flagged
     unverified), regime "hit_<side>"; otherwise core = proximity × (0.5 +
@@ -210,9 +215,11 @@ class CircuitRegime(CircuitMechanism):
         approach = ramp(vel, 0.0, 3.0)
         unverified: List[str] = []
         if locked:
-            tl = _num(c.get("time_locked_s")) or 0.0
-            lock_time = ramp(tl, 0.0, 600.0)
-            core = 0.8 + 0.2 * lock_time
+            tl = _num(c.get("time_locked_s"))
+            if tl is None:
+                unverified.append("time_locked_s")       # the lock-time term is not evaluated, never a silent 0
+            lock_time = ramp(tl, 0.0, 600.0) if tl is not None else None
+            core = 0.8 + 0.2 * (lock_time or 0.0)
             regime = f"locked_{side}"
             ev.update({"lock_time_factor": lock_time, "lock_pressure": None})
         elif hit:
@@ -308,9 +315,11 @@ class CircuitPrehitPressure(CircuitMechanism):
     ``pre_hit_state`` (and the same factors recomputed on it) reported.
     gate = 1 − ramp(distance to the nearer limit in %, 1 → 4).
     velocity factor = max(ramp(z of the approach velocity against the
-    symbol's own approach velocities over the trailing 900 s, 0.5 → 2.5),
-    ramp(approach velocity, 0.5 → 3 ticks/min)) (z None with < 6 or constant
-    samples — the absolute ramp alone then).  pressure toward the limit =
+    symbol's own approach velocities over the trailing 900 s while the same
+    limit was the nearer one, 0.5 → 2.5), ramp(approach velocity, 0.5 → 3
+    ticks/min)) (z None with < 6 or constant samples — the absolute ramp
+    alone then; the z term is 0 whenever the velocity is not toward the
+    limit, whatever its z).  pressure toward the limit =
     pressure strength when the pressure direction points at that side (−
     strength when it points away), else the combined pressure signed toward
     the side; factor ramp(0.2 → 0.7).  door: shares to the door (up) /
@@ -331,7 +340,10 @@ class CircuitPrehitPressure(CircuitMechanism):
     def _factors(self, vel: Optional[float], z: Optional[float], p_toward: Optional[float],
                  door: Optional[float], rate: Optional[float], visible: Optional[bool]) -> Dict[str, Any]:
         f_abs = ramp(vel, 0.5, 3.0) if vel is not None else None
-        f_z = ramp(z, 0.5, 2.5) if z is not None else None
+        # the z term is an *acceleration of the approach*: a velocity that is not toward the limit
+        # (≤ 0, the price is moving away or standing) cannot be pre-hit pressure whatever its z
+        # against a still more negative baseline — measured 0, never a positive factor
+        f_z = (ramp(z, 0.5, 2.5) if (vel is not None and vel > 0) else 0.0) if z is not None else None
         f_vel = max(x for x in (f_abs, f_z) if x is not None) if (f_abs is not None or f_z is not None) else None
         f_p = ramp(p_toward, 0.2, 0.7) if p_toward is not None else None
         minutes = None
@@ -381,8 +393,12 @@ class CircuitPrehitPressure(CircuitMechanism):
             ev.update({"regime": "unknown", "gate": None})
             return self._finish(0.0, ms, ev, base, "no price: distance not observable", 0)
         gate = 1.0 - ramp(pct, 1.0, 4.0)
-        # velocity z against the symbol's own trailing approach velocities (before now)
-        vals = [v for _, v in circuit_series(fr, "approach_velocity", self.z_window_s, before_now=True)]
+        # velocity z against the symbol's own trailing approach velocities (before now) — the engine signs
+        # the velocity toward the *nearer* limit and restarts its series when that side flips, so only
+        # past states whose nearer limit is this side belong to the baseline (a velocity toward the other
+        # limit is a different quantity, not a slow approach to this one)
+        vals = [v for _, v in circuit_series(fr, "approach_velocity", self.z_window_s, before_now=True,
+                                             same_side=side)]
         z = zscore_against(vel, vals, self.z_min_points)
         # pressure toward the limit
         pd_, ps_ = ms.pressure_direction, _num(ms.pressure_strength)
@@ -482,11 +498,14 @@ class CircuitLockStrength(CircuitMechanism):
         rate, vol, span = volume_rate(fr, self.vol_s)
         qmax = _num(c.get("max_queue_at_limit"))
         minutes = None
+        minutes_inf = False
         if rate is not None and rate > _EPS:
             minutes = q / rate
             size, size_basis = ramp(minutes, 1.0, 30.0), "minutes_of_volume"
         elif rate is not None:
-            minutes = float("inf") if q > 0 else 0.0
+            # nothing traded in the window: a non-empty queue would never be eaten — the time is not a
+            # finite observation (never Infinity in the evidence: neither JSON nor a measurement)
+            minutes, minutes_inf = (None if q > 0 else 0.0), q > 0
             size, size_basis = (1.0 if q > 0 else 0.0), "minutes_of_volume"
         elif qmax is not None and qmax > 0:
             size, size_basis = clamp01(q / qmax), "share_of_day_max"
@@ -499,7 +518,7 @@ class CircuitLockStrength(CircuitMechanism):
         core = lock_base * (blend or 0.0) * integrity
         ev.update({"regime": f"{'locked' if locked else 'hit'}_{side}", "queue": q, "queue_delta_60s": delta,
                    "queue_rel_change": rel, "growth": growth, "persistence": persistence, "queue_minutes_of_volume": minutes,
-                   "volume_rate_per_min": rate, "size": size, "size_basis": size_basis, "open_unlocks": open_unlocks,
+                   "queue_minutes_inf": minutes_inf, "volume_rate_per_min": rate, "size": size, "size_basis": size_basis, "open_unlocks": open_unlocks,
                    "integrity": integrity, "lock_base": lock_base, "blend": blend})
         if dropped:
             ev["unverified"] = dropped
@@ -613,11 +632,12 @@ class CircuitNextSession(CircuitMechanism):
     vs the prior limit (positive = opened beyond it in the streak direction;
     missing when not computable); follow = S × (price − open) / tick.
     continuation: blend(0.5 ramp(gap, −0.5 → 2), 0.3 lock factor [1 when
-    locked on that side now, else ramp(today's locked share, 0 → 0.5)], 0.2
-    ramp(follow, 0 → 3)), direction S.  reversal: blend(0.6 ramp(−gap, 0.5 →
-    5), 0.4 ramp(−follow, 0 → 3)), direction −S.  Both × time factor 1 − 0.5 ×
+    locked on that side now, else ramp(today's locked share, 0 → 0.5); not
+    observable (dropped, ``unverified``) when neither], 0.2 ramp(follow,
+    0 → 3)), direction S.  reversal: blend(0.6 ramp(−gap, 0.5 → 5), 0.4
+    ramp(−follow, 0 → 3)), direction −S.  Both × time factor 1 − 0.5 ×
     ramp(session elapsed, 1800 → 5400 s) (the opening state fades through the
-    session).
+    session; without a session clock the term is not evaluated and named).
     """
 
     name = "circuit_next_session"
@@ -653,12 +673,15 @@ class CircuitNextSession(CircuitMechanism):
             return self._finish(0.0, ms, ev, base, "open gap vs the prior limit not computable", 0)
         gap = ss * gap_raw
         follow = (ss * follow_raw) if follow_raw is not None else None
+        # the fade needs the session clock; without it the term is not evaluated (factor 1, named)
         time_factor = (1.0 - 0.5 * ramp(elapsed, 1800.0, 5400.0)) if elapsed is not None else 1.0
         locked_now = bool(c.get("locked_up") if side == "up" else c.get("locked_down"))
         lshare = _num(c.get("locked_share_today"))
         if ns == "continuation":
             f_gap = ramp(gap, -0.5, 2.0)
-            f_lock = 1.0 if locked_now else (ramp(lshare, 0.0, 0.5) if lshare is not None else 0.0)
+            # not locked now and no locked share measured (no session time yet): the lock term is not
+            # observable — dropped, never a silent 0
+            f_lock = 1.0 if locked_now else (ramp(lshare, 0.0, 0.5) if lshare is not None else None)
             f_follow = ramp(follow, 0.0, 3.0) if follow is not None else None
             blend, dropped = weighted_blend([("gap", 0.5, f_gap), ("lock", 0.3, f_lock), ("follow", 0.2, f_follow)])
             direction = ss
@@ -672,6 +695,8 @@ class CircuitNextSession(CircuitMechanism):
         core = time_factor * (blend or 0.0)
         ev.update({"regime": ns, "gap_ticks": gap, "follow_ticks": follow, "locked_now": locked_now,
                    "locked_share_today": lshare, "time_factor": time_factor, "blend": blend})
+        if elapsed is None:
+            dropped = list(dropped) + ["time_factor"]
         if dropped:
             ev["unverified"] = dropped
         return self._finish(core, ms, ev, base, f"{ns} after {pu or pl} {side} sessions: gap {gap:+.1f} ticks, follow {follow}",

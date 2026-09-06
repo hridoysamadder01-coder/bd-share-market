@@ -12,8 +12,9 @@ of a symbol at time t is its last observation at or before t):
 
 * mid return series: per symbol, log(mid) is stored per update (mid when a
   book exists; ltp only for symbols that never had a mid — the basis is fixed
-  per symbol and the series is reset when a mid first appears). The per-update
-  log change is also kept (``returns_of``).
+  per symbol and the series is reset when a mid first appears). Only finite
+  positive prices are observations (NaN / ±inf / ≤ 0 add no point). The
+  per-update log change is also kept (``returns_of``).
 * 60-s return at ``now``: L(now) − L(now − 60) where L is the step-function
   log price; None unless both points exist and the last observation is at
   most ``max_gap_s`` old (a stale symbol has no current return).
@@ -40,7 +41,9 @@ of a symbol at time t is its last observation at or before t):
   and share that are locked (locked_up/locked_down) or within
   ``limit_near_pct`` % of a limit (dist_up_pct / dist_down_pct).
 * simultaneous_liquidity_change: across all current symbols with a positive
-  visible liquidity (bid + ask) now and 60 s ago, share whose relative change
+  visible liquidity (bid + ask; a one-sided book's empty side is an observed
+  zero, a side missing for any other reason makes the point unobserved) now
+  and 60 s ago, share whose relative change
   |ΔV / V(now − 60)| ≥ ``liq_change_thr``; sign = +1 / −1 by majority of the
   changers' directions (0 tie), None when none changed.
 * synchronized_expansion: share of symbols (≥ ``min_velocity_samples`` |price
@@ -60,6 +63,9 @@ of a symbol at time t is its last observation at or before t):
   poll age are reported alongside (``market_volume_span_s``,
   ``market_volume_age_s``); a negative increment (day roll / feed reset) or a
   single poll gives None.
+
+* breadth: the latest MARKET_STATS breadth poll at or before ``now`` (polls are
+  kept time-indexed, so a query between two polls sees the earlier one).
 
 "Current" membership (circuit, liquidity, pressure, velocity) requires the
 member's last state within ``stale_s`` of ``now``. Everything is None when the
@@ -229,8 +235,12 @@ class CrossEngine:
         self._cap = 0
         self._dirty: set = set()
         self._grid_end: Optional[float] = None
-        self._breadth: Optional[Dict[str, Any]] = None          # latest breadth (t, up, down, n, ...)
-        self._stats: Optional[Dict[str, Any]] = None            # latest MARKET_STATS payload with its t
+        # breadth polls kept time-indexed (t asc) so a causal query between two polls sees the earlier one
+        self._breadth_ts: List[float] = []
+        self._breadth_recs: List[Dict[str, Any]] = []
+        self._breadth_retain_s = 4.0 * 3600.0
+        self._stats: Optional[Dict[str, Any]] = None            # latest MARKET_STATS payload (as delivered)
+        self._stats_t: Optional[float] = None                   # its receipt time (kept apart from the payload keys)
         self._mkt_volume = _Path(600.0)                         # cumulative market volume per poll
         self._mkt_trades = _Path(600.0)                         # cumulative market trade count per poll
         self._last_t: Optional[float] = None
@@ -277,7 +287,8 @@ class CrossEngine:
         self._note_t(t)
         ts = _secs(t)
         p = payload or {}
-        self._stats = {"t": ts, **{k: v for k, v in p.items()}}
+        self._stats = dict(p)
+        self._stats_t = ts
         vol, trades = _num(p.get("market_volume")), _num(p.get("market_trades"))
         if vol is not None:
             self._mkt_volume.push(ts, vol)
@@ -294,11 +305,28 @@ class CrossEngine:
         if up is None and down is None:
             return
         flat = None
-        if self._stats is not None and abs(self._stats.get("t", -1e18) - ts) < 1e-6:
+        if self._stats is not None and self._stats_t is not None and abs(self._stats_t - ts) < 1e-6:
             flat = _num(self._stats.get("flat"))
         if n is None and up is not None and down is not None and flat is not None:
             n = up + down + flat
-        self._breadth = {"t": ts, "up": up, "down": down, "n": n, "flat": flat}
+        rec = {"t": ts, "up": up, "down": down, "n": n, "flat": flat}
+        # time-indexed insert (a poll at an already-seen instant replaces that record)
+        i = bisect.bisect_left(self._breadth_ts, ts)
+        if i < len(self._breadth_ts) and self._breadth_ts[i] == ts:
+            self._breadth_recs[i] = rec
+        else:
+            self._breadth_ts.insert(i, ts)
+            self._breadth_recs.insert(i, rec)
+        cutoff = self._breadth_ts[-1] - self._breadth_retain_s
+        k = bisect.bisect_left(self._breadth_ts, cutoff)
+        if k:
+            del self._breadth_ts[:k]
+            del self._breadth_recs[:k]
+
+    def _breadth_at(self, t_now: float) -> Optional[Dict[str, Any]]:
+        """The latest breadth record at or before ``t_now`` (None before the first poll)."""
+        i = bisect.bisect_right(self._breadth_ts, t_now) - 1
+        return self._breadth_recs[i] if i >= 0 else None
 
     def on_state(self, ms: MarketState) -> None:
         """Ingest one symbol state (event order). Records the log-price point,
@@ -322,16 +350,17 @@ class CrossEngine:
                 s.sector_source = "watch_sector_id"
         # price basis: mid when a book exists; ltp only until a mid ever appears
         price: Optional[float] = None
-        if ms.mid is not None and ms.mid > 0:
+        mid, ltp = _pos_finite(ms.mid), _pos_finite(ms.ltp)
+        if mid is not None:
             if s.basis != "mid":
                 s.basis = "mid"
                 s.logp = _Path(s.logp.retain_s)
                 s.returns = _Path(s.returns.retain_s)
                 s._sample = None
-            price = float(ms.mid)
-        elif s.basis in (None, "ltp") and ms.ltp is not None and ms.ltp > 0:
+            price = mid
+        elif s.basis in (None, "ltp") and ltp is not None:
             s.basis = "ltp"
-            price = float(ms.ltp)
+            price = ltp
         if price is not None:
             lp = math.log(price)
             prev = s.logp.at_or_before(t)
@@ -340,11 +369,16 @@ class CrossEngine:
                 s.returns.push(t, lp - prev[1])
             s._sample = None
             self._dirty.add(ms.symbol)
-        # visible liquidity (both sides must be observed)
-        if ms.visible_bid_liq is not None and ms.visible_ask_liq is not None:
-            s.liq.push(t, float(ms.visible_bid_liq) + float(ms.visible_ask_liq))
-        if ms.price_velocity is not None:
-            s.velocity.push(t, abs(float(ms.price_velocity)))
+        # visible liquidity: both sides observed, or a one-sided book whose empty side is an
+        # observed zero (the book delivers None for a side with no displayed level)
+        vb, va = _fin(ms.visible_bid_liq), _fin(ms.visible_ask_liq)
+        if vb is not None and va is not None:
+            s.liq.push(t, vb + va)
+        elif (vb is None) != (va is None) and bool(getattr(ms, "one_sided", False)):
+            s.liq.push(t, vb if vb is not None else va)  # type: ignore[arg-type]
+        vel = _fin(ms.price_velocity)
+        if vel is not None:
+            s.velocity.push(t, abs(vel))
         if latest:
             c = ms.circuit or {}
             s.circuit = {k: c.get(k) for k in ("locked_up", "locked_down", "dist_up_pct", "dist_down_pct",
@@ -454,8 +488,11 @@ class CrossEngine:
             varx = sxx - sx * sx / nn
             vary = syy - sy * sy / nn
             cov = sxy - sx * sy / nn
-            ok = (varx > 1e-30) & (vary > 1e-30)
+            # non-constant: the centred energy must exceed both an absolute floor and a rounding
+            # residue of the raw energy (a constant non-zero series cancels to ~1e-16 × sxx, not 0)
+            ok = (varx > 1e-30) & (vary > 1e-30) & (varx > 1e-12 * sxx) & (vary > 1e-12 * syy)
             corr = np.where(ok, cov / np.sqrt(np.where(ok, varx * vary, 1.0)), np.nan)
+            corr = np.clip(corr, -1.0, 1.0)     # rounding may push an exact ±1 a ulp past the bound
         return corr, n
 
     def _best_lag(self, x_by_lag: Dict[float, Tuple[np.ndarray, np.ndarray]],
@@ -486,15 +523,16 @@ class CrossEngine:
             t_now = _secs(now)
         me = self.syms.get(symbol)
         cross = self._empty_cross()
-        # ---- breadth (latest at or before now)
-        if self._breadth is not None and self._breadth["t"] <= t_now:
-            cross["breadth_up"] = self._breadth["up"]
-            cross["breadth_down"] = self._breadth["down"]
-            cross["breadth_n"] = self._breadth["n"]
-            cross["breadth_age_s"] = t_now - self._breadth["t"]
-            n = self._breadth["n"]
-            if n and self._breadth["up"] is not None and self._breadth["down"] is not None:
-                cross["breadth_net"] = (self._breadth["up"] - self._breadth["down"]) / n
+        # ---- breadth (latest poll at or before now)
+        br = self._breadth_at(t_now)
+        if br is not None:
+            cross["breadth_up"] = br["up"]
+            cross["breadth_down"] = br["down"]
+            cross["breadth_n"] = br["n"]
+            cross["breadth_age_s"] = t_now - br["t"]
+            n = br["n"]
+            if n and br["up"] is not None and br["down"] is not None:
+                cross["breadth_net"] = (br["up"] - br["down"]) / n
         # ---- market volume / trades over the latest completed poll interval (60-s normalised)
         mv = self._market_increment(self._mkt_volume, t_now)
         if mv is not None:
@@ -744,3 +782,14 @@ def _num(x: Any) -> Optional[float]:
     except (TypeError, ValueError):
         return None
     return None if math.isnan(v) else v
+
+
+def _fin(x: Any) -> Optional[float]:
+    """Finite float or None (NaN / ±inf are not observations)."""
+    v = _num(x)
+    return v if v is not None and math.isfinite(v) else None
+
+
+def _pos_finite(x: Any) -> Optional[float]:
+    v = _fin(x)
+    return v if v is not None and v > 0 else None

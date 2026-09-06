@@ -211,22 +211,36 @@ class Frame:
         return rows
 
     def volume_over(self, seconds: float) -> Optional[float]:
-        """Traded volume inside the window: Δ cumulative day volume when both ends carry it,
-        else the sum of distinct interval volumes; None when the tape is not observable."""
+        """Traded volume inside the window: Δ cumulative day volume between the first and the last
+        state of the window that carry it (the interval that ended at the first state is before
+        the window), else the sum of distinct interval volumes; None when the tape is not
+        observable in the window."""
         st = self.states(seconds)
-        cur = st[-1].trade_volume
-        first = None
-        for s in st:
-            if s.trade_volume is not None:
-                first = s.trade_volume
-                break
-        if cur is not None and first is not None and cur >= first:
-            # the first state's own interval belongs to the window when it starts inside it
-            return float(cur - first)
+        cum = [s.trade_volume for s in st if s.trade_volume is not None]
+        if len(cum) >= 1:
+            first, cur = cum[0], cum[-1]
+            if cur >= first:
+                return float(cur - first)
         rows = [r for r in self.tape_rows(seconds) if r["volume"] is not None]
         if rows:
             return float(sum(r["volume"] for r in rows))
         return None
+
+    def side_volume_over(self, seconds: float, side: str) -> Tuple[Optional[float], bool]:
+        """(volume that hit ``side`` inside the window, attributed): with classified tape rows
+        (``trade_flow_direction`` ∈ [−1, 1] = (buy − sell) / total of the interval) the volume
+        hitting the bid is the sell part Σ (1 − d)·v / 2 and the ask the buy part Σ (1 + d)·v / 2
+        — attributed = True; without any classified row the whole window volume (both sides) is
+        returned with attributed = False; (None, False) when the tape is not observable."""
+        rows = [r for r in self.tape_rows(seconds) if r["volume"]]
+        cls = [r for r in rows if r["direction"] is not None]
+        if not cls:
+            return self.volume_over(seconds), False
+        sgn = -1.0 if side == "bid" else 1.0
+        hit = sum((1.0 + sgn * max(-1.0, min(1.0, float(r["direction"])))) * r["volume"] / 2.0 for r in cls)
+        # rows without a classification inside the same window cannot be attributed: an upper bound
+        hit += sum(r["volume"] for r in rows if r["direction"] is None)
+        return float(hit), True
 
     def signed_volume_over(self, seconds: float) -> Tuple[Optional[float], Optional[float]]:
         """(Σ direction × volume, Σ volume of classified rows) over the window; None when no classified row."""
@@ -330,14 +344,19 @@ class QueuePullStack(Mechanism):
     the fall can be consumption: pull_qty = fall − min(fall, volume);
     pull_share = pull_qty / q0; stack_share = rise / q1.  When the queue engine's
     120-s pull counter is present (``pulled_qty_120s``, tape-budgeted) its
-    share pulled / (touch qty + pulled) is a second pull estimate and the larger
-    one is used (which one is named in the evidence); the engine's
-    ``added_qty_120s`` is evidence only because it also counts levels that
-    merely appeared.  The winning (side, kind) sets
+    share pulled / (touch qty + pulled) is a second estimate of the same run's
+    pull — the counter sums pulls at every price of the last 120 s, so it only
+    counts when this run's queue did fall and never beyond that fall
+    (capped at fall / q0); the larger estimate is used (which one is named in
+    the evidence); the engine's ``added_qty_120s`` is evidence only because it
+    also counts levels that merely appeared.  The winning (side, kind) sets
     score = ramp(share, 0.15 → 0.75) × (0.6 + 0.4 × consistency), consistency =
-    share of the non-zero qty steps in the run going the same way.  With no tape
-    at all a fall cannot be split into trades and pulls: the pull estimate is
-    marked ``unverified`` and damped by 0.75.
+    share of the non-zero qty steps in the run going the same way.  A *pull* is
+    "qty falling with no trades": without a tape in the run's span a fall cannot
+    be told from consumption (and the engine's budget, with nothing to budget,
+    finalises every drop as a pull), so neither pull estimate is a candidate —
+    the fall is reported under ``sides`` and, when no stack can carry the
+    reading, the reading is score 0 with ``missing = ["trade_volume"]``.
     direction: bid pull −1, bid stack +1, ask pull +1, ask stack −1.
     """
 
@@ -353,6 +372,7 @@ class QueuePullStack(Mechanism):
         cands: List[Dict[str, Any]] = []
         sides_ev: Dict[str, Any] = {}
         tape_seen = False
+        pull_unobservable = False                     # a fall seen without a tape to split it
         for side in ("bid", "ask"):
             ser = _touch_series(fr, side, self.window_s)
             if len(ser) < 2:
@@ -376,9 +396,11 @@ class QueuePullStack(Mechanism):
             if vol is not None:
                 tape_seen = True
             traded_bound = min(fall, vol) if vol is not None else None
-            pull_qty = fall - (traded_bound or 0.0)
-            pull_share = safe_div(pull_qty, q0) if q0 > 0 else None
+            pull_qty = (fall - traded_bound) if traded_bound is not None else None
+            pull_share = safe_div(pull_qty, q0) if (q0 > 0 and pull_qty is not None) else None
             stack_share = safe_div(rise, q1) if q1 > 0 else None
+            if vol is None and fall > 0:
+                pull_unobservable = True
             qs = [r[2] for r in run]
             cons_down = _step_consistency(qs, down=True)
             cons_up = _step_consistency(qs, down=False)
@@ -392,6 +414,11 @@ class QueuePullStack(Mechanism):
                 c_added = c.get("added_qty_120s")          # evidence only: it also counts appearing levels
                 if pq is not None and tq is not None and tq + pq > 0:
                     c_pull = pq / (tq + pq)
+                    # the counter spans every price of the last 120 s: it is an estimate of *this*
+                    # run's pull only where this queue fell, and never beyond the fall it showed
+                    c_pull = min(c_pull, fall / q0) if (q0 > 0 and fall > 0) else None
+                if c_pull is not None and vol is None and c_pull > 0:
+                    pull_unobservable = True            # budget-less engine: every drop is a "pull"
             sides_ev[side] = {"touch_price": p1, "touch_qty_start": q0, "touch_qty_now": q1, "span_s": span,
                               "fall": fall, "rise": rise, "volume_in_span": vol, "pull_qty": pull_qty,
                               "pull_share": pull_share, "stack_share": stack_share,
@@ -401,21 +428,21 @@ class QueuePullStack(Mechanism):
             for kind, share, cons, src in (("pull", pull_share, cons_down, "series"),
                                             ("stack", stack_share, cons_up, "series"),
                                             ("pull", c_pull, cons_down, "counters")):
-                if share is None:
+                if share is None or (kind == "pull" and vol is None):
                     continue
-                cands.append({"side": side, "kind": kind, "share": share, "consistency": cons, "source": src,
-                              "verified": (vol is not None) or kind == "stack" or src == "counters"})
+                cands.append({"side": side, "kind": kind, "share": share, "consistency": cons, "source": src})
+        if pull_unobservable and not any(c["share"] > 0 for c in cands):
+            # a fall was seen, nothing else carries the reading, and no tape can split the fall
+            return missing_reading(self, ["trade_volume"], base, {"sides": sides_ev, "tape_observed": False})
         if not cands:
             miss = [k for k in ("best_bid", "bid_qty1", "best_ask", "ask_qty1")
                     if getattr(ms, k) is None] or ["touch series (< 2 same-price states)"]
             return missing_reading(self, miss, base, {"sides": sides_ev})
         best = max(cands, key=lambda c: c["share"])
-        cons = best["consistency"] if best["consistency"] is not None else 0.5
+        # a positive share means the run had a non-zero step, so the consistency exists; a zero share
+        # has no steps to be consistent about — no bonus, never a substituted value
+        cons = best["consistency"] if best["consistency"] is not None else 0.0
         score = ramp(best["share"], 0.15, 0.75) * (0.6 + 0.4 * cons)
-        unverified: List[str] = []
-        if not best["verified"]:
-            score *= 0.75
-            unverified.append("trade_volume")
         direction = 0
         if best["side"] == "bid":
             direction = -1 if best["kind"] == "pull" else 1
@@ -424,8 +451,8 @@ class QueuePullStack(Mechanism):
         ev: Dict[str, Any] = {"side": best["side"], "kind": best["kind"], "share": best["share"],
                               "consistency": cons, "estimate_source": best["source"], "tape_observed": tape_seen,
                               "direction": direction, "sides": sides_ev, "window_s": self.window_s}
-        if unverified:
-            ev["unverified"] = unverified
+        if pull_unobservable:
+            ev["unobservable"] = ["pull (no tape in the run's span)"]
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
                                 note=f"{best['kind']} on {best['side']} share={best['share']:.2f}")
 
@@ -494,10 +521,14 @@ class QuoteRefreshChurn(Mechanism):
             miss = ["tick_size"] if sides_ev else \
                 ([k for k in ("best_bid", "bid_qty1", "best_ask", "ask_qty1") if getattr(ms, k) is None] or ["history"])
             return missing_reading(self, miss, base, {"rate_per_min": rate})
-        qn = qty_net if qty_net is not None else 0.0
-        score = ramp(rate, 2.0, 10.0) * (1.0 / (1.0 + drift)) * (0.5 + 0.5 * (1.0 - min(1.0, qn)))
-        ev = {"rate_per_min": rate, "changes": changes, "span_s": span, "drift_ticks": drift, "qty_net_share": qn,
+        # the engine counters carry no net qty change: that term of the rule is not evaluated (factor 1,
+        # named under ``unverified``) rather than filled with a number nobody measured
+        qty_factor = (0.5 + 0.5 * (1.0 - min(1.0, qty_net))) if qty_net is not None else 1.0
+        score = ramp(rate, 2.0, 10.0) * (1.0 / (1.0 + drift)) * qty_factor
+        ev = {"rate_per_min": rate, "changes": changes, "span_s": span, "drift_ticks": drift, "qty_net_share": qty_net,
               "estimate_source": source, "sides": sides_ev, "direction": 0, "window_s": self.window_s}
+        if qty_net is None:
+            ev["unverified"] = ["qty_net_share"]
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
                                 note=f"{rate:.1f} changes/min, drift {drift:.1f} ticks")
 
@@ -657,8 +688,11 @@ class HiddenReplenishment(Mechanism):
     the new reference).  A price change resets the reference.  cycles = number
     of refills; similarity = 1 − min(1, cv(refilled sizes) / 0.5) (with one
     refill: 1 − min(1, |refill/reference − 1| / 0.5)); traded_frac =
-    min(1, traded volume in the window / Σ consumed qty) — consumption has to
-    be trade-backed, so the tape is required.  score = ramp(cycles, 0.5 → 3.5)
+    min(1, volume that hit the side in the window / Σ consumed qty) — consumption
+    has to be trade-backed, so the tape is required; with classified tape rows
+    only the volume hitting that side counts (sells for the bid, buys for the
+    ask, ``volume_attributed``), else the window's whole volume bounds it.
+    score = ramp(cycles, 0.5 → 3.5)
     × (0.5 + 0.5 × similarity) × (0.25 + 0.75 × traded_frac) — refills of a
     queue that was pulled rather than traded keep at most a quarter of the
     score; the larger side wins.  direction: bid refills (hidden buyer) +1,
@@ -727,10 +761,13 @@ class HiddenReplenishment(Mechanism):
                 rec["engine_depletion_episodes"] = c.get("depletion_episodes")
                 rec["engine_replenished"] = c.get("replenished")
                 rec["engine_mean_time_to_replenish_s"] = c.get("mean_time_to_replenish_s")
+            vol_side, attributed = fr.side_volume_over(self.window_s, side)
             traded_frac = None
-            if vol is not None and rec["consumed_qty"] > 0:
-                traded_frac = min(1.0, vol / rec["consumed_qty"])
+            if vol_side is not None and rec["consumed_qty"] > 0:
+                traded_frac = min(1.0, vol_side / rec["consumed_qty"])
             rec["traded_frac"] = traded_frac
+            rec["volume_hit_side"] = vol_side
+            rec["volume_attributed"] = attributed
             sim = rec["similarity"] if rec["similarity"] is not None else 0.0
             s_side = ramp(rec["cycles"], 0.5, 3.5) * (0.5 + 0.5 * sim) * (0.25 + 0.75 * (traded_frac or 0.0))
             rec["score"] = s_side
@@ -747,7 +784,9 @@ class HiddenReplenishment(Mechanism):
         direction = 0 if best["score"] <= 0 else (1 if best["side"] == "bid" else -1)
         ev = {"side": best["side"], "cycles": best["cycles"], "refill_sizes": best["refill_sizes"],
               "similarity": best["similarity"], "consumed_qty": best["consumed_qty"], "traded_frac": best["traded_frac"],
-              "volume_in_window": vol, "direction": direction, "sides": sides_ev, "window_s": self.window_s}
+              "volume_in_window": vol, "volume_hit_side": best["volume_hit_side"],
+              "volume_attributed": best["volume_attributed"],
+              "direction": direction, "sides": sides_ev, "window_s": self.window_s}
         return MechanismReading(self.name, self.family, clamp01(best["score"]), "inactive", ev, base,
                                 note=f"{best['cycles']} refills on {best['side']}")
 
@@ -759,6 +798,7 @@ def _print_sizes(fr: Frame, seconds: float) -> Tuple[List[Dict[str, Any]], str]:
     (when the window carries traded volume).  Returns (events, source)."""
     seen = set()
     ev: List[Dict[str, Any]] = []
+    cutoff = fr.ms.t - timedelta(seconds=seconds)
     for s in fr.states(seconds):
         lp = s.last_print
         if not isinstance(lp, dict) or lp.get("qty") is None:
@@ -774,6 +814,8 @@ def _print_sizes(fr: Frame, seconds: float) -> Tuple[List[Dict[str, Any]], str]:
             tt = s.t
         if tt.tzinfo is None:
             tt = s.t
+        if tt < cutoff:
+            continue                                   # a print carried on every state since long before the window
         ev.append({"t": tt, "qty": float(lp["qty"]), "direction": lp.get("direction"), "price": lp.get("price")})
     if ev:
         return ev, "prints"
@@ -805,7 +847,9 @@ class OrderSplitting(Mechanism):
     window carries traded volume).  Sizes are clustered with a 5 % relative
     tolerance around the smallest member; the largest cluster is the modal size:
     n_mode repeats, mode_share = n_mode / n.  regularity = 1 − min(1, cv of the
-    inter-arrival times of the modal prints) (0.5 when fewer than three).
+    inter-arrival times of the modal prints); with fewer than three modal
+    prints there is no cadence to measure — that term is not evaluated
+    (``unverified``), never filled with a number.
     score = ramp(n_mode, 1.5 → 5.5) × ramp(mode_share, 0.3 → 0.8) × (0.6 + 0.4
     × regularity), needing ≥ 3 prints.  direction = sign of the mean carried /
     inferred direction of the modal prints (0 when unknown).
@@ -843,14 +887,17 @@ class OrderSplitting(Mechanism):
         ts = sorted(e["t"] for e in modal_events)
         gaps = [(b - a).total_seconds() for a, b in zip(ts, ts[1:]) if (b - a).total_seconds() > 0]
         cv_dt = _cv(gaps) if len(gaps) >= 2 else None
-        regularity = (1.0 - min(1.0, cv_dt)) if cv_dt is not None else 0.5
+        regularity = (1.0 - min(1.0, cv_dt)) if cv_dt is not None else None
         dirs = [e["direction"] for e in modal_events if e["direction"] is not None]
         mean_dir = (sum(dirs) / len(dirs)) if dirs else None
-        score = ramp(n_mode, 1.5, 5.5) * ramp(mode_share, 0.3, 0.8) * (0.6 + 0.4 * regularity)
+        reg_factor = (0.6 + 0.4 * regularity) if regularity is not None else 1.0    # term not evaluated
+        score = ramp(n_mode, 1.5, 5.5) * ramp(mode_share, 0.3, 0.8) * reg_factor
         direction = sign(mean_dir) if score > 0 else 0
         ev = {"prints": n, "modal_size": sum(modal) / len(modal), "modal_repeats": n_mode, "mode_share": mode_share,
               "cadence_cv": cv_dt, "regularity": regularity, "mean_gap_s": (sum(gaps) / len(gaps)) if gaps else None,
               "mean_direction": mean_dir, "size_source": source, "direction": direction, "window_s": self.window_s,
               "sizes": sizes[:50]}
+        if regularity is None:
+            ev["unverified"] = ["regularity"]
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
                                 note=f"{n_mode}/{n} prints of ~{ev['modal_size']:.0f} ({source})")

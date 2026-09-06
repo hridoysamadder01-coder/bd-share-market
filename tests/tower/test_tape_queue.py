@@ -351,6 +351,116 @@ def test_machinery_ltp_fallback_from_tape_price():
     assert ms.ltp == 10.0 and ms.trade_flow_direction is None            # no book: NOT_OBSERVABLE, never 0
 
 
+def test_machinery_rows_without_a_comparable_predecessor_are_first_rows_not_repeats():
+    # a stamp carrying no total at all only advances the clock; the first real totals after it are
+    # the day's first row (cumulative, flagged) — not a "repeat" that silently loses the interval
+    tape = TapeState(tick=0.1)
+    assert tape.on_cum_totals(_t(0), _t(0), None, None, None, 10.0, source="lankabd_tape") is None
+    r = tape.on_cum_totals(_t(10), _t(10), 5, 1000, 0.0101, 10.1, source="lankabd_tape")
+    assert r["first_row"] and r["interval_trades"] == 5 and r["interval_volume"] == 1000
+    ms = _ms(10)
+    tape.fill_state(ms)
+    st = ms.session_state["tape"]
+    assert ms.trade_count == 5 and ms.interval_trades == 5 and st["repeat_rows"] == 0 and st["empty_rows"] == 1
+    assert st["rows"] == 1 and st["tape_clock"] == _t(10).isoformat()
+    # the next row differences normally
+    r = tape.on_cum_totals(_t(20), _t(20), 6, 1100, 0.01111, 10.1, source="lankabd_tape")
+    assert not r["first_row"] and r["interval_trades"] == 1 and r["interval_volume"] == 100
+    # earlier rows carried only the value: a row carrying trades + volume has no predecessor for either
+    tape2 = TapeState(tick=0.1)
+    tape2.on_cum_totals(_t(0), _t(0), None, None, 0.0100, 10.0, source="lankabd_tape")
+    r = tape2.on_cum_totals(_t(10), _t(10), 5, 1000, None, 10.1, source="lankabd_tape")
+    assert r["first_row"] and r["interval_trades"] == 5 and r["interval_volume"] == 1000 and r["direction"] is None
+    # a quantity the source stopped carrying has no predecessor for the next row: the value Δ is
+    # None (unknown), never an aggregate over two rows against the older total
+    r = tape2.on_cum_totals(_t(20), _t(20), 7, 1300, 0.0131, 10.1, source="lankabd_tape")
+    assert not r["first_row"] and r["interval_trades"] == 2 and r["interval_volume"] == 300
+    assert r["interval_vwap"] is None                                     # Δvalue unknown (predecessor not carried)
+    ms = _ms(20)
+    tape2.fill_state(ms)
+    assert ms.trade_value == 13100.0 and ms.session_state["tape"]["last_interval_value"] is None
+    r = tape2.on_cum_totals(_t(30), _t(30), 8, 1400, 0.01411, 10.1, source="lankabd_tape")
+    assert abs(r["interval_vwap"] - 10.1) < 1e-6                          # both predecessors known again
+    # trades not carried on one row: the row's Δ trades is None, the count comes back afterwards
+    r = tape2.on_cum_totals(_t(40), _t(40), None, 1500, 0.01512, 10.1, source="lankabd_tape")
+    assert r["interval_trades"] is None and r["interval_volume"] == 100 and not r["first_row"]
+    ms = _ms(40)
+    tape2.fill_state(ms)
+    assert ms.trade_count is None and ms.trade_intensity is None          # unknown, never 0
+    r = tape2.on_cum_totals(_t(50), _t(50), 10, 1600, 0.01613, 10.1, source="lankabd_tape")
+    assert r["interval_trades"] is None and r["interval_volume"] == 100   # no predecessor for the count
+    ms = _ms(50)
+    tape2.fill_state(ms)
+    assert ms.trade_count == 10
+
+
+def test_machinery_redelivered_print_ids_are_counted_once():
+    tape = TapeState(tick=0.1)
+    book = _book([(10.0, 100)], [(10.1, 50)])
+    tape.on_trade(_t(0), 10.1, 100, trade_id="T1", book=book, source="fix_md")
+    tape.on_trade(_t(0), 10.1, 100, trade_id="T1", book=book, source="fix_md")      # same print again
+    tape.on_trade(_t(3), 10.1, 100, trade_id="T1", book=book, source="fix_md")      # re-poll, later receipt
+    tape.on_trade(_t(4), 10.0, 40, trade_id="T2", book=book, source="fix_md")
+    tape.on_trade(_t(5), 10.0, 40, trade_id=None, book=book, source="fix_md")       # no id: cannot dedupe, applied
+    ms = _ms(5)
+    tape.fill_state(ms, book)
+    assert ms.trade_count == 3 and ms.trade_volume == 180 and ms.signed_flow_window == 100 - 40 - 40
+    assert ms.session_state["tape"]["duplicate_prints"] == 2 and ms.session_state["tape"]["rows"] == 3
+    # a duplicate refreshes the receipt clock (the feed is alive) but not the tape clock
+    tape.on_trade(_t(9), 10.1, 100, trade_id="T1", book=book, source="fix_md")
+    ms = _ms(9)
+    tape.fill_state(ms, book)
+    assert ms.tape_age_s == 0.0 and ms.session_state["tape"]["tape_clock"] == _t(5).isoformat()
+    assert ms.trade_count == 3
+    # ids restart daily: the same id on the next trading date is a new print
+    tape.on_trade(_t(86400 + 5), 10.1, 100, trade_id="T1", book=book, source="fix_md")
+    assert tape.preferred_feed().cum_trades == 4
+
+
+def test_machinery_emptied_book_ends_the_pre_trade_quote_and_crossed_book_decides_nothing():
+    tape = TapeState(tick=0.1)
+    quoted = _book([(10.0, 100)], [(10.1, 50)], t=_t(0))
+    tape.observe_quote(_t(0), quoted)
+    empty = EvolvingBook(tick=0.1)
+    empty.apply_snapshot(_t(5), [], [])
+    tape.observe_quote(_t(5), empty)
+    # a print after the book emptied: the stale 10.0/10.1 quote must not classify it
+    tape.on_trade(_t(10), 10.1, 100, book=empty, source="fix_md")
+    ms = _ms(10)
+    tape.fill_state(ms, empty)
+    assert ms.trade_flow_direction is None and ms.session_state["tape"]["direction_rule"] == "no pre-trade quote"
+    assert ms.signed_flow_window is None
+    # but a print stamped BEFORE the book emptied still sees the quote that stood then
+    tape.on_trade(_t(11), 10.1, 100, book=empty, t_exch=_t(3), source="fix_md")
+    assert tape.preferred_feed().last_row().direction == 1.0
+    # the quote comes back → classified again
+    tape.observe_quote(_t(20), _book([(10.0, 100)], [(10.1, 50)], t=_t(20)))
+    tape.on_trade(_t(21), 10.0, 100, source="fix_md")
+    assert tape.preferred_feed().last_row().direction == -1.0
+    # crossed displayed book (bid > ask): neither side is the resting one → None, never a confident ±1
+    d, rule, conf = classify_direction(10.05, 10.1, 10.0)
+    assert d is None and conf == "none" and "crossed" in rule
+    assert classify_direction(10.1, 10.1, 10.0)[0] is None
+    assert classify_direction(10.1, 10.1, 10.0, aggressor="S")[0] == -1.0        # the carried aggressor still wins
+
+
+def test_machinery_quote_from_inside_the_interval_is_low_confidence():
+    tape = TapeState(tick=0.1)
+    tape.on_cum_totals(_t(0), _t(0), 5, 1000, 0.0101, 10.1, source="lankabd_tape")
+    book = _book([(10.0, 100)], [(10.1, 50)], t=_t(30))                  # first quote appears mid-interval
+    tape.observe_quote(_t(30), book)
+    r = tape.on_cum_totals(_t(60), _t(60), 6, 1100, 0.01111, 10.1, source="lankabd_tape")
+    ms = _ms(60)
+    tape.fill_state(ms, book)
+    st = ms.session_state["tape"]
+    assert r["direction"] == 1.0 and st["direction_confidence"] == "low" and "inside interval" in st["direction_rule"]
+    # the next interval has a quote before its start → medium
+    r = tape.on_cum_totals(_t(90), _t(90), 7, 1200, 0.01212, 10.1, source="lankabd_tape")
+    ms = _ms(90)
+    tape.fill_state(ms, book)
+    assert r["direction"] == 1.0 and ms.session_state["tape"]["direction_confidence"] == "medium"
+
+
 # ============================================================================ queue
 def _dict_book(bids, asks, bid_orders=None, ask_orders=None):
     return {"bids": bids, "asks": asks, "bid_orders": bid_orders, "ask_orders": ask_orders}
@@ -471,6 +581,33 @@ def test_machinery_depletion_and_retreat():
     ms = _ms(0)
     QueueState().fill_state(ms)
     assert ms.liquidity_depletion is None and ms.liquidity_retreat is None and ms.liquidity_vacuum is None
+
+
+def test_machinery_queue_emptied_book_is_full_depletion_never_shown_book_is_none():
+    q = QueueState()
+    full = _dict_book([(10.0, 1000)], [(10.1, 1000)])
+    for s in range(0, 121, 10):
+        q.on_book(_t(s), full)
+    s = q.on_book(_t(130), _dict_book([], []))                           # both sides vanish
+    assert s["bid"]["kind"] == "vanish" and s["ask"]["kind"] == "vanish"
+    ms = _ms(130)
+    q.fill_state(ms)
+    qq = ms.session_state["queue"]
+    assert ms.liquidity_depletion == 1.0 and qq["touch_depth"] == 0.0 and qq["touch_depth_120s_ago"] == 2000.0
+    assert qq["bid"]["retreats"] == 1 and qq["bid"]["pending_qty"] == 1000 and qq["bid"]["visible"] is None
+    # levels come back: depletion measured against the depth 120 s earlier
+    q.on_book(_t(140), _dict_book([(10.0, 500)], [(10.1, 500)]))
+    ms = _ms(140)
+    q.fill_state(ms)
+    assert abs(ms.liquidity_depletion - 0.5) < 1e-9
+    # a book that never showed a level (closed market) has no touch depth: None, not 0 / 1
+    q2 = QueueState()
+    for s in range(0, 241, 10):
+        q2.on_book(_t(s), _dict_book([], []))
+    ms = _ms(240)
+    q2.fill_state(ms)
+    assert ms.liquidity_depletion is None and ms.session_state["queue"]["touch_depth"] is None
+    assert ms.liquidity_retreat is None and ms.liquidity_vacuum is None
 
 
 def test_machinery_vacuum_detection():

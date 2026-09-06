@@ -194,6 +194,107 @@ def test_machinery_tape_rows_flagged_rows_dropped():
     assert rows[0]["state"] is real
 
 
+def test_machinery_tape_rows_negative_interval_dropped():
+    """An unflagged negative interval (a source reset the tape engine did not mark) is not a
+    trade: it is dropped from the rows, so no flow sum can go negative or lose its sign."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(4)]
+    st.append(S(20, BIDS, ASKS, tv=1300.0, iv=300.0, itr=1, dirn=1.0))
+    st.append(S(25, BIDS, ASKS, tv=900.0, iv=-400.0, itr=-1, dirn=-1.0))
+    st.append(S(30, BIDS, ASKS, tv=1100.0, iv=200.0, itr=1, dirn=1.0))
+    hist = StateHistory()
+    for m in st[:-1]:
+        hist.push(m)
+    fr = af.Frame(st[-1], hist)
+    rows = af.classified_rows(fr, 60)
+    assert [(r["volume"], r["direction"]) for r in rows] == [(300.0, 1.0), (200.0, 1.0)]
+    fs = af.flow_summary(rows)
+    assert fs["total"] == 500.0 and fs["signed"] == 500.0 and fs["one_sided"] == 1.0
+    # a cumulative delta across the reset is a phantom: None, the caller falls back to the rows
+    assert af.cum_delta(st) is None and af.cum_delta(st[:5]) == 300.0
+    assert af.volume_since(fr, st[3]) == 500.0
+
+
+def test_machinery_block_absorption_reset_inside_baseline_is_not_a_phantom_rate():
+    """A cumulative reset inside the baseline (1500 → 100 at t = 300, then counting on from
+    there) must not read as a negative or phantom baseline delta: the rows carry the 13 real
+    100-share intervals, the reset row itself is dropped."""
+    st = _block_scenario()
+    for m in st:
+        s = (m.t - T0).total_seconds()
+        if s >= 300:
+            m.trade_volume = m.trade_volume - 1400.0
+            if 300 <= s < 360:                       # the reset row and its re-polls
+                m.interval_volume, m.interval_trades = -1400.0, -14
+    ref = run(af.BlockAbsorption(), _block_scenario())[-1]
+    r = run(af.BlockAbsorption(), st)[-1]
+    assert r.evidence["size_source"] == "baseline_rate" and r.evidence["burst_volume"] == pytest.approx(6100.0)
+    assert r.evidence["baseline_volume"] == pytest.approx(ref.evidence["baseline_volume"] - 100.0)
+    assert r.evidence["baseline_rate_per_s"] > 0 and r.score >= 0.6
+
+
+def test_machinery_adverse_retreat_vacated_side_is_the_strongest_retreat():
+    """After a buy the whole ask side disappears while bids remain: no spread exists any more,
+    which is the strongest widening there is — a full pull scores fully, it is not "missing"."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(10)]
+    st.append(S(50, BIDS, [(10.1, 800.0)] + ASKS[1:], tv=1200.0, iv=200.0, itr=1, dirn=1.0))
+    st += [S(55 + 5 * j, BIDS, [], tv=1200.0, iv=200.0, itr=1, dirn=1.0) for j in range(3)]
+    r = run(af.AdverseRetreat(), st)[-1]
+    assert not r.evidence.get("missing") and r.evidence["hit_side_vacated"] is True
+    assert r.evidence["pulled_share"] == pytest.approx((3300.0 - 200.0) / 3300.0)
+    assert r.evidence["components"]["spread"] == 1.0 and r.score >= 0.9
+    assert r.evidence["direction"] == 1
+    # the book itself unobservable (both sides empty): nothing can be called pulled
+    st2 = st[:11] + [S(55 + 5 * j, [], [], tv=1200.0, iv=200.0, itr=1, dirn=1.0) for j in range(3)]
+    r2 = run(af.AdverseRetreat(), st2)[-1]
+    assert r2.score == 0.0 and r2.evidence["missing"]
+
+
+def test_machinery_adverse_retreat_counts_later_prints_when_trade_state_is_oldest():
+    """The classified trade is the oldest state held; a later unclassified 300-share print is
+    still subtracted from the depth that vanished."""
+    st = [S(50, BIDS, [(10.1, 800.0)] + ASKS[1:], tv=1200.0, iv=200.0, itr=1, dirn=1.0),
+          S(55, BIDS, [(10.1, 800.0)] + ASKS[1:], tv=1500.0, iv=300.0, itr=1, dirn=None),
+          S(60, BIDS, [(10.3, 100.0)], tv=1500.0, iv=300.0, itr=1, dirn=None)]
+    r = run(af.AdverseRetreat(), st)[-1]
+    assert r.evidence["traded_since_pre"] == pytest.approx(300.0)
+    assert r.evidence["pulled_share"] == pytest.approx((3100.0 - 100.0 - 300.0) / 3100.0)
+
+
+def test_machinery_passive_one_sided_book_names_missing_not_half():
+    """Sells absorbed at a bid while no ask is displayed: the mid flatness and the two-sided depth
+    share are unobservable — named as missing, score 0, not a 0.5 stand-in for each."""
+    st = [S((m.t - T0).total_seconds(), m.bids, [], tv=m.trade_volume, iv=m.interval_volume,
+            itr=m.interval_trades, dirn=m.trade_flow_direction) for m in _passive_scenario("bid")]
+    r = run(af.PassiveAccumulation(), st)[-1]
+    assert r.evidence["absorbed_share"] == pytest.approx(1.0) and r.evidence["refill_ratio"] > 0.9
+    assert r.evidence["flat"] is None and r.evidence["depth_share_change"] is None
+    assert r.score == 0.0 and r.evidence["direction"] == 0
+    assert any("mid" in m for m in r.evidence["missing"]) and any("depth" in m for m in r.evidence["missing"])
+
+
+def test_machinery_participation_bucket_cum_reset_is_not_a_phantom():
+    """A cumulative reset inside a bucket (1800 → 100, then counting on: 300, 500, …) leaves
+    that bucket unobservable (its only interval was destroyed by the reset) and the following
+    buckets at their true 200 — never a phantom or negative volume."""
+    st = _participation_scenario()
+    for m in st[5:]:
+        m.trade_volume -= 1900.0
+    st[5].interval_volume, st[5].interval_trades = -1900.0, -19
+    r = run(pf.ParticipationFootprint(), st)[-1]
+    assert r.evidence["bucket_volumes"] == [200.0] * 9 and r.evidence["buckets"] == 9
+    assert r.evidence["mode"] == "market" and r.evidence["coverage"] == 1.0 and r.score >= 0.6
+    # the same window without the reset: 10 buckets, otherwise identical ratios
+    ref = run(pf.ParticipationFootprint(), _participation_scenario())[-1]
+    assert ref.evidence["buckets"] == 10 and ref.evidence["mean_ratio"] == pytest.approx(r.evidence["mean_ratio"])
+    # a bucket no state landed in (a 120-s poll gap) is unobserved, not a silent zero of coverage
+    gap = [m for m in _participation_scenario() if (m.t - T0).total_seconds() != 300.0]
+    rg = run(pf.ParticipationFootprint(), gap)[-1]
+    vols = rg.evidence["bucket_volumes"]
+    assert rg.evidence["buckets"] == 9 and rg.evidence["coverage"] == 1.0 and 0.0 not in vols
+    assert vols.count(400.0) == 1 and vols.count(200.0) == 8       # the delta after the gap spans two buckets
+    assert 0.35 <= rg.score < ref.score
+
+
 def test_machinery_duplicate_timestamp_pre_state_by_identity():
     """Two states share a timestamp (the trade's state and a book update right after it): the
     book *before* the trade is found by identity, so the traded volume is subtracted from the
@@ -658,16 +759,20 @@ def test_machinery_composite_absorption_counts_only_in_its_direction():
 
 
 # ============================================================================= #8 pegged_repricing
-def _pegged_scenario(n: int = 8, same_size: bool = True, follow: bool = True, use_ltp: bool = True
-                     ) -> List[MarketState]:
+def _pegged_scenario(n: int = 8, same_size: bool = True, follow: bool = True, use_ltp: bool = True,
+                     lag: bool = False) -> List[MarketState]:
     """The last traded price steps up one tick every 20 s; the bid is re-posted one tick behind
-    it with the same size (500) — or with varying sizes — or does not follow at all."""
+    it with the same size (500) — or with varying sizes — or does not follow at all.  With
+    ``lag`` the ask leads instead (one tick at odd polls) and the bid re-posts two ticks behind
+    it at the *next* poll."""
     st = []
     for i in range(n):
-        p = round(10.0 + (i if follow else 0) * TICK, 6)
+        b_steps = (i // 2) if lag else (i if follow else 0)
+        a_steps = ((i + 1) // 2) if lag else i
+        p = round(10.0 + b_steps * TICK, 6)
         q = 500.0 if same_size else 500.0 * (1 + 0.8 * (i % 3))
         b = [(p, q)] + [(round(p - k * TICK, 6), 800.0) for k in range(1, 4)]
-        ap = round(10.0 + i * TICK + 0.2, 6)
+        ap = round(10.0 + a_steps * TICK + 0.2, 6)
         a = [(ap, 900.0 if same_size else 900.0 * (1 + 0.6 * ((i + 1) % 3)))] + \
             [(round(ap + k * TICK, 6), 700.0) for k in range(1, 4)]
         ltp = round(10.0 + i * TICK + 0.1, 6) if use_ltp else None
@@ -693,9 +798,31 @@ def test_machinery_pegged_repricing_null_and_evidence_changes():
     assert varied.evidence["size_similarity"] < 0.5 and varied.score < full.score
     few = run(pf.PeggedRepricing(), _pegged_scenario(n=3))[-1]
     assert few.evidence["follows"] == 2 and few.score < full.score
-    # without a last traded price the opposite best is the reference
-    nol = run(pf.PeggedRepricing(), _pegged_scenario(use_ltp=False))[-1]
+    # without a last traded price the opposite best is the reference: the ask leads at odd polls,
+    # the bid re-posts two ticks behind it at the next poll (a one-poll lag is a follow)
+    nol = run(pf.PeggedRepricing(), _pegged_scenario(n=12, use_ltp=False, lag=True))[-1]
     assert nol.evidence["reference"] == ["opposite_best"] and nol.score >= 0.6
+    assert nol.evidence["side"] == "bid" and nol.evidence["follows"] == 5 and nol.evidence["moves"] == 5
+    assert nol.evidence["sides"]["ask"]["score"] < nol.score           # the leader is not the pegged side
+
+
+def test_machinery_pegged_repricing_parallel_shift_is_not_pegging():
+    """Without a last traded price, a whole-book shift (both bests move one tick in the same poll)
+    makes each side the other's "leader": ambiguous, counted as moves but never as follows."""
+    st = [S(20 * i, shift(BIDS, i), shift(ASKS, i), tv=1000.0 + 100 * i, iv=100.0, itr=1, dirn=1.0)
+          for i in range(8)]
+    r = run(pf.PeggedRepricing(), st)[-1]
+    for sd in ("bid", "ask"):
+        rec = r.evidence["sides"][sd]
+        assert rec["moves"] == 7 and rec["parallel_moves"] == 7 and rec["follows"] == 0
+    assert r.score == 0.0 and r.evidence["direction"] == 0
+    # a static last traded price while both bests move: the reference did not lead either
+    for m in st:
+        m.ltp = 10.05
+    r2 = run(pf.PeggedRepricing(), st)[-1]
+    assert r2.evidence["follows"] == 0 and r2.score == 0.0
+    # the same shift with the trade price stepping ahead of it *is* repricing around the tape
+    assert run(pf.PeggedRepricing(), _pegged_scenario())[-1].score >= 0.6
 
 
 # ============================================================================= #9 participation_footprint

@@ -72,7 +72,7 @@ def ingest_binary(tmp_path_factory):
 
 def _run_daemon(binary: str, tmp_path, seconds: float = 6.0):
     www = tmp_path / "www"
-    www.mkdir()
+    www.mkdir(exist_ok=True)  # a second run against the same tmp_path is a daemon restart
     (www / "depth.html").write_bytes(TEXT_BODY)
     (www / "blob.bin").write_bytes(BINARY_BODY)
     port = _free_port()
@@ -228,3 +228,46 @@ def test_realdata_go_verify_command_agrees_with_python(ingest_binary, tmp_path):
     assert not verify_store(root)["all_ok"]
     r = subprocess.run([ingest_binary, "-verify", root], capture_output=True, text=True, timeout=60)
     assert r.returncode == 1 and "all_ok=false" in r.stdout
+
+
+def test_realdata_go_store_survives_python_compression_and_go_restart(ingest_binary, tmp_path):
+    """Round trip through both stores: Python compress_and_verify replaces the
+    Go segments with verified .gz files (adding gz_path/gz_sha256/gz_bytes to the
+    manifest); a second Go run on the same directory must keep those entries
+    verbatim, continue every hash chain from them, and both verifiers must
+    still accept the whole store (the Go one reading the gz through gz_path)."""
+    from seeing.capture.raw_store import RawStore
+
+    root, _appended, _port = _run_daemon(ingest_binary, tmp_path, seconds=2.0)
+    man1 = json.load(open(os.path.join(root, "MANIFEST.json")))
+    store = RawStore(root=root, capturer_id="pytest", software_version="compat-test")
+    rep = store.compress_and_verify()
+    assert rep["failed"] == [] and rep["verified"] == len(man1["segments"]) >= 6
+    assert verify_store(root)["all_ok"]
+    r = subprocess.run([ingest_binary, "-verify", root], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0 and "all_ok=true" in r.stdout, r.stdout + r.stderr
+
+    # second Go run against the same out directory (a restart)
+    root2, _appended2, _port2 = _run_daemon(ingest_binary, tmp_path, seconds=2.0)
+    assert root2 == root
+    man2 = json.load(open(os.path.join(root, "MANIFEST.json")))
+    gz_entries = [s for s in man2["segments"] if "gz_path" in s]
+    assert len(gz_entries) == len(man1["segments"]), "Python-written gz_* manifest fields were dropped by the Go rewrite"
+    for s in gz_entries:
+        gz = os.path.join(root, s["gz_path"])
+        assert os.path.exists(gz) and s["gz_bytes"] == os.path.getsize(gz)
+        assert s["gz_sha256"] == hashlib.sha256(open(gz, "rb").read()).hexdigest()
+        assert not os.path.exists(os.path.join(root, s["path"]))  # the plain file stays gone
+    assert len(man2["segments"]) >= 2 * len(man1["segments"])
+    # the Python RawStore minted its own epoch when it rewrote the manifest; both earlier epochs are kept
+    assert man1["epoch"] in {e["epoch"] for e in man2["previous_epochs"]} and man2["epoch"] != man1["epoch"]
+    rep2 = verify_store(root)
+    assert rep2["all_ok"] and rep2["chain_ok"], rep2
+    # the chain of every source continues from the compressed entry's sha256
+    for src in {s["source"] for s in man1["segments"]}:
+        segs = [s for s in man2["segments"] if s["source"] == src]
+        assert len(segs) >= 2
+        first_new = next(iter_segment(os.path.join(root, segs[1].get("gz_path") or segs[1]["path"])))[0]
+        assert first_new["prev_segment_sha256"] == segs[0]["sha256"]
+    r = subprocess.run([ingest_binary, "-verify", root], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0 and "all_ok=true" in r.stdout and f"segments={len(man2['segments'])}" in r.stdout, r.stdout

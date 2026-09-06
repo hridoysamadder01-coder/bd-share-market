@@ -10,6 +10,10 @@ completed curve records.
 
 Observables per update (None when the book does not carry them):
   qty1 per side            ``bid_qty1`` / ``ask_qty1`` (else the first level);
+                           a side with no displayed level and no best price in a
+                           book that displays the other side is an observed
+                           depth of 0 (the side was wiped or is not quoted) —
+                           only a fully empty book is unobservable;
   top-K depth per side     Σ qty of the first K = 5 displayed levels;
   spread in ticks          ``spread_ticks`` (else spread / tick, else
                            (best_ask − best_bid) / tick);
@@ -155,11 +159,17 @@ def _observe(ms: MarketState) -> _Obs:
     asks = list(ms.asks or [])
     bid1 = ms.bid_qty1 if ms.bid_qty1 is not None else (float(bids[0][1]) if bids else None)
     ask1 = ms.ask_qty1 if ms.ask_qty1 is not None else (float(asks[0][1]) if asks else None)
+    best_bid = ms.best_bid if ms.best_bid is not None else (float(bids[0][0]) if bids else None)
+    best_ask = ms.best_ask if ms.best_ask is not None else (float(asks[0][0]) if asks else None)
+    # a displayed book with nothing on one side: that side's depth is an observed 0, not a missing field
+    # (a wiped side is the strongest depletion there is); a fully empty book stays unobservable
+    if bid1 is None and best_bid is None and not bids and asks:
+        bid1 = 0.0
+    if ask1 is None and best_ask is None and not asks and bids:
+        ask1 = 0.0
     topk_bid = float(sum(float(q) for _, q in bids[:TOP_K])) if bids else bid1
     topk_ask = float(sum(float(q) for _, q in asks[:TOP_K])) if asks else ask1
     tick = ms.tick_size if ms.tick_size else None
-    best_bid = ms.best_bid if ms.best_bid is not None else (float(bids[0][0]) if bids else None)
-    best_ask = ms.best_ask if ms.best_ask is not None else (float(asks[0][0]) if asks else None)
     spread_ticks = ms.spread_ticks
     if spread_ticks is None and tick:
         if ms.spread is not None:
@@ -243,6 +253,7 @@ class ResilienceEngine:
                 self._sample(tr, rec, o)
             elif (o.t - rec["shock_t"]).total_seconds() >= TIMEOUT_S:
                 # the book vanished and never came back inside the window: close on what was last seen
+                rec["elapsed_s"] = (o.t - rec["shock_t"]).total_seconds()
                 self._close_at_timeout(tr, rec, o.t, rec["final_share"])
             state = tr.state
         else:
@@ -422,6 +433,10 @@ class ResilienceEngine:
     def _sample(self, tr: _Track, rec: Dict[str, Any], o: _Obs) -> None:
         s = (o.t - rec["shock_t"]).total_seconds()
         first = not rec["samples"]
+        if s < 0:
+            # an out-of-order state stamped before the shock is not part of the recovery (it cannot recover a
+            # curve it precedes, nor produce a negative time-to-recovery); the state and clock are untouched
+            return
         if not first:
             rec["updates"] += 1
         sh = self._shares(rec, o)
@@ -474,7 +489,8 @@ class ResilienceEngine:
             self._close(tr, rec, o.t, "overshoot" if rec["overshoot"] else "recovered")
             return
         if s >= TIMEOUT_S:
-            self._close_at_timeout(tr, rec, o.t, share)
+            # on what was last seen: the shocked side may be unobservable on this very update
+            self._close_at_timeout(tr, rec, o.t, share if share is not None else rec["final_share"])
             return
         improving = False
         if share is not None and rec["share_at_shock"] is not None and \

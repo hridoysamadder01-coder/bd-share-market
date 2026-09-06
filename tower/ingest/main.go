@@ -29,7 +29,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -93,6 +95,21 @@ type Daemon struct {
 	store      *Store
 	transports []Transport
 	started    time.Time
+	stopCause  atomic.Value // string: first cause recorded (signal name, "deadline", "cancel")
+}
+
+// SetStopCause records why the daemon is stopping; the first cause wins. It
+// is reported in the runner's final META (stopped_by / stopped_by_signal).
+func (d *Daemon) SetStopCause(cause string) { d.stopCause.CompareAndSwap(nil, cause) }
+
+func (d *Daemon) stopReason(ctx context.Context) string {
+	if c, ok := d.stopCause.Load().(string); ok {
+		return c
+	}
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return "deadline"
+	}
+	return "cancel"
 }
 
 // NewDaemon opens the store and builds every transport (no network yet).
@@ -198,7 +215,9 @@ loop:
 		}
 	}
 	wg.Wait() // transports have stopped: every record they will ever produce is enqueued
-	runner.Put(NewRecord("META", Obj{{"finished", true}, {"stopped_by_signal", true}, {"status", d.status()}}))
+	cause := d.stopReason(ctx)
+	runner.Put(NewRecord("META", Obj{{"finished", true}, {"stopped_by", cause},
+		{"stopped_by_signal", strings.HasPrefix(cause, "signal:")}, {"status", d.status()}}))
 	d.heartbeat()
 	return d.store.Close()
 }
@@ -247,6 +266,7 @@ func main() {
 	go func() {
 		s := <-sig
 		fmt.Fprintf(os.Stderr, "ingest: %v: closing segments\n", s)
+		d.SetStopCause("signal:" + s.String())
 		cancel()
 	}()
 	fmt.Fprintf(os.Stderr, "ingest: capturer=%s epoch=%s out=%s sources=%d\n", cfg.CapturerID, d.store.Epoch, cfg.Out, len(cfg.Sources))

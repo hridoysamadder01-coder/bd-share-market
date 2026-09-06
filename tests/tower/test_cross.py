@@ -402,3 +402,102 @@ def test_realdata_fixture_breadth_and_no_invented_context():
     a = json.dumps([(s, t.isoformat(), c, sec) for s, t, c, sec in states], sort_keys=True, default=str)
     b = json.dumps([(s, t.isoformat(), c, sec) for s, t, c, sec in states2], sort_keys=True, default=str)
     assert a == b
+
+
+def test_machinery_breadth_history_between_polls_and_payload_t_key():
+    """Breadth is the latest poll at or before ``now``: a query between two polls sees the
+    earlier one (not None), and a payload carrying its own ``t`` key cannot clobber the
+    poll time used for the same-instant ``flat`` fallback."""
+    eng = CrossEngine()
+    eng.on_state(ms("A", T0, 10.0))
+    t1 = T0 + timedelta(seconds=60)
+    eng.on_market_stats(T0, {"up": 1, "down": 2, "flat": 3, "t": "2026-09-06T04:00:00Z"})
+    eng.on_market_breadth(T0, 1, 2, None)
+    eng.on_market_stats(t1, {"up": 5, "down": 6, "flat": 7, "t": "junk"})
+    eng.on_market_breadth(t1, 5, 6, None)
+    between = eng.context_for("A", T0 + timedelta(seconds=30))[0]
+    assert (between["breadth_up"], between["breadth_down"], between["breadth_n"]) == (1.0, 2.0, 6.0)
+    assert between["breadth_age_s"] == 30.0
+    after = eng.context_for("A", t1 + timedelta(seconds=1))[0]
+    assert (after["breadth_up"], after["breadth_n"], after["breadth_age_s"]) == (5.0, 18.0, 1.0)
+    assert eng.context_for("A", T0 - timedelta(seconds=1))[0]["breadth_up"] is None
+    # an out-of-order (older) poll is inserted at its own time, never as the latest
+    t_old = T0 + timedelta(seconds=20)
+    eng.on_market_stats(t_old, {"up": 9, "down": 9, "flat": 0})
+    eng.on_market_breadth(t_old, 9, 9, None)
+    assert eng.context_for("A", T0 + timedelta(seconds=25))[0]["breadth_up"] == 9.0
+    assert eng.context_for("A", t1 + timedelta(seconds=1))[0]["breadth_up"] == 5.0
+
+
+def test_machinery_nonfinite_prices_are_not_observations():
+    """A NaN / inf / non-positive mid or ltp adds no log-price point, so no NaN can leak
+    into the 60-s returns or the market median (None, never NaN)."""
+    eng = CrossEngine()
+    for i, bad in enumerate((float("nan"), float("inf"), 0.0, -5.0)):
+        eng.on_state(ms("A", T0 + timedelta(seconds=10 * i), bad, seq=i))
+        eng.on_state(ms("B", T0 + timedelta(seconds=10 * i), None, seq=i, ltp=bad))
+    assert len(eng.syms["A"].logp) == 0 and eng.syms["A"].basis is None
+    assert len(eng.syms["B"].logp) == 0 and eng.syms["B"].basis is None
+    for i in range(4, 12):
+        t = T0 + timedelta(seconds=10 * i)
+        eng.on_state(ms("A", t, 10.0 + 0.01 * i, seq=i))
+        eng.on_state(ms("B", t, 20.0, seq=i))
+    eng.on_state(ms("A", t, float("inf"), seq=99))      # a later bad value is ignored, the path stays finite
+    cross, _ = eng.context_for("A", t)
+    assert cross["symbol_return_60s"] is not None and math.isfinite(cross["symbol_return_60s"])
+    assert cross["market_return_60s"] is not None and math.isfinite(cross["market_return_60s"])
+    assert math.isfinite(cross["symbol_vs_market_60s"])
+    # NaN velocity / liquidity are not samples either
+    eng.on_state(ms("A", t, 10.5, seq=100, price_velocity=float("nan"), visible_bid_liq=float("nan"), visible_ask_liq=5.0))
+    assert len(eng.syms["A"].velocity) == 0 and len(eng.syms["A"].liq) == 0
+
+
+def test_machinery_one_sided_book_counts_as_liquidity_drop():
+    """When a book side disappears (``one_sided``), its visible liquidity is an observed zero:
+    the symbol's liquidity halves and it counts as a changer — it is not read as unchanged.
+    A side missing without the one-sided flag (unobserved) still adds no point."""
+    eng = CrossEngine()
+    for i in range(8):
+        t = T0 + timedelta(seconds=10 * i)
+        eng.on_state(ms("A", t, 10.0, seq=i, visible_bid_liq=500.0, visible_ask_liq=500.0))
+        gone = i >= 4
+        eng.on_state(ms("B", t, 10.0, seq=i, visible_bid_liq=500.0, visible_ask_liq=(None if gone else 500.0),
+                        one_sided=gone))
+        eng.on_state(ms("C", t, 10.0, seq=i, visible_bid_liq=500.0, visible_ask_liq=(None if gone else 500.0)))
+    got = eng.context_for("B", T0 + timedelta(seconds=70))[0]["simultaneous_liquidity_change"]
+    # A unchanged, B halved (one-sided), C's last two-sided point (t = 30 s, within max_gap) reads unchanged
+    assert got["n"] == 3 and got["count"] == 1 and got["count_down"] == 1 and got["sign"] == -1
+    assert abs(got["own_rel_change"] + 0.5) < 1e-12
+    assert len(eng.syms["C"].liq) == 4 and len(eng.syms["B"].liq) == 8
+    assert eng.context_for("C", T0 + timedelta(seconds=70))[0]["simultaneous_liquidity_change"]["own_rel_change"] == 0.0
+
+
+def test_machinery_pearson_constant_series_is_undefined_and_bounded():
+    """A constant (even non-zero) series on the overlap has no correlation (NaN, never a
+    rounding residue), identical series give exactly 1, and |corr| never exceeds 1."""
+    import numpy as np
+
+    n = 30
+    x = np.zeros(90)
+    x[:n] = 3.3e-4
+    vx = np.zeros(90, dtype=bool)
+    vx[:n] = True
+    rng = np.random.default_rng(5)
+    y = np.zeros(90)
+    y[:n] = rng.normal(size=n) * 1e-3
+    Y = np.stack([y, x, -y, y * 2.0 + 1e-3])
+    M = np.stack([vx] * 4)
+    corr, cnt = CrossEngine._masked_corr(x, vx, Y, M)
+    assert cnt.tolist() == [30.0] * 4 and all(math.isnan(c) for c in corr)
+    corr, _ = CrossEngine._masked_corr(y, vx, Y, M)
+    assert math.isnan(corr[1]) and corr[0] == 1.0 and corr[2] == -1.0 and abs(corr[3] - 1.0) < 1e-12
+    assert all(abs(c) <= 1.0 for c in corr if not math.isnan(c))
+    # engine level: a symbol whose price never moves has no lead/lag relation with anyone
+    eng = CrossEngine()
+    a = random_walk_mids(1200 // 5 + 1, seed=4)
+    for i, p in enumerate(a):
+        t = T0 + timedelta(seconds=5 * i)
+        eng.on_state(ms("A", t, p, seq=i))
+        eng.on_state(ms("F", t, 42.0, seq=i))
+    cross, _ = eng.context_for("A", t)
+    assert cross["lead_lag_pairs_evaluated"] == 1 and cross["leaders"] == [] and cross["laggers"] == []

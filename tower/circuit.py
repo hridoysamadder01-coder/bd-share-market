@@ -92,6 +92,11 @@ session phases
     CLOSED / PRE_OPEN the displayed book is the previous session's residue and the
     carried ltp the previous close. Streak fields are ``None`` until a prior-session
     record exists (``set_day_history`` or a day roll) — never a silent 0.
+out-of-order updates
+    an update older than the last one processed (``out_of_order=True``: an earlier
+    time, or an earlier trading date) is described (limits, distances, flags) but
+    never accumulated: it does not move the session / lock clocks, the rolling
+    series, the transition counters or the day forward/backward.
 """
 from __future__ import annotations
 
@@ -199,7 +204,9 @@ class _Day:
     cum_value_seen: Optional[float] = None
     pre_hit_state: Optional[Dict[str, Any]] = None
     open_price: Optional[float] = None
+    open_source: Optional[str] = None      # 'published' (quote open) | 'ltp' (first in-session print)
     max_queue_at_limit: Optional[float] = None
+    velocity_side: Optional[str] = None    # the limit the velocity series is measured toward
     queue_nonzero_since_up: Optional[datetime] = None
     queue_nonzero_since_down: Optional[datetime] = None
     last_key: Optional[Tuple[datetime, int]] = None     # (t, seq) of the update ``last`` was computed for
@@ -293,28 +300,41 @@ class CircuitEngine:
         sym = ms.symbol
         day = self._day.get(sym)
         tdate = trading_date(ms.t)
+        out_of_order = False
         if day is not None and day.date is not None and tdate != day.date:
-            # a new trading date: close the finished session into the history
-            self._history.setdefault(sym, []).append(self.day_summary(sym))
-            day = None
+            if tdate > day.date:
+                # a new trading date: close the finished session into the history
+                self._roll_day(sym)
+                day = None
+            else:
+                out_of_order = True         # an event of an EARLIER trading date never rolls a session back
         if day is None:
             day = _Day(date=tdate, t_first=ms.t)
             self._day[sym] = day
+        if day.t_prev is not None and ms.t < day.t_prev:
+            out_of_order = True
         in_session = ms.session_phase in SESSION_PHASES
+        # ``live``: this update advances TODAY's session bookkeeping. An out-of-order update (older
+        # than the last one processed) is described but never accumulated: it must not move the
+        # session clock, the lock clock, the rolling series or the transition counters backwards.
+        live = in_session and not out_of_order
         quote = (ms.session_state or {}).get("quote") or {}
         yclose = _f(quote.get("yclose"))
         if yclose is not None:
             day.yclose = yclose
         # the opening price exists only once the session trades: before the open the carried
-        # quote (open / ltp) is the previous session's, so it is never taken as today's open
-        if in_session and _f(quote.get("open")) is not None and day.open_price is None:
-            day.open_price = _f(quote.get("open"))
+        # quote (open / ltp) is the previous session's, so it is never taken as today's open. The
+        # published open replaces an open taken from the first in-session ltp whenever it appears
+        # (that ltp may still be the previous close carried into the first continuous frame).
+        pub_open = _f(quote.get("open")) if live else None
+        if pub_open is not None and (day.open_price is None or day.open_source != "published"):
+            day.open_price, day.open_source = pub_open, "published"
         if _f(quote.get("close_published")) is not None:
             day.close = _f(quote.get("close_published"))
-        if ms.ltp is not None and in_session:
+        if ms.ltp is not None and live:
             day.ltp_last = ms.ltp
             if day.open_price is None:
-                day.open_price = ms.ltp
+                day.open_price, day.open_source = ms.ltp, "ltp"
         tick = ms.tick_size if ms.tick_size else None
         ref = self._resolve_reference(sym, day.yclose, tick)
         if tick is None and ref.tick:
@@ -344,11 +364,12 @@ class CircuitEngine:
             "pressure_before_hit": (day.pre_hit_state or {}).get("pressure_strength"),
             "liquidity_before_hit": (day.pre_hit_state or {}).get("liquidity_door_side"),
             "shares_to_door": None, "door_visible": None, "shares_to_floor": None, "floor_visible": None,
-            "exception": None,
-            "consecutive_upper_streak": None, "consecutive_lower_streak": None,
+            "exception": None, "exception_detail": None,
+            "prior_upper_streak": None, "prior_lower_streak": None, "streak_history_observed": False,
+            "consecutive_upper_streak": None, "consecutive_lower_streak": None, "locked_share_today": None,
             "streak_continuation_strength": None, "streak_weakening": None, "break_day": None,
             "break_behaviour": None, "next_session": None, "open_price": day.open_price,
-            "in_session": in_session,
+            "open_source": day.open_source, "in_session": in_session, "out_of_order": out_of_order,
         }
         # session clock: elapsed between consecutive in-session updates (a residual closed-market
         # book, the pre-open hours or the gap into the next CLOSED update are not session time);
@@ -375,14 +396,20 @@ class CircuitEngine:
             if tick:
                 c["dist_up_ticks"] = (upper - px) / tick
                 c["dist_down_ticks"] = (px - lower) / tick
-                if in_session:              # the approach series is the live session's path only
+                if live:                    # the approach series is the live session's path only
                     day.dist_up.push(ms.t, c["dist_up_ticks"])
                     day.dist_down.push(ms.t, c["dist_down_ticks"])
             c["nearer_limit"] = "up" if c["dist_up_pct"] <= c["dist_down_pct"] else "down"
 
         # ---- approach velocity / acceleration (ticks per minute toward the nearer limit)
-        if c["nearer_limit"] is not None and tick and in_session and c["dist_up_ticks"] is not None:
+        if c["nearer_limit"] is not None and tick and live and c["dist_up_ticks"] is not None:
             series = day.dist_up if c["nearer_limit"] == "up" else day.dist_down
+            if day.velocity_side != c["nearer_limit"]:
+                # the velocity is signed toward the NEARER limit: when that side flips (the price
+                # crosses the middle of the band) the sign flips with it, so the series restarts —
+                # otherwise the flip would read as a large spurious acceleration
+                day.velocity = RollingSeries(window_s=self.approach_window_s * 2, min_keep=4)
+                day.velocity_side = c["nearer_limit"]
             dv, dt = _rate(series, self.approach_window_s)
             if dv is not None:
                 vel = -dv / (dt / 60.0)
@@ -410,8 +437,8 @@ class CircuitEngine:
             c["locked_down"] = bool(at(ba, lower) and not has_bids)
         # the flags above describe the displayed book in any phase; the bookkeeping below (first
         # hit / lock, lock time, unlock / relock counts, streak "locked now") is session-only
-        hit_up, hit_down = bool(c["hit_up"]) and in_session, bool(c["hit_down"]) and in_session
-        locked_up, locked_down = bool(c["locked_up"]) and in_session, bool(c["locked_down"]) and in_session
+        hit_up, hit_down = bool(c["hit_up"]) and live, bool(c["hit_down"]) and live
+        locked_up, locked_down = bool(c["locked_up"]) and live, bool(c["locked_down"]) and live
         locked = locked_up or locked_down
         prev_locked = day.prev_locked_up or day.prev_locked_down
 
@@ -472,14 +499,14 @@ class CircuitEngine:
                     day.time_locked_up_s += dt
                 if day.prev_locked_down:
                     day.time_locked_down_s += dt
-        if in_session and locked and not prev_locked:
+        if live and locked and not prev_locked:
             if day.first_lock_time is None:
                 day.first_lock_time = ms.t
             if day.last_unlock_time is not None:
                 day.relock_count += 1
                 day.last_relock_time = ms.t
                 day.time_between_unlock_relock_s = (ms.t - day.last_unlock_time).total_seconds()
-        elif in_session and prev_locked and not locked:
+        elif live and prev_locked and not locked:
             day.unlock_count += 1
             day.last_unlock_time = ms.t
         day.ever_locked_up = day.ever_locked_up or locked_up
@@ -498,7 +525,19 @@ class CircuitEngine:
         if ms.asks and lower is not None:
             q_dn = float(sum(q for p, q in ms.asks if at(p, lower)))
         c["queue_at_upper"], c["queue_at_lower"] = q_up, q_dn
-        if in_session:                      # queue dynamics / persistence are the live session's only
+        # the per-side clocks run for BOTH sides every live update (a queue that was already displayed
+        # on the far side keeps its age when the nearer limit flips to it); a queue observed empty
+        # stops its clock in any phase (queue dynamics / persistence are the live session's only)
+        for q, since_attr in ((q_up, "queue_nonzero_since_up"), (q_dn, "queue_nonzero_since_down")):
+            if q is None or out_of_order:
+                continue
+            if q <= 0:
+                setattr(day, since_attr, None)
+            elif live:
+                if getattr(day, since_attr) is None:
+                    setattr(day, since_attr, ms.t)
+                day.max_queue_at_limit = max(day.max_queue_at_limit or 0.0, q)
+        if live:
             if q_up is not None:
                 day.queue_up.push(ms.t, q_up)
             if q_dn is not None:
@@ -509,27 +548,15 @@ class CircuitEngine:
         q_now = q_up if side == "up" else q_dn
         if q_now is not None:
             c["queue_side"] = side
-        if q_now is not None and in_session:
+        if q_now is not None and live:
             qs = day.queue_up if side == "up" else day.queue_down
             dq, _ = _rate(qs, self.queue_window_s)
             if dq is not None:
                 c["queue_delta_60s"] = dq
                 c["queue_growth"] = max(dq, 0.0)
                 c["queue_decay"] = max(-dq, 0.0)
-            # persistence is per side: a switch of the nearer limit must not inherit the other side's clock
-            since_attr = "queue_nonzero_since_up" if side == "up" else "queue_nonzero_since_down"
-            if q_now > 0:
-                if getattr(day, since_attr) is None:
-                    setattr(day, since_attr, ms.t)
-                c["queue_persistence_s"] = (ms.t - getattr(day, since_attr)).total_seconds()
-                day.max_queue_at_limit = max(day.max_queue_at_limit or 0.0, q_now)
-            else:
-                setattr(day, since_attr, None)
-                c["queue_persistence_s"] = 0.0
-        if q_up is not None and q_up <= 0:
-            day.queue_nonzero_since_up = None
-        if q_dn is not None and q_dn <= 0:
-            day.queue_nonzero_since_down = None
+            since = getattr(day, "queue_nonzero_since_up" if side == "up" else "queue_nonzero_since_down")
+            c["queue_persistence_s"] = (ms.t - since).total_seconds() if (q_now > 0 and since is not None) else 0.0
         c["max_queue_at_limit"] = day.max_queue_at_limit
 
         # ---- volume / turnover while approaching and while locked (new tape rows only)
@@ -566,7 +593,7 @@ class CircuitEngine:
             near_pct = None
             if c["dist_up_pct"] is not None:
                 near_pct = min(c["dist_up_pct"], c["dist_down_pct"])
-            if n_new > 0:
+            if n_new > 0 and not out_of_order:
                 if locked:
                     day.volume_while_locked += iv
                     day.turnover_while_locked += ival
@@ -582,17 +609,27 @@ class CircuitEngine:
         # ---- streaks across sessions
         self._streaks(sym, day, c, ms, locked_up, locked_down, locked)
 
-        day.t_prev = ms.t
-        day.prev_in_session = in_session
-        if in_session:
-            # outside the session the lock state is frozen at its last in-session value
-            # (``locked_up_close`` in the day summary is the state at the close, not the residue)
-            day.prev_locked_up, day.prev_locked_down = locked_up, locked_down
+        if not out_of_order:
+            day.t_prev = ms.t
+            day.prev_in_session = in_session
+            if in_session:
+                # outside the session the lock state is frozen at its last in-session value
+                # (``locked_up_close`` in the day summary is the state at the close, not the residue)
+                day.prev_locked_up, day.prev_locked_down = locked_up, locked_down
         day.last = c
         day.last_key = (ms.t, ms.seq)
         return c
 
     # ------------------------------------------------------------------ helpers
+    def _roll_day(self, sym: str) -> None:
+        """Close the running session into the history. A record already supplied for the same
+        date (``set_day_history`` built from the same capture) is replaced, never duplicated —
+        a duplicated date would count one session twice in the streak."""
+        summary = self.day_summary(sym)
+        recs = self._history.setdefault(sym, [])
+        recs[:] = [r for r in recs if str(r.get("date") or "") != str(summary.get("date") or "")]
+        recs.append(summary)
+        recs.sort(key=lambda r: str(r.get("date") or ""))
     def _resolve_reference(self, sym: str, yclose: Optional[float], tick: Optional[float]) -> _Ref:
         r = self._ref.get(sym) or _Ref()
         published = r.rule_source is not None and r.rule_source != BANDS_RULE_SOURCE and r.upper is not None
@@ -650,10 +687,8 @@ class CircuitEngine:
                  locked_up: bool, locked_down: bool, locked: bool) -> None:
         if sym not in self._history:
             # no prior-session record was ever supplied (set_day_history / a day roll): the streak is
-            # not observable — never a silent 0 (consumers treat None as "no streak bookkeeping")
-            c["prior_upper_streak"] = c["prior_lower_streak"] = None
-            c["consecutive_upper_streak"] = c["consecutive_lower_streak"] = None
-            c["streak_history_observed"] = False
+            # not observable — never a silent 0 (consumers treat None as "no streak bookkeeping");
+            # the streak keys are already None in ``c``
             return
         recs = self._history.get(sym) or []
         c["streak_history_observed"] = True
@@ -781,8 +816,13 @@ def day_history_from_tables(tables: Dict[str, Any], symbol: str) -> List[Dict[st
         return []
     circ = tables.get("circuit")
     lim_by_date: Dict[str, Tuple[float, float, Optional[float]]] = {}
+    # the tick is per instrument (0.1 for shares, 0.5 for the listed bonds), not per price: a date
+    # without a circuit row borrows the symbol's published tick; 0.1 is only ever an ASSUMPTION
+    published_tick: Optional[float] = None
     if circ is not None and len(circ) and "symbol" in circ.columns:
         for _, row in circ[circ["symbol"] == symbol].iterrows():
+            if _f(row.get("tick_size")) is not None:
+                published_tick = _f(row.get("tick_size"))
             up, lo = _f(row.get("upper_limit")), _f(row.get("lower_limit"))
             if up is None or lo is None:
                 continue
@@ -798,15 +838,23 @@ def day_history_from_tables(tables: Dict[str, Any], symbol: str) -> List[Dict[st
         yclose = _f(last.get("yclose"))
         opn = _f(last.get("open"))
         up = lo = tick = None
+        tick_assumed = False
+        limit_source = None
         if d in lim_by_date:
             up, lo, tick = lim_by_date[d]
+            limit_source = "circuit_table"
         elif yclose is not None:
             band = band_for(yclose)
             if band is not None:
-                up, lo, _ = limits_from_reference(yclose, band, 0.1)
-                tick = 0.1
-        half = (tick or 0.1) / 2.0
+                tick = published_tick if published_tick is not None else 0.1
+                tick_assumed = published_tick is None
+                up, lo, _ = limits_from_reference(yclose, band, tick)
+                limit_source = BANDS_RULE_SOURCE
+        if tick is None:
+            tick, tick_assumed = (published_tick, False) if published_tick is not None else (0.1, True)
+        half = tick / 2.0
         out.append({"symbol": symbol, "date": d, "close": close, "yclose": yclose, "open": opn, "upper": up, "lower": lo,
+                    "tick": tick, "tick_assumed": tick_assumed, "limit_source": limit_source,
                     "locked_up_close": bool(close is not None and up is not None and abs(close - up) < half),
                     "locked_down_close": bool(close is not None and lo is not None and abs(close - lo) < half),
                     "source": "seeing_tables"})

@@ -51,8 +51,11 @@ re-parsed here — and adds what the engines need on top of parsed frames:
   ``is_recovery=True``.
 
 Never a silent zero: a field the adapter did not deliver stays ``None`` and is
-absent from ``observed_fields``. Derived numbers (breadth from the watch poll)
-are labelled ``payload["inferred_fields"]`` with their rule.
+absent from ``observed_fields``; a price left at the page's 0.0 sentinel is
+listed in ``payload["zero_fields"]`` and is neither ``Event.price`` nor an
+observed field, on every quote/book source. Derived numbers (breadth from the
+watch poll) are labelled ``payload["inferred_fields"]`` with their rule and are
+always computed over the whole poll, never over a replay's symbol filter.
 
 Ordering: ``Event.sort_key()`` = (t_recv, source priority, seq_local); the
 final sort adds (source, event_type, symbol) as a deterministic tie-break so
@@ -143,6 +146,36 @@ def _f(v: Any) -> Optional[float]:
     return None if x != x else x
 
 
+_PRICE_FIELDS = ("ltp", "open", "high", "low", "close_published", "yclose")
+
+
+def _zero_fields(fr: Dict[str, Any]) -> List[str]:
+    """Price fields the page left at its 0.0 'not populated' sentinel. The
+    lankabd_depth adapter lists them itself; the other adapters (dsebd_depth,
+    lankabd_watch, dsebd_latest, lankabd_grid) do not, so the same rule is
+    applied here — a price of 0 is never an observed price on any of them."""
+    if "zero_fields" in fr:
+        return list(fr.get("zero_fields") or [])
+    return [k for k in _PRICE_FIELDS if _f(fr.get(k)) == 0.0]
+
+
+def _tape_t_exch(fr: Dict[str, Any]) -> Optional[datetime]:
+    """Exchange stamp of a tape row. The adapter already converted the epoch-ms
+    stamp (``t_source_utc``; ``None`` when it could not — flagged in its
+    problems); a hand-built frame without that key is converted here, and a
+    stamp outside the platform's clock range (an adapter-flagged bad row must
+    never abort the whole store) yields ``None``."""
+    if "t_source_utc" in fr:
+        return utc(fr["t_source_utc"]) if fr.get("t_source_utc") else None
+    ms = _f(fr.get("t_source_ms"))
+    if ms is None:
+        return None
+    try:
+        return epoch_ms_to_utc(ms)
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
 def _levels(levels: Any) -> List[Tuple[float, float]]:
     return [(float(p), float(q)) for p, q in (levels or [])]
 
@@ -223,7 +256,8 @@ def _breadth(frames: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
 def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv: datetime, seq: int,
                        body_sha256: Optional[str] = None, key: Optional[str] = None,
                        http: Optional[Dict[str, Any]] = None,
-                       problems: Optional[Sequence[str]] = None) -> List[Event]:
+                       problems: Optional[Sequence[str]] = None,
+                       breadth_frames: Optional[Sequence[Dict[str, Any]]] = None) -> List[Event]:
     """Pure mapping of one record's parsed frames to Events (no QA state).
 
     ``seq_local`` is left at 0 here and assigned by :class:`Normalizer`. Rules
@@ -231,7 +265,10 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
     missing value stays ``None``. ``problems`` are the adapter's parse problems
     for this record: every event of the record then carries
     ``flags["parse_problem"]`` and ``payload["parse_problems"]`` so a partial
-    parse is never mistaken for a clean observation."""
+    parse is never mistaken for a clean observation. ``breadth_frames`` is the
+    *whole* watch poll when ``frames`` is a symbol-filtered subset of it: the
+    market-wide breadth event is always derived from every item the poll
+    carried, never from a replay filter."""
     t_recv = utc(t_recv)
     phase = session_phase(t_recv)
     raw_ref = (source, int(seq), body_sha256 or "")
@@ -251,7 +288,7 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
     if source in BOOK_SOURCES:
         # one full book image per record: bids best-first, asks best-first, plus the day fields the page shows
         for fr in frames:
-            zero = list(fr.get("zero_fields") or [])
+            zero = _zero_fields(fr)
             bid_ok, ask_ok = _book_sides_present(source, fr)
             sym = (fr.get("symbol") or key or "").upper() or None
             day = {"ltp": _f(fr.get("ltp")), "open": _f(fr.get("open")), "high": _f(fr.get("high")),
@@ -293,7 +330,7 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
         cid = params.get("cid") if isinstance(params, dict) else None
         for fr in frames:
             t_ms = fr.get("t_source_ms")
-            t_exch = epoch_ms_to_utc(_f(t_ms)) if _f(t_ms) is not None else None
+            t_exch = _tape_t_exch(fr)
             fl: Dict[str, bool] = {}
             if t_exch is None:
                 fl["bad_stamp"] = True                      # row kept, but it cannot be placed on the exchange clock
@@ -314,21 +351,23 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
             payload = {k: v for k, v in fr.items() if k != "symbol"}
             inst = fr.get("instrument_number")
             always = ("t_recv", "t_source") if t_exch is not None else ("t_recv",)
-            # a zero-flagged watch field is the feed's 'not populated' sentinel: not observed, and never a price
-            zero = set(fr.get("zero_fields") or ())
+            # a zero price is the feed's 'not populated' sentinel: not observed, and never a price
+            zero = _zero_fields(fr)
+            payload["zero_fields"] = zero
             price = None if "ltp" in zero else _price_or_none(fr.get("ltp"))
             out.append(mk(EventType.QUOTE, symbol=sym, t_exch=t_exch, price=price,
                           instrument_id=str(inst) if inst is not None else None, payload=payload,
                           observed_fields=_observed(fr, always, exclude=zero)))
-        if source == "lankabd_watch" and frames:
-            # market-wide breadth derived from this poll: INFERRED, rule stated in the payload
-            b = _breadth(frames)
-            feed_t = frames[0].get("feed_timestamp_utc")
+        poll = breadth_frames if breadth_frames is not None else frames
+        if source == "lankabd_watch" and poll:
+            # market-wide breadth derived from the WHOLE poll: INFERRED, rule stated in the payload
+            b = _breadth(poll)
+            feed_t = poll[0].get("feed_timestamp_utc")
             b.update({"rule": "per item: ltp > yclose → up, < → down, == → flat; missing/0 → unpriced",
                       "inferred_fields": ["up", "down", "flat", "unpriced"],
                       "feed_timestamp_utc": feed_t, "kind": "breadth_from_watch"})
             out.append(mk(EventType.MARKET_STATS, symbol=None, t_exch=utc(feed_t) if feed_t else None,
-                          payload=b, observed_fields=("t_recv",)))
+                          payload=b, observed_fields=("t_recv", "t_source") if feed_t else ("t_recv",)))
         return out
 
     if source == "lankabd_market":
@@ -485,9 +524,12 @@ class Normalizer:
         self._last_feed_seq[(source, key)] = s
         if prev is not None and s > prev + 1:
             self.stats.src(source).gaps += 1
-            self._emit(Event(source=source, event_type=EventType.GAP, t_recv=t, seq_local=0, symbol=key,
+            sym = key.upper() if (key and source in PER_SYMBOL_KEY_SOURCES) else None
+            self._emit(Event(source=source, event_type=EventType.GAP, t_recv=t, seq_local=0, symbol=sym,
                              session_phase=session_phase(t), status="seq_hole", seq_feed=s,
-                             payload={"reason": "seq_hole", "expected": prev + 1, "got": s, "missing": s - prev - 1},
+                             payload={"reason": "seq_hole", "expected": prev + 1, "got": s, "missing": s - prev - 1,
+                                      "key": key},
+                             raw_ref=(source, int(rec.get("seq", 0)), rec.get("body_sha256") or ""),
                              flags={"gap": True}))
             return s, True
         return s, False
@@ -500,11 +542,20 @@ class Normalizer:
         kind, source = rec.get("kind"), rec.get("source")
         if source is None or (self.sources is not None and source not in self.sources):
             return
+        if kind not in ("HEARTBEAT", "GAP", "DATA"):
+            return
+        try:
+            record_time(rec)
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
+            # a record that cannot be placed on the receipt clock is a problem, never a crash
+            # of the stream (the live tailer feeds records one at a time through here)
+            self.stats.problem(f"{source} seq {rec.get('seq')}: record without a usable t_recv_utc ({e!r})")
+            return
         if kind == "HEARTBEAT":
             self._on_heartbeat(rec)
         elif kind == "GAP":
             self._on_gap(rec)
-        elif kind == "DATA":
+        else:
             self._on_data(rec)
         # META / TRAILER / CLOCK carry no observation; restarts are detected from the
         # epoch each DATA record carries (see _on_data), not from META order.
@@ -606,14 +657,16 @@ class Normalizer:
         # no frames and no problems = the source answered with an empty list (a tape pull
         # before the day's first trade, a block board with no prints): a real observation
         # of "nothing", carried as a STATUS event so liveness and cadence stay visible
-        frames = parsed.frames
+        frames = all_frames = parsed.frames
         if frames and self.symbols is not None and source not in PER_SYMBOL_KEY_SOURCES:
             frames = [fr for fr in frames if self._want_symbol((fr.get("symbol") or "").upper() or None)]
-            if not frames:
+            # market-wide events are always kept: a watch poll still yields its breadth
+            # (computed over the whole poll) even when no selected symbol is in it
+            if not frames and source != "lankabd_watch":
                 return
         seq = int(rec.get("seq", 0))
         events = events_from_frames(source, frames, t_recv=t, seq=seq, body_sha256=sha, key=key, http=http,
-                                    problems=parsed.problems)
+                                    problems=parsed.problems, breadth_frames=all_frames)
         # a book page without its tables is not a book observation: counted as a parse failure
         c.parse_failures += sum(1 for ev in events if ev.status == "book_unparsed")
         # record-level QA (shared by every event of the record)

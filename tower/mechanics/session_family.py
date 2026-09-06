@@ -115,9 +115,15 @@ class CloseSessionPressure(DirectedMechanism):
         vol_now = fr.volume_over(self.vol_s)
         span_now = min(self.vol_s, fr.span_s(self.vol_s)) or self.vol_s
         rate_now = (vol_now / (span_now / 60.0)) if vol_now is not None else None
-        vol_rel = safe_div(rate_now, base_rate) if base_rate > _EPS else (None if rate_now is None else float("inf"))
-        vol_factor = ramp(vol_rel, 1.2, 3.0) if (vol_rel is not None and vol_rel != float("inf")) else \
-            (1.0 if vol_rel == float("inf") and rate_now and rate_now > 0 else 0.0)
+        # a silent day baseline (rate 0) makes any positive rate unboundedly large relative to it; a
+        # zero rate against a zero baseline is not a ratio at all (None, factor 0)
+        if base_rate > _EPS:
+            vol_rel = safe_div(rate_now, base_rate)
+            vol_factor = ramp(vol_rel, 1.2, 3.0)
+        elif rate_now is not None and rate_now > 0:
+            vol_rel, vol_factor = float("inf"), 1.0
+        else:
+            vol_rel, vol_factor = None, 0.0
         p = combined_pressure_of(ms)
         excess = (abs(p) - (base_abs_p or 0.0)) if p is not None else None
         p_factor = ramp(excess, 0.2, 0.6)

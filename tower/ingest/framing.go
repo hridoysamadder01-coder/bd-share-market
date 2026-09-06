@@ -62,9 +62,23 @@ func NewFramer(kind string, r io.Reader, delimiter string) (Framer, error) {
 // ---------------------------------------------------------------- line
 
 type lineFramer struct {
-	r     *bufio.Reader
-	delim []byte
-	buf   []byte
+	r       *bufio.Reader
+	delim   []byte
+	buf     []byte
+	pending error // a read error that arrived together with data: surfaced once the data is framed
+}
+
+// takePending returns (and clears) a deferred read error, mapping EOF inside
+// a frame to io.ErrUnexpectedEOF. Errors are never sticky: a later Next
+// reads again, so a transient error (a tailed file re-opened, a socket
+// deadline) does not turn the framer into a permanent EOF.
+func takePending(pending *error, partial int) error {
+	err := *pending
+	*pending = nil
+	if errors.Is(err, io.EOF) && partial > 0 {
+		return io.ErrUnexpectedEOF
+	}
+	return err
 }
 
 func (l *lineFramer) Next() ([]byte, error) {
@@ -75,14 +89,14 @@ func (l *lineFramer) Next() ([]byte, error) {
 			l.buf = l.buf[end:]
 			return frame, nil
 		}
+		if l.pending != nil {
+			return nil, takePending(&l.pending, len(l.buf))
+		}
 		chunk := make([]byte, 1<<14)
 		n, err := l.r.Read(chunk)
 		l.buf = append(l.buf, chunk[:n]...)
 		if err != nil {
-			if err == io.EOF && len(l.buf) > 0 {
-				return nil, io.ErrUnexpectedEOF
-			}
-			return nil, err
+			l.pending = err // the bytes that came with it are framed first
 		}
 	}
 }
@@ -98,20 +112,25 @@ type sohFramer struct {
 	r       *bufio.Reader
 	buf     []byte
 	skipped int64
-	eof     bool
+	pending error
 }
 
+// fill reads one chunk. An error that arrives with data is deferred until the
+// data has been framed; errors are not sticky (see takePending).
 func (s *sohFramer) fill() error {
-	if s.eof {
-		return io.EOF
+	if s.pending != nil {
+		return takePending(&s.pending, len(s.buf))
 	}
 	chunk := make([]byte, 1<<14)
 	n, err := s.r.Read(chunk)
 	s.buf = append(s.buf, chunk[:n]...)
 	if err != nil {
-		s.eof = true
 		if n > 0 {
+			s.pending = err
 			return nil
+		}
+		if errors.Is(err, io.EOF) && len(s.buf) > 0 {
+			return io.ErrUnexpectedEOF
 		}
 		return err
 	}
@@ -196,10 +215,7 @@ func (s *sohFramer) Next() ([]byte, error) {
 			}
 		}
 		if err := s.fill(); err != nil {
-			if len(s.buf) > 0 {
-				return nil, io.ErrUnexpectedEOF
-			}
-			return nil, err
+			return nil, err // EOF inside a frame is already io.ErrUnexpectedEOF; other errors keep their identity
 		}
 	}
 }
@@ -214,9 +230,9 @@ func (s *sohFramer) Partial() []byte { return s.buf }
 // ---------------------------------------------------------------- len16
 
 type len16Framer struct {
-	r   *bufio.Reader
-	buf []byte
-	eof bool
+	r       *bufio.Reader
+	buf     []byte
+	pending error
 }
 
 func (l *len16Framer) Next() ([]byte, error) {
@@ -229,23 +245,14 @@ func (l *len16Framer) Next() ([]byte, error) {
 				return frame, nil
 			}
 		}
-		if l.eof {
-			if len(l.buf) > 0 {
-				return nil, io.ErrUnexpectedEOF
-			}
-			return nil, io.EOF
+		if l.pending != nil {
+			return nil, takePending(&l.pending, len(l.buf))
 		}
 		chunk := make([]byte, 1<<14)
 		n, err := l.r.Read(chunk)
 		l.buf = append(l.buf, chunk[:n]...)
 		if err != nil {
-			l.eof = true
-			if !errors.Is(err, io.EOF) {
-				if len(l.buf) > 0 {
-					return nil, io.ErrUnexpectedEOF
-				}
-				return nil, err
-			}
+			l.pending = err
 		}
 	}
 }

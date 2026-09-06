@@ -34,6 +34,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -47,6 +48,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -230,11 +232,22 @@ func DataRecord(key any, srcSeq any, envelopeKey string, envelope Obj, body []by
 	return NewRecord("DATA", f)
 }
 
-// GapRecord builds a GAP record. detail is truncated to 4000 bytes like Python.
-func GapRecord(reason, detail string, key any, envelopeKey string, envelope Obj, body []byte) Record {
-	if len(detail) > 4000 {
-		detail = detail[:4000]
+// truncateRunes cuts s to at most n bytes without splitting a UTF-8 sequence
+// (a split sequence would be re-encoded as U+FFFD, changing the text).
+func truncateRunes(s string, n int) string {
+	if len(s) <= n {
+		return s
 	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}
+
+// GapRecord builds a GAP record. detail is truncated to 4000 bytes like Python
+// (Python cuts characters; the cut here never lands inside a character).
+func GapRecord(reason, detail string, key any, envelopeKey string, envelope Obj, body []byte) Record {
+	detail = truncateRunes(detail, 4000)
 	f := Obj{{"reason", reason}, {"detail", detail}, {"key", key}}
 	if envelope != nil {
 		f = append(f, KV{envelopeKey, envelope})
@@ -249,7 +262,10 @@ func GapRecord(reason, detail string, key any, envelopeKey string, envelope Obj,
 
 // ---------------------------------------------------------------- store
 
-// ManifestSegment is one closed segment entry of MANIFEST.json.
+// ManifestSegment is the typed view of one closed segment entry of
+// MANIFEST.json. The gz_* fields are written by the Python store's
+// compress_and_verify (the .jsonl is replaced by a verified .jsonl.gz); the
+// Go daemon never writes them but must read and preserve them.
 type ManifestSegment struct {
 	Source    string `json:"source"`
 	Path      string `json:"path"`
@@ -260,18 +276,61 @@ type ManifestSegment struct {
 	Bytes     int64  `json:"bytes"`
 	Epoch     string `json:"epoch"`
 	ClosedUTC string `json:"closed_utc"`
+	GzPath    string `json:"gz_path,omitempty"`
+	GzSHA256  string `json:"gz_sha256,omitempty"`
+	GzBytes   int64  `json:"gz_bytes,omitempty"`
 }
 
-// Manifest is MANIFEST.json.
+// DataPath is the file that holds the segment's bytes: the gzip when the
+// Python post-run compression replaced the plain file (raw_store.verify_store
+// and seeing.replay use the same rule: gz_path or path).
+func (s ManifestSegment) DataPath(root string) string {
+	p := s.Path
+	if s.GzPath != "" {
+		p = s.GzPath
+	}
+	return filepath.Join(root, filepath.FromSlash(p))
+}
+
+// Manifest is MANIFEST.json. Segment entries are kept as the JSON that was
+// read or written, so a manifest that passed through the Python store (which
+// may add fields) is rewritten with every field intact.
 type Manifest struct {
 	SchemaVersion   int               `json:"schema_version"`
 	CapturerID      string            `json:"capturer_id"`
 	Epoch           string            `json:"epoch"`
 	SoftwareVersion string            `json:"software_version"`
 	OpenedUTC       string            `json:"opened_utc"`
-	Segments        []ManifestSegment `json:"segments"`
+	Segments        []json.RawMessage `json:"segments"`
 	PreviousEpochs  []map[string]any  `json:"previous_epochs,omitempty"`
 	ClosedUTC       string            `json:"closed_utc,omitempty"`
+}
+
+// Entries decodes the segment list into its typed view (unknown fields are
+// still present in Segments and survive a rewrite).
+func (m Manifest) Entries() ([]ManifestSegment, error) {
+	out := make([]ManifestSegment, 0, len(m.Segments))
+	for i, raw := range m.Segments {
+		var s ManifestSegment
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return out, fmt.Errorf("manifest segment %d: %w", i, err)
+		}
+		out = append(out, s)
+	}
+	return out, nil
+}
+
+// ReadManifest loads <root>/MANIFEST.json.
+func ReadManifest(root string) (Manifest, error) {
+	var man Manifest
+	raw, err := os.ReadFile(filepath.Join(root, "MANIFEST.json"))
+	if err != nil {
+		return man, err
+	}
+	if err := json.Unmarshal(raw, &man); err != nil {
+		return man, fmt.Errorf("MANIFEST.json: %w", err)
+	}
+	return man, nil
 }
 
 // Store owns the output directory, the manifest and one SourceWriter per source.
@@ -301,15 +360,14 @@ func OpenStore(root, capturerID, softwareVersion string, queueSize int) (*Store,
 	s := &Store{Root: root, CapturerID: capturerID, Epoch: newEpoch(), SoftwareVersion: softwareVersion,
 		QueueSize: queueSize, prevSHA: map[string]*string{}, writers: map[string]*SourceWriter{}}
 	s.manifest = Manifest{SchemaVersion: schemaVersion, CapturerID: capturerID, Epoch: s.Epoch,
-		SoftwareVersion: softwareVersion, OpenedUTC: isoUTC(time.Now()), Segments: []ManifestSegment{}}
-	if raw, err := os.ReadFile(filepath.Join(root, "MANIFEST.json")); err == nil {
-		var old Manifest
-		if json.Unmarshal(raw, &old) == nil { // a corrupt manifest must not stop capture
-			for _, seg := range old.Segments {
+		SoftwareVersion: softwareVersion, OpenedUTC: isoUTC(time.Now()), Segments: []json.RawMessage{}}
+	if old, err := ReadManifest(root); err == nil { // a corrupt manifest must not stop capture
+		if entries, err := old.Entries(); err == nil {
+			for _, seg := range entries {
 				sha := seg.SHA256
 				s.prevSHA[seg.Source] = &sha
 			}
-			s.manifest.Segments = old.Segments
+			s.manifest.Segments = old.Segments // verbatim: Python-added fields (gz_path, ...) are kept
 			s.manifest.PreviousEpochs = append(old.PreviousEpochs,
 				map[string]any{"epoch": old.Epoch, "opened_utc": old.OpenedUTC})
 		}
@@ -385,12 +443,17 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) writeManifest() error {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", " ")
 	s.mu.Lock()
-	raw, err := json.MarshalIndent(s.manifest, "", " ")
+	err := enc.Encode(s.manifest)
 	s.mu.Unlock()
 	if err != nil {
 		return err
 	}
+	raw := buf.Bytes()
 	path := filepath.Join(s.Root, "MANIFEST.json")
 	tmp := path + ".tmp"
 	f, err := os.Create(tmp)
@@ -604,6 +667,10 @@ func (w *SourceWriter) appendLine(r Record) error {
 }
 
 func (w *SourceWriter) write(r Record) error {
+	if r.TRecv.IsZero() { // a record built without NewRecord: stamp now, never bucket into year 0001
+		r.TRecv = time.Now().UTC()
+		r.Mono = monoNs()
+	}
 	hk := hourKey(r.TRecv)
 	if w.seg != nil && w.seg.hourKey != hk {
 		if err := w.closeSegment(); err != nil {
@@ -678,15 +745,39 @@ func (w *SourceWriter) closeSegment() error {
 		return err
 	}
 	rel, _ := filepath.Rel(w.store.Root, seg.path)
-	w.store.mu.Lock()
-	d := digest
-	w.store.prevSHA[w.Source] = &d
-	w.store.manifest.Segments = append(w.store.manifest.Segments, ManifestSegment{
+	entry, err := marshalJSON(ManifestSegment{
 		Source: w.Source, Path: filepath.ToSlash(rel), Records: records, FirstSeq: firstSeq, LastSeq: lastSeq,
 		SHA256: digest, Bytes: size, Epoch: w.store.Epoch, ClosedUTC: isoUTC(time.Now()),
 	})
+	if err != nil {
+		return err
+	}
+	w.store.mu.Lock()
+	d := digest
+	w.store.prevSHA[w.Source] = &d
+	w.store.manifest.Segments = append(w.store.manifest.Segments, json.RawMessage(entry))
 	w.store.mu.Unlock()
 	return w.store.writeManifest()
+}
+
+// openSegmentFile opens a plain or gzip-compressed segment for reading.
+func openSegmentFile(path string) (io.ReadCloser, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasSuffix(path, ".gz") {
+		return f, nil
+	}
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	return struct {
+		io.Reader
+		io.Closer
+	}{gz, f}, nil
 }
 
 // ---------------------------------------------------------------- verification (Go port of raw_store.verify_*)
@@ -703,9 +794,9 @@ type SegmentReport struct {
 	OK             bool
 }
 
-// ReadSegment parses a segment into records (a tiny JSONL reader).
+// ReadSegment parses a segment (.jsonl or .jsonl.gz) into records (a tiny JSONL reader).
 func ReadSegment(path string) ([]map[string]any, error) {
-	f, err := os.Open(path)
+	f, err := openSegmentFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -723,10 +814,11 @@ func ReadSegment(path string) ([]map[string]any, error) {
 	return out, sc.Err()
 }
 
-// VerifySegment re-hashes a segment and checks its TRAILER, body CRC/sha256 and seq continuity.
+// VerifySegment re-hashes a segment (.jsonl or .jsonl.gz) and checks its
+// TRAILER, body CRC/sha256 and seq continuity.
 func VerifySegment(path string) SegmentReport {
 	rep := SegmentReport{Path: path, ChainOK: true}
-	f, err := os.Open(path)
+	f, err := openSegmentFile(path)
 	if err != nil {
 		return rep
 	}
@@ -767,6 +859,9 @@ func VerifySegment(path string) SegmentReport {
 			}
 		}
 	}
+	if err := sc.Err(); err != nil { // unreadable tail (I/O error, corrupt gzip): the segment is not intact
+		rep.BadRecords++
+	}
 	rep.SeqContiguous = true
 	for i := 1; i < len(seqs); i++ {
 		if seqs[i] != seqs[i-1]+1 {
@@ -782,24 +877,27 @@ func VerifySegment(path string) SegmentReport {
 	return rep
 }
 
-// VerifyStore verifies every manifest segment and the per-source hash chain.
+// VerifyStore verifies every manifest segment (gz_path when the Python
+// post-run compression replaced the plain file) and the per-source hash chain.
 func VerifyStore(root string) (reports []SegmentReport, allOK bool, err error) {
-	raw, err := os.ReadFile(filepath.Join(root, "MANIFEST.json"))
+	man, err := ReadManifest(root)
 	if err != nil {
 		return nil, false, err
 	}
-	var man Manifest
-	if err := json.Unmarshal(raw, &man); err != nil {
+	entries, err := man.Entries()
+	if err != nil {
 		return nil, false, err
 	}
 	allOK = true
 	prev := map[string]string{}
-	for _, s := range man.Segments {
-		path := filepath.Join(root, filepath.FromSlash(s.Path))
+	for _, s := range entries {
+		path := s.DataPath(root)
 		r := VerifySegment(path)
 		recs, rerr := ReadSegment(path)
-		if rerr == nil && len(recs) > 0 {
-			if p, seen := prev[s.Source]; seen {
+		if p, seen := prev[s.Source]; seen {
+			// an unreadable or empty first record breaks the chain, as in Python (which raises)
+			r.ChainOK = false
+			if rerr == nil && len(recs) > 0 {
 				got, _ := recs[0]["prev_segment_sha256"].(string)
 				r.ChainOK = got == p
 			}
@@ -819,4 +917,3 @@ func (r SegmentReport) String() string {
 		map[bool]string{true: "ok", false: "FAIL"}[r.OK && r.ChainOK], filepath.Base(r.Path),
 		r.Records, r.BadRecords, r.TrailerMatches, r.ChainOK, r.SeqContiguous)
 }
-

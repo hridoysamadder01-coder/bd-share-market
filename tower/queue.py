@@ -39,7 +39,10 @@ Other rules
                        Σ qty at better-or-equal prices ahead of it (and Σ
                        orders when the source carries counts);
   liquidity_depletion  share of touch depth (bid_qty1 + ask_qty1) consumed over
-                       120 s: max(0, (D(t−120 s) − D(t)) / D(t−120 s));
+                       120 s: max(0, (D(t−120 s) − D(t)) / D(t−120 s)); a book
+                       that emptied after showing levels has D = 0 (both
+                       touches retreated), a book that never showed a level
+                       has no D at all (None);
   liquidity_replenishment  share of the most recent depletion episode (≤ 120 s
                        old) rebuilt: (touch qty − low) / (pre − low), clamped;
   liquidity_retreat    over 120 s both sides finalised pulls > 0, no traded
@@ -169,6 +172,7 @@ class QueueState:
         self.touch_depth: RollingSeries = RollingSeries(window_s=KEEP_S, min_keep=0)
         self.vacuum_since: Optional[datetime] = None
         self._low_since: Optional[datetime] = None
+        self._seen_levels = False                    # a displayed level has been observed at least once
 
     # ------------------------------------------------------------- volume budget
     def _new_volume(self, t: datetime, iv: Optional[float], key: Any) -> None:
@@ -360,6 +364,10 @@ class QueueState:
             depth_total += (q1 or 0.0)
             summary[sd] = {"kind": kind, "price": p1, "qty": q1, "orders": o1}
         if any_side:
+            self._seen_levels = True
+        if any_side or self._seen_levels:
+            # a book that emptied after showing levels has a touch depth of 0 (both touches retreated);
+            # a book that never showed a level (closed market) has no observable touch depth at all
             self.touch_depth.push(t, depth_total)
         self._update_vacuum(t)
         return summary

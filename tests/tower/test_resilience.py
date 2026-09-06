@@ -419,6 +419,71 @@ def test_machinery_session_record_is_a_bounded_snapshot():
     assert states[-1].to_dict()["session_state"]["resilience"]["samples_n"] == 19
 
 
+def test_machinery_full_wipe_of_one_side_is_the_strongest_depth_shock():
+    """Every bid level is taken out while the asks stay displayed: the bid depth is an observed 0 (not a
+    missing field), the depth rule fires with drop_share 1.0, share 0 at the shock, and the book rebuilding
+    recovers the curve.  Before the fix a wiped side read as None and the strongest shock there is was missed."""
+    eng = ResilienceEngine()
+    steps = list(_calm(300)) + [(305, [], ASKS), (310, [], ASKS), (315, BIDS, ASKS)]
+    states = _run(eng, steps)
+    assert [ms.resilience_state for ms in states[-4:]] == ["none", "shocked", "shocked", "recovered"]
+    c = eng.curves("SYN")[0]
+    assert c["side"] == "bid" and c["direction"] == -1 and c["triggers"][0]["kind"] == "depth"
+    assert abs(c["triggers"][0]["drop_share"] - 1.0) < 1e-9 and c["share_at_shock"] == 0.0
+    assert c["shock"]["spread_ticks"] is None and c["shock"]["mid"] is None      # one-sided at the shock: no spread
+    assert c["time_to_recovery_s"] == 10.0 and c["updates_to_recovery"] == 2
+    assert abs(states[-3].liquidity_response) < 1e-9 and abs(states[-1].liquidity_response - 1.0) < 1e-9
+    # a fully empty book is still unobservable: no zero is invented for either side
+    eng2 = ResilienceEngine()
+    states2 = _run(eng2, list(_calm(300)) + [(305, [], [])])
+    assert states2[-1].resilience_state == "none" and eng2.active_curve("SYN") is None
+    assert states2[-1].liquidity_response is None
+
+
+def test_machinery_shocked_side_vanishing_is_a_vacuum_not_partial():
+    """Bid shock to 20 %, then the whole bid side disappears while the asks stay: the share is 0 (observed),
+    the live state is 'vacuum' from 120 s on and the timeout close is 'vacuum' with final share 0 — not a
+    'partial' close read off a None share."""
+    eng = ResilienceEngine()
+    steps = list(_calm(300)) + [(305, _scale(BIDS, 0.2, only_first=True), ASKS)]
+    steps += [(s, [], ASKS) for s in range(310, 305 + int(TIMEOUT_S) + 10, 5)]
+    states = _run(eng, steps)
+    by_t = {ms.t: ms for ms in states}
+    assert by_t[_t(310)].resilience_state == "shocked"
+    assert by_t[_t(305 + VACUUM_S)].resilience_state == "vacuum"
+    assert by_t[_t(305 + TIMEOUT_S)].resilience_state == "vacuum"
+    c = eng.curves("SYN")[0]
+    assert c["state"] == "vacuum" and c["vacuum"] is True and c["partial"] is False
+    assert c["final_share"] == 0.0 and c["min_share"] == 0.0 and abs(c["share_at_shock"] - 0.2) < 1e-9
+    assert abs(by_t[_t(310)].liquidity_response + 0.2) < 1e-9
+
+
+def test_machinery_out_of_order_state_before_the_shock_is_not_a_curve_sample():
+    """A state stamped before the shock (out-of-order delivery) must not become a sample with a negative
+    ``s`` — nor 'recover' the curve with a negative time-to-recovery.  It leaves the curve untouched."""
+    eng = ResilienceEngine()
+    steps = list(_calm(300)) + [(305, BIDS[2:], ASKS), (290, BIDS, ASKS), (320, BIDS, ASKS)]
+    states = _run(eng, steps)
+    assert [ms.resilience_state for ms in states[-3:]] == ["shocked", "shocked", "recovered"]
+    c = eng.curves("SYN")[0]
+    assert [x["s"] for x in c["samples"]] == [0.0, 15.0] and c["time_to_recovery_s"] == 15.0
+    assert c["updates_to_recovery"] == 1 and all(s >= 0 for s, _ in c["curve"])
+    assert states[-2].liquidity_response is None                          # a negative age is not a response
+
+
+def test_machinery_long_unobservable_gap_does_not_make_a_stale_pre_a_burst():
+    """After 20 minutes without a book the book returns two levels lower and thinner.  The only earlier
+    observation is 20 min old — not inside any burst — so no sweep/depth shock is declared against it."""
+    eng = ResilienceEngine()
+    steps = list(_calm(300)) + [(s, [], []) for s in range(305, 1500, 5)] + [(1500, BIDS[2:], ASKS)]
+    states = _run(eng, steps)
+    assert states[-1].resilience_state == "none" and eng.active_curve("SYN") is None and eng.curves("SYN") == []
+    # ... whereas the same book 30 s after a calm one is a shock
+    eng2 = ResilienceEngine()
+    states2 = _run(eng2, list(_calm(300)) + [(330, BIDS[2:], ASKS)])
+    assert states2[-1].resilience_state == "shocked"
+
+
 # ============================================================================ real data
 def test_realdata_fixture_closed_market_books_produce_no_shock_and_no_silent_zero():
     """The committed capture is a closed market: static one-sided or empty pre-open books from two

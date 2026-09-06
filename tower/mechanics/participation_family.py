@@ -37,8 +37,8 @@ from ..state import MarketState
 from ..windows import clamp01, curvature, safe_div, sign, slope
 from .base import Mechanism, MechanismReading, StateHistory, register
 from .queue_family import Frame, _EPS, _cv, baselines, best_of, geo_mean, mid_of, missing_reading, ramp
-from .accumulation_family import (DirectedMechanism, classified_rows, flow_summary, reading, state_before,
-                                  tape_missing, tape_rows)
+from .accumulation_family import (DirectedMechanism, all_states, classified_rows, cum_delta, flow_summary, reading,
+                                  state_before, tape_missing, tape_rows)
 
 
 # ============================================================================ #8
@@ -49,13 +49,18 @@ class PeggedRepricing(DirectedMechanism):
     Rule (window 300 s): per side, consecutive states where the side's best
     price moved by ≥ 1 tick are *moves*.  The reference price is the last
     traded price (``ltp``) when the state carries one, else the opposite best.
-    A move is a *follow* when the reference also moved ≥ 1 tick in the same
-    direction and the new best lands ≤ 2 ticks behind the reference (a bid
-    below it, an ask above it).  consistency = follows / moves; similarity =
-    1 − min(1, cv(re-posted touch sizes) / 0.5) (0.5 with a single follow).
-    Per side score = ramp(follows, 1.5 → 5) × ramp(consistency, 0.5 → 0.9) ×
-    (0.3 + 0.7 × similarity); the stronger side wins.  direction = sign of the
-    pegged side's net price drift over the window when |drift| ≥ 2 ticks, else 0.
+    A move is a *follow* when the reference moved ≥ 1 tick in the same
+    direction over the same step or the step before it (a re-post may lag the
+    reference by one poll) and the new best lands ≤ 2 ticks behind the
+    reference (a bid below it, an ask above it).  With the opposite best as
+    the reference a step in which both sides moved by the same amount is a
+    parallel shift — each side would be the other's "leader" — and counts as a
+    move but not a follow (``parallel_moves``).  consistency = follows / moves;
+    similarity = 1 − min(1, cv(re-posted touch sizes) / 0.5) (0.5 with a single
+    follow).  Per side score = ramp(follows, 1.5 → 5) × ramp(consistency, 0.5 →
+    0.9) × (0.3 + 0.7 × similarity); the stronger side wins.  direction = sign
+    of the pegged side's net price drift over the window when |drift| ≥ 2
+    ticks, else 0.
     """
 
     name = "pegged_repricing"
@@ -74,19 +79,29 @@ class PeggedRepricing(DirectedMechanism):
             ref = s.ltp if s.ltp is not None else best_of(s, opp)[0]
             ser.append((s.t, float(p), float(q), (float(ref) if ref is not None else None),
                         ("ltp" if s.ltp is not None else "opposite_best")))
-        moves = follows = 0
+        moves = follows = parallel = 0
         sizes: List[float] = []
         ref_sources = set()
-        for a, b in zip(ser, ser[1:]):
+        for i in range(1, len(ser)):
+            a, b = ser[i - 1], ser[i]
             dp = (b[1] - a[1]) / tick
             if abs(dp) < 0.5:
                 continue
             moves += 1
             if a[3] is None or b[3] is None:
                 continue
-            dref = (b[3] - a[3]) / tick
+            d_now = (b[3] - a[3]) / tick
+            prev = ser[i - 2] if i >= 2 else None
+            d_prev = ((a[3] - prev[3]) / tick) if (prev is not None and prev[3] is not None) else 0.0
             behind = ((b[3] - b[1]) if side == "bid" else (b[1] - b[3])) / tick
-            if abs(dref) >= 0.5 and sign(dref) == sign(dp) and -0.5 <= behind <= self.behind_ticks + _EPS:
+            if not (-0.5 <= behind <= self.behind_ticks + _EPS):
+                continue
+            if b[4] == "opposite_best" and abs(d_now) >= 0.5 and abs(d_now - dp) < 0.5:
+                parallel += 1                    # both sides moved together: neither led the other
+                continue
+            led_now = abs(d_now) >= 0.5 and sign(d_now) == sign(dp)
+            led_prev = abs(d_prev) >= 0.5 and sign(d_prev) == sign(dp)
+            if led_now or led_prev:
                 follows += 1
                 sizes.append(b[2])
                 ref_sources.add(b[4])
@@ -100,8 +115,8 @@ class PeggedRepricing(DirectedMechanism):
             sim = None
         drift = ((ser[-1][1] - ser[0][1]) / tick) if len(ser) >= 2 else None
         s_side = ramp(follows, 1.5, 5.0) * ramp(consistency, 0.5, 0.9) * (0.3 + 0.7 * (sim if sim is not None else 0.0))
-        return {"points": len(ser), "moves": moves, "follows": follows, "consistency": consistency,
-                "size_similarity": sim, "sizes": sizes[:40], "drift_ticks": drift,
+        return {"points": len(ser), "moves": moves, "follows": follows, "parallel_moves": parallel,
+                "consistency": consistency, "size_similarity": sim, "sizes": sizes[:40], "drift_ticks": drift,
                 "reference": sorted(ref_sources), "score": s_side}
 
     def compute(self, ms: MarketState, hist: StateHistory) -> MechanismReading:
@@ -121,7 +136,8 @@ class PeggedRepricing(DirectedMechanism):
         direction = 0
         if score > 0 and rec["drift_ticks"] is not None and abs(rec["drift_ticks"]) >= 2.0:
             direction = sign(rec["drift_ticks"])
-        ev = {"side": best_side, "moves": rec["moves"], "follows": rec["follows"], "consistency": rec["consistency"],
+        ev = {"side": best_side, "moves": rec["moves"], "follows": rec["follows"],
+              "parallel_moves": rec["parallel_moves"], "consistency": rec["consistency"],
               "size_similarity": rec["size_similarity"], "drift_ticks": rec["drift_ticks"],
               "reference": rec["reference"], "sides": sides, "direction": direction, "window_s": self.window_s}
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
@@ -133,15 +149,19 @@ def bucket_volumes(fr: Frame, window_s: float, bucket_s: float) -> List[Dict[str
     """Symbol traded volume per ``bucket_s`` bucket counted back from now over ``window_s``,
     oldest first; only buckets whose start lies inside the observed history are formed.
     Volume = Δ cumulative day volume between the states at or before the bucket ends when
-    both carry it, else Σ tape-row volumes inside the bucket.  Each bucket also carries the
-    market 60-s volume from ``cross['market_volume_60s']`` of the state at its end (None when
-    the state does not carry it)."""
+    both carry it and the total never decreases across the states in between (a reset inside
+    the bucket would otherwise be a phantom volume — ``cum_delta``), else Σ tape-row volumes
+    inside the bucket.  Each bucket also carries the market 60-s volume from
+    ``cross['market_volume_60s']`` of the state at its end (None when the state does not carry
+    it)."""
     states = fr.states(window_s)
     if not states:
         return []
     t_first = states[0].t
     n = int(window_s // bucket_s)
     rows = tape_rows(fr, window_s)
+    every = all_states(fr)
+    index = {id(s): i for i, s in enumerate(every)}
     out = []
     for k in range(n - 1, -1, -1):
         end = fr.ms.t - timedelta(seconds=k * bucket_s)
@@ -152,13 +172,25 @@ def bucket_volumes(fr: Frame, window_s: float, bucket_s: float) -> List[Dict[str
         s_start = fr.at_or_before(start)
         vol: Optional[float] = None
         src = "none"
-        if s_end is not None and s_start is not None and s_end.trade_volume is not None \
-                and s_start.trade_volume is not None and s_end.trade_volume >= s_start.trade_volume:
-            vol, src = float(s_end.trade_volume - s_start.trade_volume), "cum_volume"
-        else:
+        delta = None
+        reset_inside = False
+        if s_end is None or s_end.t <= start:
+            src = "no_state"                       # no state landed inside the bucket: unobserved, not 0
+        elif s_start is not None and s_end.trade_volume is not None and s_start.trade_volume is not None:
+            seg = every[index[id(s_start)]:index[id(s_end)] + 1]
+            delta = cum_delta(seg)
+            cum = [s.trade_volume for s in seg if s.trade_volume is not None]
+            reset_inside = delta is None and any(b < a for a, b in zip(cum, cum[1:]))
+        if delta is not None:
+            vol, src = delta, "cum_volume"
+        elif src != "no_state":
             rs = [r for r in rows if start < r["t"] <= end and r["volume"] is not None]
-            if rs or (s_end is not None and s_end.interval_volume is not None):
+            if rs:
                 vol, src = float(sum(r["volume"] for r in rs)), "interval_volume"
+            elif reset_inside:
+                vol, src = None, "reset"           # the reset destroyed the bucket's only interval: unobservable
+            elif s_end.interval_volume is not None:
+                vol, src = 0.0, "interval_volume"
         mkt = None
         if s_end is not None and isinstance(s_end.cross, dict):
             mkt = s_end.cross.get("market_volume_60s")

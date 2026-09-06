@@ -14,16 +14,21 @@ Two kinds of tape source exist for DSE symbols:
 
   The first row of a symbol's day has no predecessor: its "interval" is the
   cumulative value itself (``first_row`` flag; it carries no rate information,
-  no direction, and is excluded from the rolling windows).  A negative Δ is a
-  source-side reset / correction: the row is **kept** with
-  ``monotone_break=True`` and excluded from the windows (never repaired).  A
-  row whose totals did not change advances the tape clock (the source affirms
-  "no trade through this stamp") but produces no interval — the next interval
-  starts at that stamp.  A quantity the source does not carry (trade count,
-  volume, value) is None on the row and makes every window built on it None
-  (``unsized_rows`` counts them); it is never a silent zero.  When the value is
-  not carried the row's last price stands in for the interval VWAP in the
-  direction rule, at low confidence.
+  no direction, and is excluded from the rolling windows).  The same holds for
+  a row none of whose carried totals has a comparable predecessor (the earlier
+  rows carried other quantities).  A negative Δ is a source-side reset /
+  correction: the row is **kept** with ``monotone_break=True`` and excluded
+  from the windows (never repaired).  A row whose (carried) totals did not
+  change advances the tape clock (the source affirms "no trade through this
+  stamp") but produces no interval — the next interval starts at that stamp;
+  a row carrying no total at all only advances the clock (``empty_rows``).  A
+  quantity the source does not carry (trade count, volume, value) is None on
+  the row and makes every window built on it None (``unsized_rows`` counts
+  them); it is never a silent zero, and a quantity the source stopped carrying
+  has no predecessor for the next row (never a two-row aggregate).  When the
+  value is not carried the row's last price stands in for the interval VWAP in
+  the direction rule, at low confidence.  A print re-delivered with an already
+  seen ``trade_id`` is counted (``duplicate_prints``) and never applied twice.
 
 Feeds are kept separately and the state is filled from the best available one
 (prints > exchange-stamped cumulative > snapshot day totals, ties broken by
@@ -35,8 +40,11 @@ Trade direction (``trade_flow_direction`` ∈ [−1, 1]):
   * otherwise the quote rule on the print price / interval VWAP against the
     book at the **last update before** the print / before the interval started
     (the quotes seen by ``fill_state`` / the ``book`` argument are tracked
-    against time):  +1 at or above the ask, −1 at or below the bid, otherwise
-    the position inside the spread scaled to (−1, 1);
+    against time; a book that emptied ends its quote, so a later print has no
+    pre-trade quote; with no quote before the interval started the one seen
+    inside it is used at low confidence):  +1 at or above the ask, −1 at or
+    below the bid, otherwise the position inside the spread scaled to (−1, 1);
+    a crossed book (bid > ask) decides nothing → None;
   * a **locked** book (bid == ask, a price-limit queue) makes the side exact by
     construction: prints execute against the resting queue, so the direction
     is −1 when the bid queue is the larger displayed side (sellers hit it) and
@@ -131,6 +139,8 @@ def classify_direction(price: Optional[float], bid: Optional[float], ask: Option
         return None, "no traded price", "none"
     if bid is None and ask is None:
         return None, "no pre-trade quote", "none"
+    if bid is not None and ask is not None and bid > ask + _EPS:
+        return None, "crossed book: side undetermined", "none"
     if bid is not None and ask is not None and abs(bid - ask) <= _EPS:
         bq, aq = bid_qty or 0.0, ask_qty or 0.0
         if bq > aq:
@@ -160,7 +170,11 @@ class _QuoteTrack:
 
     def push(self, t: datetime, q: Tuple[Optional[float], Optional[float], Optional[float], Optional[float]]) -> None:
         if q[0] is None and q[1] is None:
-            return
+            # an empty book is recorded only as the END of a quote: from here on a print has no
+            # pre-trade quote (the last displayed one is gone, it must not classify later prints)
+            if not self.buf or (self.buf[-1][1][0] is None and self.buf[-1][1][1] is None):
+                return
+            q = (None, None, None, None)
         if self.buf and self.buf[-1][0] == t and self.buf[-1][1] == q:
             return
         if self.buf and t < self.buf[-1][0]:
@@ -214,6 +228,10 @@ class _Feed:
     repeat_rows: int = 0
     monotone_breaks: int = 0
     unsized_rows: int = 0                           # rows whose trades or quantity the source did not carry
+    empty_rows: int = 0                             # rows carrying no total at all (a stamp only)
+    duplicate_prints: int = 0                       # prints re-delivered with an already seen trade id
+    seen_ids: Deque[str] = field(default_factory=lambda: deque(maxlen=20000))
+    seen_set: set = field(default_factory=set)
     intensity: Optional[float] = None
     intensity_series: RollingSeries = field(default_factory=lambda: RollingSeries(window_s=KEEP_S, min_keep=0))
     abs_flow_series: RollingSeries = field(default_factory=lambda: RollingSeries(window_s=BASELINE_W_S, min_keep=0))
@@ -311,6 +329,22 @@ class _Feed:
     def last_row(self) -> Optional[_Row]:
         return self.rows[-1] if self.rows else None
 
+    def remember_id(self, t_row: datetime, trade_id: Optional[str]) -> bool:
+        """Record a print id; True when it was already seen (a re-delivered print).
+
+        Ids restart daily on most feeds, so the key is (tape-clock date, id): a day-2 print
+        reusing a day-1 id is a new print, never swallowed."""
+        if trade_id is None:
+            return False
+        key = f"{t_row.date().isoformat()}|{trade_id}"
+        if key in self.seen_set:
+            return True
+        if len(self.seen_ids) == self.seen_ids.maxlen:
+            self.seen_set.discard(self.seen_ids[0])
+        self.seen_ids.append(key)
+        self.seen_set.add(key)
+        return False
+
 
 # --------------------------------------------------------------------------- TapeState
 class TapeState:
@@ -351,7 +385,8 @@ class TapeState:
 
     def _quote_for(self, t_start: Optional[datetime], t_end: datetime, book: Any):
         """Quote at the last update before the interval start (else before its end, else the given book).
-        Returns (quote tuple or None, touch_moved inside the interval)."""
+        Returns (quote tuple or None, touch_moved inside the interval, quote taken from inside the
+        interval / the given book rather than before its start)."""
         q_start = self._quotes.at_or_before(t_start) if t_start is not None else None
         q_end = self._quotes.at_or_before(t_end)
         moved = bool(q_start is not None and q_end is not None and q_start[:2] != q_end[:2])
@@ -359,7 +394,8 @@ class TapeState:
         if q is None and book is not None:
             qb = _touch_of(book)
             q = qb if (qb[0] is not None or qb[1] is not None) else None
-        return q, moved
+        inside = bool(t_start is not None and q_start is None and q is not None)
+        return q, moved, inside
 
     # ------------------------------------------------------------------ prints
     def on_trade(self, t: datetime, price: Optional[float], qty: Optional[float], aggressor: Optional[str] = None,
@@ -370,7 +406,12 @@ class TapeState:
             self.observe_quote(t, book)
         feed = self._feed("prints", source or "prints")
         t_row = t_exch or t
-        q, _ = self._quote_for(None, t_row, book)
+        if feed.remember_id(t_row, trade_id):
+            # the same print delivered again (recovery / re-poll): counted, never applied twice
+            feed.duplicate_prints += 1
+            feed.last_recv = t
+            return feed.last_print
+        q, _, _ = self._quote_for(None, t_row, book)
         bid, ask, bq, aq = q if q is not None else (None, None, None, None)
         d, rule, conf = classify_direction(price, bid, ask, bq, aq, aggressor)
         vol = float(qty) if qty is not None else None          # size not carried → None, never 0
@@ -408,25 +449,29 @@ class TapeState:
         ct = None if cum_trades is None else float(cum_trades)
         cv = None if cum_volume is None else float(cum_volume)
         cval = None if cum_value is None else float(cum_value) * self.value_scale
-        first = feed.n_rows == 0 and feed.cum_trades is None and feed.cum_volume is None
+        feed.last_recv = t_recv
+        if ct is None and cv is None and cval is None:
+            # a stamp without any total: nothing to difference, the clock alone advances
+            feed.empty_rows += 1
+            feed.advance(t_exch)
+            feed._update_intensity()
+            return None
+        d_n = None if (ct is None or feed.cum_trades is None) else ct - feed.cum_trades
+        d_v = None if (cv is None or feed.cum_volume is None) else cv - feed.cum_volume
+        d_val = None if (cval is None or feed.cum_value is None) else cval - feed.cum_value
+        # first row of the day — or a row none of whose carried totals has a comparable predecessor
+        # (the previous rows carried other quantities): the cumulative values themselves, flagged
+        first = feed.n_rows == 0 or (d_n is None and d_v is None and d_val is None)
         if first:
             d_n, d_v, d_val = ct, cv, cval
-        else:
-            d_n = None if (ct is None or feed.cum_trades is None) else ct - feed.cum_trades
-            d_v = None if (cv is None or feed.cum_volume is None) else cv - feed.cum_volume
-            d_val = None if (cval is None or feed.cum_value is None) else cval - feed.cum_value
         # the interval starts at the tape clock — the last stamp of this feed, a repeat row included
         # (a repeat affirms "no trade through this stamp", so it bounds the interval)
         t_prev = feed.now
-        # remember the totals (also when nothing changed) and the receipt time
-        if ct is not None:
-            feed.cum_trades = ct
-        if cv is not None:
-            feed.cum_volume = cv
-        if cval is not None:
-            feed.cum_value = cval
-        feed.last_recv = t_recv
-        if not first and (d_n or 0.0) == 0.0 and (d_v or 0.0) == 0.0 and (d_val or 0.0) == 0.0:
+        # remember the totals as carried (a quantity the source stopped carrying has no predecessor
+        # for the next row: it becomes None, never a two-row aggregate against an older total)
+        feed.cum_trades, feed.cum_volume, feed.cum_value = ct, cv, cval
+        known = [x for x in (d_n, d_v, d_val) if x is not None]
+        if not first and known and all(x == 0.0 for x in known):
             feed.repeat_rows += 1
             feed.advance(t_exch)
             feed._update_intensity()
@@ -434,7 +479,7 @@ class TapeState:
         mono = any(x is not None and x < 0 for x in (d_n, d_v, d_val))
         vwap = (d_val / d_v) if (d_val is not None and d_v is not None and d_v > 0) else None
         traded = d_v is not None and d_v > 0
-        q, moved = self._quote_for(t_prev if not first else None, t_exch, book)
+        q, moved, inside = self._quote_for(t_prev if not first else None, t_exch, book)
         bid, ask, bq, aq = q if q is not None else (None, None, None, None)
         d, rule, conf = (None, "no traded volume in interval", "none")
         if first:
@@ -444,13 +489,19 @@ class TapeState:
             d, rule, conf = None, "monotone break: interval not classified", "none"
         elif vwap is not None:
             d, rule, conf = classify_direction(vwap, bid, ask, bq, aq, None)
-            if moved and conf == "medium":
+            if inside and d is not None:
+                # no quote before the interval started: the one seen inside it (after some of its
+                # trades) is weaker evidence
+                conf, rule = "low", rule + " (quote from inside interval)"
+            elif moved and conf == "medium":
                 conf, rule = "low", rule + " (touch moved inside interval)"
         elif traded and price is not None:
             # value not carried: the row's last price stands in for the VWAP (weaker evidence)
             d, rule, conf = classify_direction(float(price), bid, ask, bq, aq, None)
             if d is not None:
                 conf, rule = "low", rule + " (last price, value not carried)"
+                if inside:
+                    rule += " (quote from inside interval)"
         elif traded:
             d, rule, conf = None, "no traded price / value in interval", "none"
         elif d_v is None:
@@ -578,7 +629,8 @@ class TapeState:
                                if (feed.last_recv is not None and feed.now is not None) else None),
             "totals_are_day_totals": feed.kind != "prints",     # prints count from the first print seen
             "rows": feed.n_rows, "repeat_rows": feed.repeat_rows, "monotone_breaks": feed.monotone_breaks,
-            "unsized_rows": feed.unsized_rows,
+            "unsized_rows": feed.unsized_rows, "empty_rows": feed.empty_rows,
+            "duplicate_prints": feed.duplicate_prints,
             "last_first_row": bool(row.first_row) if row else None,
             "last_monotone_break": bool(row.monotone_break) if row else None,
             "last_dt_s": row.dt_s if row else None,

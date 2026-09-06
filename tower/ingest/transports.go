@@ -78,9 +78,9 @@ type SourceConfig struct {
 	ReadTimeoutMs int      `json:"read_timeout_ms"`
 
 	// file_tail
-	Path      string `json:"path"`
-	PollMs    int    `json:"poll_ms"`
-	FromStart bool   `json:"from_start"`
+	Path    string `json:"path"`
+	PollMs  int    `json:"poll_ms"`
+	FromEnd bool   `json:"from_end"` // first run only (no persisted offset): start at the current end of the file (tail -f); the skipped prefix is recorded as GAP{from_end}
 }
 
 // Transport is a running source.
@@ -435,7 +435,7 @@ func newWebsocket(cfg SourceConfig, w *SourceWriter) (*wsTransport, error) {
 }
 
 func (t *wsTransport) Name() string { return t.cfg.Name }
-func (t *wsTransport) Status() Obj { return t.c.status(t.w) }
+func (t *wsTransport) Status() Obj  { return t.c.status(t.w) }
 
 func (t *wsTransport) Run(ctx context.Context) {
 	var bo backoff
@@ -555,7 +555,7 @@ func newTCP(cfg SourceConfig, w *SourceWriter) (*tcpTransport, error) {
 }
 
 func (t *tcpTransport) Name() string { return t.cfg.Name }
-func (t *tcpTransport) Status() Obj { return t.c.status(t.w) }
+func (t *tcpTransport) Status() Obj  { return t.c.status(t.w) }
 
 func (t *tcpTransport) Run(ctx context.Context) {
 	var bo backoff
@@ -622,10 +622,12 @@ func (t *tcpTransport) serve(ctx context.Context, conn net.Conn, connID int, bo 
 				nil, "transport", env, nil))
 		}
 		if err != nil {
-			if errors.Is(err, io.ErrUnexpectedEOF) && len(fr.Partial()) > 0 {
+			// Whatever ended the connection (clean cut, reset, read deadline,
+			// shutdown), bytes read but not framed are never dropped silently.
+			if partial := fr.Partial(); len(partial) > 0 {
 				env := Obj{{"type", "tcp"}, {"addr", t.cfg.Addr}, {"framing", t.cfg.Framing}, {"conn_id", connID}}
-				t.w.Put(GapRecord("partial_frame", "connection ended inside a frame; bytes kept in body",
-					nil, "transport", env, fr.Partial()))
+				t.w.Put(GapRecord("partial_frame", fmt.Sprintf("connection ended inside a frame (%s); %d byte(s) kept in body",
+					err.Error(), len(partial)), nil, "transport", env, append([]byte(nil), partial...)))
 			}
 			return err
 		}
@@ -682,7 +684,7 @@ func newFileTail(cfg SourceConfig, w *SourceWriter, root string) (*fileTail, err
 }
 
 func (t *fileTail) Name() string { return t.cfg.Name }
-func (t *fileTail) Status() Obj { return t.c.status(t.w) }
+func (t *fileTail) Status() Obj  { return t.c.status(t.w) }
 
 func inodeOf(fi os.FileInfo) uint64 {
 	if st, ok := fi.Sys().(*syscall.Stat_t); ok {
@@ -747,12 +749,11 @@ func (r *tailReader) Read(p []byte) (int, error) {
 				return 0, errTruncated
 			}
 			if fi, err := os.Stat(r.path); err == nil && inodeOf(fi) != r.inode && inodeOf(fi) != 0 {
-				r.f.Close()
-				r.f = nil
-				r.pos = 0
-				if err := r.open(0); err == nil {
-					return 0, errRotated
-				}
+				// rotated: report it now even if the new file cannot be opened
+				// yet (Read keeps retrying open(0)); the caller resets framing
+				// so old-file bytes are never merged into a new-file frame.
+				r.reopen(0)
+				return 0, errRotated
 			}
 		} else if err := r.open(r.pos); err != nil && r.f == nil {
 			// file absent: keep waiting
@@ -787,18 +788,39 @@ func (r *tailReader) open(offset int64) error {
 	return nil
 }
 
+// reopen closes the current file and opens the path again at offset; when
+// the open fails the reader is left closed with pos = offset so Read retries
+// from there on its next poll.
+func (r *tailReader) reopen(offset int64) {
+	if r.f != nil {
+		r.f.Close()
+		r.f, r.inode = nil, 0
+	}
+	r.pos = offset
+	_ = r.open(offset)
+}
+
+// startOffset decides where a run begins and why; a non-empty reason is
+// recorded as a GAP so a skipped or restarted prefix is never silent.
+func (t *fileTail) startOffset(st tailState) (start int64, reason, detail string) {
+	fi, statErr := os.Stat(t.cfg.Path)
+	resuming := st.Path == t.cfg.Path
+	switch {
+	case resuming && statErr == nil && st.Inode != 0 && inodeOf(fi) != st.Inode:
+		return 0, "rotate", fmt.Sprintf("file replaced since the last run (inode %d -> %d); restarting at offset 0 (persisted offset %d)",
+			st.Inode, inodeOf(fi), st.Offset)
+	case resuming && statErr == nil && fi.Size() < st.Offset:
+		return 0, "truncate", fmt.Sprintf("file shorter (%d) than the persisted offset (%d); restarting at offset 0", fi.Size(), st.Offset)
+	case resuming:
+		return st.Offset, "", ""
+	case t.cfg.FromEnd && statErr == nil && fi.Size() > 0:
+		return fi.Size(), "from_end", fmt.Sprintf("from_end: %d byte(s) present before the first run are not captured", fi.Size())
+	}
+	return 0, "", ""
+}
+
 func (t *fileTail) Run(ctx context.Context) {
-	st := t.loadState()
-	start := st.Offset
-	if st.Path != t.cfg.Path {
-		start = 0
-	}
-	if t.cfg.FromStart && st.Path == "" {
-		start = 0
-	}
-	if fi, err := os.Stat(t.cfg.Path); err == nil && st.Path == t.cfg.Path && st.Inode != 0 && inodeOf(fi) != st.Inode {
-		start = 0 // the file was replaced since the last run
-	}
+	start, reason, detail := t.startOffset(t.loadState())
 	rd := &tailReader{ctx: ctx, path: t.cfg.Path, poll: time.Duration(t.cfg.PollMs) * time.Millisecond}
 	if err := rd.open(start); err != nil {
 		rd.pos = start
@@ -818,6 +840,12 @@ func (t *fileTail) Run(ctx context.Context) {
 		_ = t.saveState(tailState{Path: t.cfg.Path, Offset: frameStart, Inode: rd.inode})
 	}
 	defer persist()
+	if reason != "" {
+		env := envBase()
+		env = append(env, KV{"offset", frameStart})
+		t.w.Put(GapRecord(reason, detail, nil, "transport", env, nil))
+	}
+	persist()
 	t.c.setState("tailing")
 	for {
 		data, err := fr.Next()
@@ -845,14 +873,21 @@ func (t *fileTail) Run(ctx context.Context) {
 			case ctx.Err() != nil:
 				return
 			default:
+				// an I/O error: record it, then re-open at the consumed offset
+				// with fresh framing — the unframed tail is re-read from the
+				// file, so nothing is lost or duplicated and a dead descriptor
+				// cannot make the loop spin on the same error.
 				t.c.err.Add(1)
 				t.c.setState("error")
 				env := envBase()
 				env = append(env, KV{"offset", frameStart})
-				t.w.Put(GapRecord("exception", err.Error(), nil, "transport", env, nil))
+				t.w.Put(GapRecord("exception", fmt.Sprintf("%s; re-reading from offset %d", err.Error(), frameStart),
+					nil, "transport", env, nil))
 				if !sleepCtx(ctx, time.Duration(t.cfg.PollMs)*time.Millisecond) {
 					return
 				}
+				rd.reopen(frameStart)
+				br, fr = newFramer()
 				continue
 			}
 		}

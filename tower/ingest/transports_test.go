@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -161,6 +160,7 @@ func TestTCPFIXFramingWithDisconnectAndReconnect(t *testing.T) {
 	defer l.Close()
 	var conns atomic.Int64
 	msgs := [][]byte{fixMsg(7, "55=ABC\x01"), fixMsg(8, "55=DEF\x01268=1\x01"), fixMsg(9, "55=GHI\x01")}
+	cutMsg := fixMsg(10, "55=CUT\x01")[:12] // "8=FIX.4.4<SOH>9=" + 2 digits: the connection dies inside this frame
 	go func() {
 		for {
 			c, err := l.Accept()
@@ -176,11 +176,14 @@ func TestTCPFIXFramingWithDisconnectAndReconnect(t *testing.T) {
 					return
 				}
 				if k == 1 {
-					// first connection: three messages, one split mid-frame across writes, then hang up
+					// first connection: three messages, one split mid-frame across
+					// writes, then the head of a fourth message and a hang-up
 					stream := bytes.Join(msgs, nil)
 					_, _ = c.Write(stream[:len(stream)/2])
 					time.Sleep(30 * time.Millisecond)
 					_, _ = c.Write(stream[len(stream)/2:])
+					time.Sleep(30 * time.Millisecond)
+					_, _ = c.Write(cutMsg)
 					time.Sleep(50 * time.Millisecond)
 					return
 				}
@@ -211,8 +214,17 @@ func TestTCPFIXFramingWithDisconnectAndReconnect(t *testing.T) {
 		}
 	}
 	gaps := ofKind(recs, "GAP")
-	if len(gaps) == 0 || gaps[0]["reason"] != "disconnect" {
-		t.Fatalf("no disconnect gap: %v", gaps)
+	// the cut fourth message is a partial_frame GAP carrying its bytes, written before the disconnect GAP
+	if len(gaps) < 2 || gaps[0]["reason"] != "partial_frame" || gaps[1]["reason"] != "disconnect" {
+		t.Fatalf("want partial_frame then disconnect: %v", gaps)
+	}
+	if pb, _ := decodeBody(gaps[0]); !bytes.Equal(pb, cutMsg) || gaps[0]["transport"].(map[string]any)["conn_id"].(float64) != 1 {
+		t.Fatalf("partial bytes %q", pb)
+	}
+	for _, r := range data { // the cut bytes never leak into a DATA record
+		if b, _ := decodeBody(r); bytes.Contains(b, []byte("55=CUT")) || bytes.Equal(b, cutMsg) {
+			t.Fatalf("partial frame emitted as DATA: %q", b)
+		}
 	}
 	// the record after the disconnect GAP comes from connection 2
 	found := false
@@ -230,13 +242,14 @@ func TestTCPLen16Framing(t *testing.T) {
 	l, _ := net.Listen("tcp", "127.0.0.1:0")
 	defer l.Close()
 	frames := [][]byte{len16([]byte("A\x00\xff")), len16(bytes.Repeat([]byte("Q"), 1000)), len16(nil), len16([]byte("end"))}
+	tail := len16(bytes.Repeat([]byte("T"), 100))[:40] // prefix says 100 bytes; only 38 arrive before shutdown
 	var served atomic.Bool
 	go func() {
 		c, err := l.Accept()
 		if err != nil {
 			return
 		}
-		stream := bytes.Join(frames, nil)
+		stream := append(bytes.Join(frames, nil), tail...)
 		for i := 0; i < len(stream); i += 7 { // 7-byte writes: prefixes and payloads straddle reads
 			end := i + 7
 			if end > len(stream) {
@@ -271,8 +284,12 @@ func TestTCPLen16Framing(t *testing.T) {
 	if data[0]["body_encoding"] != "b64" || data[3]["body_encoding"] != "utf8" {
 		t.Fatalf("body encodings: %v %v", data[0]["body_encoding"], data[3]["body_encoding"])
 	}
-	if len(ofKind(recs, "GAP")) != 0 {
-		t.Fatalf("unexpected gaps %v", ofKind(recs, "GAP"))
+	gaps := ofKind(recs, "GAP")
+	if len(gaps) != 1 || gaps[0]["reason"] != "partial_frame" {
+		t.Fatalf("shutdown inside a frame must leave exactly one partial_frame GAP: %v", gaps)
+	}
+	if b, _ := decodeBody(gaps[0]); !bytes.Equal(b, tail) {
+		t.Fatalf("partial bytes %q", b)
 	}
 }
 
@@ -463,6 +480,9 @@ func TestDaemonRunWithHeartbeatAndRunnerMeta(t *testing.T) {
 	if len(meta) != 3 || meta[1]["started"] != true || meta[2]["finished"] != true { // segment META + started + finished
 		t.Fatalf("runner meta %d", len(meta))
 	}
+	if meta[2]["stopped_by"] != "deadline" || meta[2]["stopped_by_signal"] != false {
+		t.Fatalf("a context deadline is not a signal: %v", meta[2])
+	}
 	if _, err := os.Stat(filepath.Join(out, "status.json")); err != nil {
 		t.Fatal("status.json")
 	}
@@ -470,5 +490,93 @@ func TestDaemonRunWithHeartbeatAndRunnerMeta(t *testing.T) {
 	if !ok || len(reports) != 3 {
 		t.Fatalf("verify %v", reports)
 	}
-	fmt.Println("daemon segments:", len(reports))
+
+	// a signal-driven stop is reported as such
+	out2 := t.TempDir()
+	cfg.Out = out2
+	d2, err := NewDaemon(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		d2.SetStopCause("signal:terminated")
+		cancel2()
+	}()
+	if err := d2.Run(ctx2); err != nil {
+		t.Fatal(err)
+	}
+	meta = ofKind(readAll(t, out2, "runner"), "META")
+	if last := meta[len(meta)-1]; last["stopped_by"] != "signal:terminated" || last["stopped_by_signal"] != true {
+		t.Fatalf("signal stop: %v", last)
+	}
+}
+
+func TestFileTailFromEndAndRotateBetweenRuns(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "feed.log")
+	_ = os.WriteFile(path, []byte("old1\nold2\n"), 0o644)
+	root := t.TempDir()
+	st, _ := OpenStore(root, "cap", "test", 64)
+	cfg := SourceConfig{Name: "tail", Type: "file_tail", Path: path, Framing: "line", PollMs: 20, FromEnd: true}
+	tr, _ := NewTransport(cfg, st)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { tr.Run(ctx); close(done) }()
+	w := st.Writer("tail")
+	wait := func(w *SourceWriter, n int64) {
+		deadline := time.Now().Add(3 * time.Second)
+		for w.Enqueued.Load() < n && time.Now().Before(deadline) {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	wait(w, 1) // the from_end GAP
+	f, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	_, _ = f.WriteString("new1\n")
+	f.Close()
+	wait(w, 2)
+	cancel()
+	<-done
+	_ = st.Close()
+	recs := readAll(t, root, "tail")
+	gaps, data := ofKind(recs, "GAP"), ofKind(recs, "DATA")
+	if len(gaps) != 1 || gaps[0]["reason"] != "from_end" || gaps[0]["transport"].(map[string]any)["offset"].(float64) != 10 {
+		t.Fatalf("from_end must be recorded as a GAP at the skipped offset: %v", gaps)
+	}
+	if len(data) != 1 {
+		t.Fatalf("from_end must skip the existing prefix: %d data records", len(data))
+	}
+	if b, _ := decodeBody(data[0]); string(b) != "new1\n" || data[0]["transport"].(map[string]any)["offset"].(float64) != 10 {
+		t.Fatalf("%q %v", b, data[0]["transport"])
+	}
+
+	// the file is replaced (new inode) between runs: the persisted offset is
+	// not applied to the new file; the restart is a GAP{rotate}, not silence
+	_ = os.Remove(path)
+	_ = os.WriteFile(path, []byte("fresh\n"), 0o644)
+	st2, _ := OpenStore(root, "cap", "test", 64)
+	tr2, _ := NewTransport(cfg, st2)
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	done2 := make(chan struct{})
+	go func() { tr2.Run(ctx2); close(done2) }()
+	wait(st2.Writer("tail"), 2)
+	cancel2()
+	<-done2
+	_ = st2.Close()
+	var after []map[string]any
+	for _, r := range readAll(t, root, "tail") {
+		if r["epoch"] == st2.Epoch && (r["kind"] == "DATA" || r["kind"] == "GAP") {
+			after = append(after, r)
+		}
+	}
+	if len(after) != 2 || after[0]["reason"] != "rotate" {
+		t.Fatalf("rotate between runs: %v", after)
+	}
+	if b, _ := decodeBody(after[1]); string(b) != "fresh\n" || after[1]["transport"].(map[string]any)["offset"].(float64) != 0 {
+		t.Fatalf("post-rotate: %q", b)
+	}
+	if _, ok, _ := VerifyStore(root); !ok {
+		t.Fatal("verify")
+	}
 }

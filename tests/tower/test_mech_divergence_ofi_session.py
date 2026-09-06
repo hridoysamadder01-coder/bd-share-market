@@ -54,7 +54,7 @@ def S(s: float, bids=BIDS, asks=ASKS, *, base: datetime = T0, tv=None, iv=None, 
       intensity=None, vel=None, bp=None, tp=None, cp=None, prev_rev=None, ofi_w=None, ofi=None, sfw=None,
       vol=None, impact=None, asym=None, speed=None, sb=None, sa=None, curve=None, shock=None, auction=None,
       phase: str = "CONTINUOUS", clock: Optional[str] = None, tick: Optional[float] = TICK, mig=None,
-      sasym=None, seq: int = 0) -> MarketState:
+      sasym=None, seq: int = 0, tape_vol=None) -> MarketState:
     """A MarketState carrying what the book / tape / pressure / resilience / auction engines write."""
     ms = MarketState(symbol="SYN", t=_t(s, base), seq=seq, tick_size=tick, session_phase=phase)
     ms.bids = [(float(p), float(q)) for p, q in bids]
@@ -87,7 +87,9 @@ def S(s: float, bids=BIDS, asks=ASKS, *, base: datetime = T0, tv=None, iv=None, 
     if auction is not None:
         ms.auction = auction
     if clock is not None:
-        ms.session_state["tape"] = {"tape_clock": clock}
+        ms.session_state.setdefault("tape", {})["tape_clock"] = clock
+    if tape_vol is not None:                                          # the tape's own 300-s window volume
+        ms.session_state.setdefault("tape", {})["volume_300s"] = tape_vol
     if mig is not None:
         ms.depth_migration_bid, ms.depth_migration_ask = mig
     ms.side_asymmetry = sasym
@@ -203,6 +205,17 @@ def test_machinery_churn_anomaly_null_and_evidence_changes():
     assert short.score == 0.0 and short.evidence["missing"]
 
 
+def test_machinery_churn_anomaly_silent_baseline_is_not_a_silent_zero():
+    """No trades at all for the whole baseline (intensity 0 everywhere) then a burst: the ratio to a
+    zero mean is unbounded, so the intensity is compared against a 1 trade/min floor."""
+    st = [S(5 * i, tv=1000.0, intensity=0.0) for i in range(40)] + [S(200 + 5 * j, tv=1000.0, intensity=30.0) for j in range(12)]
+    r = run(df.ChurnAnomaly(), st)[-1]
+    assert r.evidence["burst_basis"] == "ratio_silent_baseline" and r.evidence["intensity_z"] is None
+    assert r.evidence["intensity_ratio"] == pytest.approx(30.0) and r.score >= 0.6
+    faint = run(df.ChurnAnomaly(), st[:40] + [S(200 + 5 * j, tv=1000.0, intensity=1.0) for j in range(12)])[-1]
+    assert faint.evidence["burst_basis"] == "ratio_silent_baseline" and faint.score == 0.0
+
+
 # ============================================================================= #22 book_trade_divergence
 def _btd_scenario(bp: float, tp: float, n: int = 25, conflict_last: Optional[int] = None) -> List[MarketState]:
     out = []
@@ -227,13 +240,40 @@ def test_machinery_book_trade_divergence_null_persistence_and_fallback():
     brief = run(df.BookTradeDivergence(), _btd_scenario(0.5, -0.5, conflict_last=5))[-1]
     full = run(df.BookTradeDivergence(), _btd_scenario(0.5, -0.5))[-1]
     assert brief.evidence["conflict_share"] == pytest.approx(0.2) and brief.score < full.score
-    # no pressure layer: book pressure from the displayed book, trade pressure from the flow window
-    st = [S(5 * i, scale(BIDS, 3.0), ASKS, tv=1000.0, sfw=-800.0, vol=1000.0) for i in range(25)]
+    # no pressure layer: book pressure from the displayed book, trade pressure = signed flow over the
+    # tape's volume of the same 300-s window
+    st = [S(5 * i, scale(BIDS, 3.0), ASKS, tv=1000.0, sfw=-800.0, tape_vol=1000.0) for i in range(25)]
     r = run(df.BookTradeDivergence(), st)[-1]
     assert r.evidence["book_pressure"] > 0.3 and r.evidence["trade_pressure"] == pytest.approx(-0.8)
     assert r.score >= 0.6 and "missing" not in r.evidence
     miss = run(df.BookTradeDivergence(), [S(5 * i, bp=0.5) for i in range(5)])[-1]
     assert miss.score == 0.0 and miss.evidence["missing"] == ["trade_pressure"]
+
+
+def test_machinery_trade_pressure_fallback_needs_the_window_volume():
+    """A signed flow without the tape's 300-s volume is not a pressure: None, never ±1 (the 120-s
+    response volume is a different window and is not used as the denominator)."""
+    assert df.trade_pressure_of(S(0, sfw=-800.0)) is None
+    assert df.trade_pressure_of(S(0, sfw=-800.0, vol=1000.0)) is None
+    assert df.trade_pressure_of(S(0, sfw=-800.0, tape_vol=2000.0)) == pytest.approx(-0.4)
+    assert df.trade_pressure_of(S(0, sfw=-800.0, tape_vol=500.0)) == -1.0          # clipped, never beyond ±1
+    assert df.trade_pressure_of(S(0, sfw=-800.0, tape_vol=1000.0, tp=0.3)) == pytest.approx(0.3)
+    miss = run(df.BookTradeDivergence(), [S(5 * i, scale(BIDS, 3.0), ASKS, sfw=-800.0, vol=1000.0) for i in range(5)])[-1]
+    assert miss.score == 0.0 and miss.evidence["missing"] == ["trade_pressure"]
+
+
+def test_machinery_book_trade_divergence_persistence_unknown_with_few_points():
+    """One or two states carrying both pressures cannot show persistence: the share is None (not
+    1.0 from the current point alone), the factor stays neutral and the reading is unverified."""
+    st = [S(5 * i, tv=1000.0, bp=0.5) for i in range(24)] + [S(120, tv=1000.0, bp=0.5, tp=-0.5)]
+    r = run(df.BookTradeDivergence(), st)[-1]
+    assert r.evidence["points"] == 1 and r.evidence["conflict_share"] is None
+    assert r.evidence["unverified"] == ["persistence"]
+    assert r.score == pytest.approx(0.75) and r.evidence["direction"] == -1
+    full = run(df.BookTradeDivergence(), _btd_scenario(0.5, -0.5))[-1]
+    assert full.score > r.score and "unverified" not in full.evidence
+    three = run(df.BookTradeDivergence(), _btd_scenario(0.5, -0.5, n=3))[-1]
+    assert three.evidence["conflict_share"] == pytest.approx(1.0) and "unverified" not in three.evidence
 
 
 # ============================================================================= #23 depth_price_divergence
@@ -297,6 +337,21 @@ def test_machinery_flow_impact_divergence_impact_without_flow_null_and_missing()
     assert miss.score == 0.0 and any("price_impact" in m for m in miss.evidence["missing"])
 
 
+def test_machinery_flow_impact_divergence_silent_flow_baseline():
+    """Median |flow| of the baseline = 0: flow_rel is None (flagged), a non-zero flow takes the
+    flow ramps to their limits, and a zero flow scores nothing."""
+    st = [S(5 * i, tv=1000.0, sfw=0.0, vol=1000.0, impact=0.01 + 0.002 * (i % 3)) for i in range(40)]
+    st.append(S(200, tv=1000.0, sfw=2000.0, vol=2500.0))
+    r = run(df.FlowImpactDivergence(), st)[-1]
+    assert r.evidence["base_flow_silent"] is True and r.evidence["flow_rel"] is None
+    assert r.evidence["mode"] == "flow_without_impact" and r.score == 1.0 and r.evidence["direction"] == -1
+    quiet = run(df.FlowImpactDivergence(), st[:40] + [S(200, tv=1000.0, sfw=0.0, vol=1000.0)])[-1]
+    assert quiet.evidence["base_flow_silent"] is True and quiet.score == 0.0
+    # a move without any flow against a silent flow baseline: impact without flow at its limit
+    jump = run(df.FlowImpactDivergence(), st[:40] + [S(200, shift(BIDS, 5), shift(ASKS, 5), tv=1000.0, sfw=0.0, vol=1000.0)])[-1]
+    assert jump.evidence["mode"] == "impact_without_flow" and jump.score == 1.0 and jump.evidence["direction"] == -1
+
+
 # ============================================================================= #25 resilience_asymmetry
 def _ra_scenario(sb: float = 0.012, sa: float = 0.002, alternate: bool = False, n: int = 25) -> List[MarketState]:
     out = []
@@ -327,6 +382,9 @@ def test_machinery_resilience_asymmetry_null_and_evidence():
     assert r.evidence["normalised_now"] == pytest.approx(0.01 / 0.012) and r.score >= 0.6
     miss = run(df.ResilienceAsymmetry(), [S(5 * i, tv=1000.0) for i in range(10)])[-1]
     assert miss.score == 0.0 and miss.evidence["missing"]
+    # an asymmetry without any recovery speed cannot be normalised: skipped (was ±1 whatever its size)
+    bare = run(df.ResilienceAsymmetry(), [S(5 * i, tv=1000.0, asym=1e-6) for i in range(25)])[-1]
+    assert bare.score == 0.0 and bare.evidence["missing"]
 
 
 # ============================================================================= #26 compression_expansion
@@ -643,6 +701,21 @@ def test_machinery_close_session_pressure_null_phase_and_missing():
     assert l1.evidence["unverified"] == ["pressure"] and l1.score == pytest.approx(0.5)
 
 
+def test_machinery_close_session_pressure_silent_day_baseline():
+    """A day without any volume before the close window: a positive close rate is unboundedly
+    large relative to it (factor 1), a zero rate is no ratio at all (None, factor 0) — never inf/0."""
+    quiet_day = [S(t, base=T_CLOSE, tv=1000.0) for t in range(0, 1800, 5)]
+    burst = quiet_day + [S(1800 + 5 * i, base=T_CLOSE, tv=1000.0 + 500.0 * (i + 1)) for i in range(61)]   # to 25 min
+    r = run(sf.CloseSessionPressure(), burst)[-1]
+    assert r.evidence["window_factor"] == 1.0
+    assert r.evidence["base_rate_per_min"] == 0.0 and r.evidence["volume_rel"] == float("inf")
+    assert r.evidence["volume_factor"] == 1.0 and r.score == pytest.approx(0.5)
+    still = quiet_day + [S(1800 + 5 * i, base=T_CLOSE, tv=1000.0) for i in range(61)]
+    z = run(sf.CloseSessionPressure(), still)[-1]
+    assert z.evidence["rate_now_per_min"] == 0.0 and z.evidence["volume_rel"] is None
+    assert z.evidence["volume_factor"] == 0.0 and z.score == 0.0
+
+
 # ============================================================================= #16 auction_imbalance
 def _auction(p: Optional[float], source: str = "fix_md", age: float = 10.0, **kw) -> Dict[str, Any]:
     d = {"auction_pressure": p, "source": source, "auction_age_s": age, "indicative_price": 10.2, "matched_qty": 1000.0,
@@ -706,6 +779,50 @@ def test_machinery_lifecycle_building_active_confirmed_release(mid_move, termina
     i_t = seq.index(terminal)
     assert rs[i_t].evidence["direction"] == 0 and rs[i_t].evidence["episode_direction"] == 1
     assert (rs[i_t].evidence["mid_change_since_start"] > 0) == (terminal == "resolved")
+
+
+class _Scripted(df.DirectedMechanism):
+    """A DirectedMechanism fed scripted (score, direction) readings — tests the lifecycle contract
+    itself (not registered: it is not a mechanism of the tower)."""
+    name, family = "scripted_directed", "test"
+
+    def __init__(self, script: Sequence[Tuple[float, int]]) -> None:
+        super().__init__()
+        self.script = list(script)
+
+    def compute(self, ms: MarketState, hist: StateHistory):
+        score, d = self.script.pop(0)
+        return df._reading(self, score, {"direction": d}, {}, "scripted")
+
+
+def test_machinery_lifecycle_episode_direction_does_not_leak_between_episodes():
+    """Episode 1 carries direction +1 and resolves on a rising mid.  Episode 2 is built from readings
+    whose direction is 0 and ends on a falling mid: it must be judged as undirected (resolved,
+    never failed) — the previous episode's +1 must not leak into it."""
+    # exactly one releasing reading between the episodes: episode 2 starts straight from "resolved"
+    # (an inactive reading in between would reset the direction on its own)
+    script = [(0.9, 1)] * 12 + [(0.0, 0)] + [(0.9, 0)] * 12 + [(0.0, 0)]
+    mids = [k for k in range(12)] + [11] + [11 - k for k in range(12)] + [-1]
+    st = [S(5 * i, shift(BIDS, k), shift(ASKS, k), tv=1000.0) for i, k in enumerate(mids)]
+    rs = run(_Scripted(script), st, use_update=True)
+    seq = [r.state for r in rs]
+    ends = [i for i, s in enumerate(seq) if s in ("resolved", "failed")]
+    assert len(ends) == 2, seq
+    first, second = ends
+    assert seq[first] == "resolved" and rs[first].evidence["episode_direction"] == 1
+    assert rs[first].evidence["mid_change_since_start"] > 0
+    i_b2 = next(i for i in range(first + 1, second) if seq[i] in ("building", "active"))
+    assert rs[i_b2].evidence["direction"] == 0 and rs[i_b2].evidence["episode_direction"] == 0
+    assert "confirmed" in seq[i_b2:second]
+    assert rs[second].evidence["mid_change_since_start"] < 0
+    assert seq[second] == "resolved" and rs[second].evidence["episode_direction"] == 0
+    # the mirror: episode 2 directed (−1) on a falling mid resolves, on a rising mid fails
+    for mid2, want in ((-1, "resolved"), (1, "failed")):
+        script = [(0.9, 1)] * 12 + [(0.0, 0)] + [(0.9, -1)] * 12 + [(0.0, 0)]
+        mids = [k for k in range(12)] + [11] + [11 + mid2 * k for k in range(12)] + [11 + mid2 * 12]
+        st = [S(5 * i, shift(BIDS, k), shift(ASKS, k), tv=1000.0) for i, k in enumerate(mids)]
+        seq = [r.state for r in run(_Scripted(script), st, use_update=True)]
+        assert [s for s in seq if s in ("resolved", "failed")] == ["resolved", want]
 
 
 def test_machinery_lifecycle_direction_zero_resolves():

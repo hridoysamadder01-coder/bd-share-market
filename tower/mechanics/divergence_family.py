@@ -137,14 +137,21 @@ def book_pressure_of(s: MarketState) -> Optional[float]:
 
 
 def trade_pressure_of(s: MarketState) -> Optional[float]:
-    """Trade pressure of one state: ``trade_pressure`` else signed flow / max(|signed flow|, volume)."""
+    """Trade pressure of one state: ``trade_pressure``; else ``signed_flow_window`` over the
+    tape's volume of the *same* 300-s window (``session_state["tape"]["volume_300s"]``), so the
+    ratio is a share in [−1, 1].  None when neither the pressure layer nor the tape's window
+    volume is carried — a signed flow without its window volume is not a pressure (dividing by
+    the 120-s response volume or by |flow| itself would read any non-zero flow as ±1)."""
     if s.trade_pressure is not None:
         return float(s.trade_pressure)
     sfw = s.signed_flow_window
     if sfw is None:
         return None
-    denom = max(abs(float(sfw)), float(s.volume_only_response or 0.0))
-    return float(sfw) / denom if denom > 0 else None
+    tp = s.session_state.get("tape") if isinstance(s.session_state, dict) else None
+    vol = tp.get("volume_300s") if isinstance(tp, dict) else None
+    if vol is None or float(vol) <= 0:
+        return None
+    return max(-1.0, min(1.0, float(sfw) / float(vol)))
 
 
 def trade_pressure_now(fr: Frame, seconds: float = 300.0) -> Optional[float]:
@@ -219,7 +226,10 @@ class DirectedMechanism(Mechanism):
         return None
 
     def update(self, ms: MarketState, hist: StateHistory):
+        prev = self._state
         st = super().update(ms, hist)
+        if prev in ("inactive", "failed", "resolved") and st.state in ("building", "active"):
+            self._episode_direction = 0          # a new episode: the previous episode's direction must not leak
         d = st.evidence.get("direction")
         if st.state in ("building", "active", "confirmed") and d in (1, -1):
             self._episode_direction = d
@@ -240,8 +250,10 @@ class ChurnAnomaly(DirectedMechanism):
     window, so a sustained burst does not dilute its own z (≥ 5 points, else
     missing).  burst =
     ramp(z, 1.5 → 3.5) when the baseline has spread; when it is flat (std ≈ 0)
-    the z is unknown and burst = ramp(intensity / mean, 2 → 4) is used instead
-    (``burst_basis`` names which).  progress = max(|price_velocity| ticks/min,
+    the z is unknown and burst = ramp(intensity / mean, 2 → 4) is used instead;
+    when it is silent (mean ≈ 0, no trades at all) the ratio is unbounded and
+    the intensity is compared against a 1 trade/min floor (``burst_basis``
+    names which: ``z`` / ``ratio_flat_baseline`` / ``ratio_silent_baseline``).  progress = max(|price_velocity| ticks/min,
     |Δmid over 120 s| / 2 min) — the velocity is taken from the state or from the
     mid series; low_progress = 1 − ramp(progress, 0.5 → 2.5).
     score = burst × low_progress.  direction 0 (churn implies no direction).
@@ -274,11 +286,17 @@ class ChurnAnomaly(DirectedMechanism):
                                    base, {"intensity": cur, "baseline_points": len(prior)})
         m, sd = mean_std(prior)
         z = zscore_against(cur, prior, self.min_points)
-        ratio = safe_div(cur, m) if m and m > _EPS else None
         if z is not None:
+            ratio = safe_div(cur, m) if m > _EPS else None
             burst, burst_basis = ramp(z, 1.5, 3.5), "z"
-        else:
+        elif m > _EPS:
+            ratio = cur / m
             burst, burst_basis = ramp(ratio, 2.0, 4.0), "ratio_flat_baseline"
+        else:
+            # a silent baseline (no trades at all for the whole stretch): the ratio is unbounded, so
+            # the intensity is compared against a 1 trade/min floor instead of a zero mean
+            ratio = cur / 1.0
+            burst, burst_basis = ramp(ratio, 2.0, 4.0), "ratio_silent_baseline"
         if not fr.tick:
             return missing_reading(self, ["tick_size"], base, {"intensity": cur, "intensity_z": z})
         vel = price_velocity_of(fr)
@@ -305,7 +323,10 @@ class BookTradeDivergence(DirectedMechanism):
     ``trade_pressure`` (else signed flow / volume over 300 s of tape rows).
     conflict now = book × trade < 0; strength = min(|book|, |trade|) when in
     conflict, else 0.  Persistence = share of the states in the last 120 s that
-    carry both pressures and are in conflict with min(|book|, |trade|) ≥ 0.15.
+    carry both pressures and are in conflict with min(|book|, |trade|) ≥ 0.15;
+    with fewer than 3 such states it is unknown (None, ``unverified`` =
+    ["persistence"]) and its factor stays neutral (0.5) — never 1.0 from the
+    current point alone.
     score = ramp(strength, 0.15 → 0.5) × (0.5 + 0.5 × ramp(persistence, 0.3 → 0.9)).
     direction = sign(trade pressure): the transactions, not the display, are
     taken as the side that will carry the price.
@@ -316,6 +337,7 @@ class BookTradeDivergence(DirectedMechanism):
     requires = ("book_pressure", "trade_pressure", "imb_topk", "signed_flow_window")
     window_s = 120.0
     min_conflict = 0.15
+    min_persist_points = 3
 
     def compute(self, ms: MarketState, hist: StateHistory) -> MechanismReading:
         fr = Frame(ms, hist)
@@ -336,13 +358,18 @@ class BookTradeDivergence(DirectedMechanism):
             n_both += 1
             if b * t < 0 and min(abs(b), abs(t)) >= self.min_conflict:
                 n_conf += 1
-        share = n_conf / n_both if n_both else 0.0
-        score = ramp(strength, 0.15, 0.5) * (0.5 + 0.5 * ramp(share, 0.3, 0.9))
+        # persistence is unknown (never 1.0 from the current point alone) with < 3 points carrying
+        # both pressures: the factor stays neutral and the reading is flagged unverified
+        share = n_conf / n_both if n_both >= self.min_persist_points else None
+        persist = ramp(share, 0.3, 0.9) if share is not None else 0.5
+        score = ramp(strength, 0.15, 0.5) * (0.5 + 0.5 * persist)
         direction = sign(tp) if score > 0 else 0
         ev = {"book_pressure": bp, "trade_pressure": tp, "conflict": conflict, "strength": strength,
               "conflict_share": share, "points": n_both, "engine_divergence": ms.pressure_divergence,
               "direction": direction, "window_s": self.window_s}
-        return _reading(self, score, ev, base, f"book {bp:.3f} vs trade {tp:.3f}, conflict share {share:.2f}")
+        if share is None:
+            ev["unverified"] = ["persistence"]
+        return _reading(self, score, ev, base, f"book {bp:.3f} vs trade {tp:.3f}, conflict share {share}")
 
 
 # ============================================================================ #23
@@ -406,8 +433,11 @@ class FlowImpactDivergence(DirectedMechanism):
     trailing 900 s *before* now: base_impact = median |price_impact| (≥ 5
     points, else missing) and base_flow = median |signed_flow_window| (≥ 5
     points, else the tape's ``abs_flow_baseline``).  expected move =
-    base_impact × |flow|; flow_rel = |flow| / base_flow; ratio = |move| /
-    expected.
+    base_impact × |flow|; flow_rel = |flow| / base_flow (None with
+    ``base_flow_silent`` when the baseline flow is 0: any non-zero flow is then
+    unboundedly large relative to it and the flow ramps take their limits);
+    ratio = |move| / expected (None when the baseline impact is 0 — a flow
+    that moves nothing is then normal, not divergent, and A is 0).
       A  flow without impact:  ramp(flow_rel, 1.2 → 2.5) × (1 − ramp(ratio, 0.2 → 0.8))
       B  impact without flow:  ramp(|move| / max(base_impact × base_flow, 1 tick), 2 → 4)
                                × (1 − ramp(flow_rel, 0.3 → 1.0))
@@ -455,18 +485,24 @@ class FlowImpactDivergence(DirectedMechanism):
             return missing_reading(self, ["signed flow baseline (900 s)"], base,
                                    {"signed_flow": flow, "mid_change_ticks": move, "base_impact": base_impact})
         expected = base_impact * abs(flow)
-        flow_rel = abs(flow) / base_flow if base_flow > _EPS else None
+        # a silent flow baseline (median |flow| = 0) makes any non-zero flow unboundedly large relative
+        # to it: flow_rel is reported None with ``base_flow_silent`` and the ramps take their limits
+        silent = base_flow <= _EPS
+        flow_rel = abs(flow) / base_flow if not silent else None
+        rel_hi = ramp(flow_rel, 1.2, 2.5) if not silent else (1.0 if abs(flow) > _EPS else 0.0)
+        rel_lo = ramp(flow_rel, 0.3, 1.0) if not silent else (1.0 if abs(flow) > _EPS else 0.0)
         ratio = abs(move) / expected if expected > _EPS else None
-        a = ramp(flow_rel, 1.2, 2.5) * (1.0 - ramp(ratio, 0.2, 0.8)) if (flow_rel is not None and ratio is not None) else 0.0
+        a = rel_hi * (1.0 - ramp(ratio, 0.2, 0.8)) if ratio is not None else 0.0
         normal_move = max(base_impact * base_flow, 1.0)
-        b = ramp(abs(move) / normal_move, 2.0, 4.0) * (1.0 - ramp(flow_rel, 0.3, 1.0)) if flow_rel is not None else 0.0
+        b = ramp(abs(move) / normal_move, 2.0, 4.0) * (1.0 - rel_lo)
         if a >= b:
             mode, score, direction = "flow_without_impact", a, (-sign(flow) if a > 0 else 0)
         else:
             mode, score, direction = "impact_without_flow", b, (-sign(move) if b > 0 else 0)
         ev = {"signed_flow": flow, "flow_basis": flow_basis, "mid_change_ticks": move, "base_impact": base_impact,
               "impact_points": len(imp_hist), "base_flow": base_flow, "base_flow_basis": flow_basis_b,
-              "expected_move_ticks": expected, "flow_rel": flow_rel, "impact_ratio": ratio, "normal_move_ticks": normal_move,
+              "expected_move_ticks": expected, "flow_rel": flow_rel, "base_flow_silent": silent, "impact_ratio": ratio,
+              "normal_move_ticks": normal_move,
               "score_flow_without_impact": a, "score_impact_without_flow": b, "mode": mode,
               "engine_failed_response": ms.failed_response, "direction": direction}
         return _reading(self, score, ev, base, f"{mode}: flow_rel {flow_rel}, ratio {ratio}")
@@ -480,7 +516,8 @@ class ResilienceAsymmetry(DirectedMechanism):
     Rule (window 600 s): for every state carrying ``recovery_asymmetry`` (bid
     speed − ask speed, shares/s) the normalised asymmetry r = asym /
     (|speed_bid| + |speed_ask|) from the resilience record, else asym /
-    max(|recovery_speed|, |asym|), so r ∈ [−1, 1].  The trailing run of states
+    max(|recovery_speed|, |asym|), so r ∈ [−1, 1]; a state carrying the
+    asymmetry without any recovery speed cannot be normalised and is skipped.  The trailing run of states
     whose r has the sign of the current one gives run_share = run points /
     window points, run_span = seconds covered by the run, mean_r over the run.
     score = ramp(|mean_r|, 0.3 → 0.8) × ramp(run_share, 0.6 → 1.0) ×
@@ -507,8 +544,10 @@ class ResilienceAsymmetry(DirectedMechanism):
             sa = rec.get("recovery_speed_ask") if isinstance(rec, dict) else None
             if sb is not None and sa is not None:
                 denom = abs(sb) + abs(sa)
+            elif s.recovery_speed is not None:
+                denom = max(abs(float(s.recovery_speed)), abs(asym))
             else:
-                denom = max(abs(s.recovery_speed or 0.0), abs(asym))
+                continue          # an asymmetry without any recovery speed cannot be normalised (it is not ±1)
             if denom <= _EPS:
                 continue
             pts.append((s.t, float(asym), max(-1.0, min(1.0, float(asym) / denom))))

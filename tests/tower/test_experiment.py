@@ -329,3 +329,189 @@ def test_realdata_closed_fixture_all_rows_excluded_and_blocked(tmp_path):
     man = json.load(open(os.path.join(out, "MANIFEST.json")))
     assert set(man["outputs"]) == {"MECHANISM_RESULTS.csv", "FALSIFICATION.csv", "DENOMINATOR.json", "VERDICTS.json"}
     assert man["inputs"]
+
+
+# ---------------------------------------------------------------------------- adversarial: causality / contracts / edges
+def _tiny_table(n=6, vols=(1., 2., 3., 4., 5., 6.)):
+    return pd.DataFrame({"symbol": ["A"] * n, "volume_only_response": list(vols), "eligible": [True] * n})
+
+
+def test_machinery_volume_baseline_threshold_is_causal():
+    from tower.experiment import baseline_signal
+    df = _tiny_table()
+    a = baseline_signal(df, "volume_only_response", "move", CFG, scope=df["eligible"])
+    df2 = df.copy()
+    df2.loc[5, "volume_only_response"] = 0.0          # a FUTURE row changes: the past must not
+    b = baseline_signal(df2, "volume_only_response", "move", CFG, scope=df2["eligible"])
+    assert np.array_equal(a.values[:5], b.values[:5])
+    # running median: 1 ≥ 1, 2 ≥ 1.5, 3 ≥ 2, 4 ≥ 2.5, 5 ≥ 3, 6 ≥ 3.5 → all True; a drop below the running median → False
+    assert a.all()
+    df3 = _tiny_table(vols=(5., 5., 5., 5., 1., 5.))
+    c = baseline_signal(df3, "volume_only_response", "move", CFG, scope=df3["eligible"])
+    assert list(c.values) == [True, True, True, True, False, True]
+    # out-of-scope rows do not feed the threshold but still receive one; NaN never fires
+    df4 = _tiny_table(vols=(1., 100., 1., np.nan, 1., 1.))
+    df4.loc[1, "eligible"] = False
+    d = baseline_signal(df4, "volume_only_response", "move", CFG, scope=df4["eligible"])
+    assert list(d.values) == [True, True, True, False, True, True]
+
+
+def test_machinery_source_duplicate_flag_applies_only_to_the_producing_receipt(tmp_path):
+    from tower.state import SourceStatus
+    root = str(tmp_path / "s")
+    store = StateStore(root)
+    t0 = datetime(2026, 9, 6, 5, 0, tzinfo=timezone.utc)
+    bids, asks = [(10.0, 100.0)], [(10.1, 100.0)]
+    for i in range(4):
+        t = t0 + timedelta(seconds=10 * i)
+        # the depth source's last receipt (t0 + 10 s) was a repeat; rows 2 and 3 are produced by other sources
+        st = SourceStatus(source="depth", last_update=t0 + timedelta(seconds=10), duplicate=(i >= 1))
+        ms = MarketState(symbol="ZZZ", t=t, seq=i + 1, session_phase="CONTINUOUS", best_bid=10.0, best_ask=10.1,
+                         mid=10.05, ltp=10.05, tick_size=0.1, bids=bids, asks=asks, empty_book=False,
+                         book_source="depth", trade_count=float(i), trade_volume=float(10 * i),
+                         sources={"depth": st})
+        store.append(ms)
+    store.close()
+    df = add_exclusions(add_forward_outcomes(load_store(root), (10,)), CFG, 10)
+    assert list(df["book_src_duplicate"]) == [False, True, False, False]
+    assert list(df["excl_duplicate"]) == [False, True, False, False]
+    # content identical to the previous row is still a duplicate without any source flag
+    assert df["session_phase"].eq("CONTINUOUS").all()
+
+
+def test_machinery_missing_session_phase_is_not_reported_as_closed():
+    from tower.experiment import _flatten_state
+    row = _flatten_state({"symbol": "Q", "t": "2026-09-06T05:00:00+00:00", "session_phase": None}, {})
+    assert row["session_phase"] == "UNKNOWN"
+    assert np.isnan(row["mid"]) and row["bids"] == [] and row["book_src_duplicate"] is None
+
+
+def test_machinery_fdr_family_excludes_blocked_mechanisms():
+    from tower.experiment import finalize_verdicts
+    def prov(name, p, blocked):
+        return {"mechanism": name, "permutation": {"p_value": p, "n_perm": 10}, "blocked": blocked,
+                "blocked_reasons": ["too small"] if blocked else [],
+                "checks": {"a_beats_best_baseline_ci": True, "b_permutation": p < 0.05 or True, "c_side_flip": True,
+                           "d_placebo": True, "e_wall_removal": True, "f_loso": True, "g_liquidity": True},
+                "side_flip_not_applicable": False}
+    cfg = ExperimentConfig(fdr_q=0.10)
+    v = finalize_verdicts({"m1": prov("m1", 0.06, False), "m2": prov("m2", 0.09, False), "mb": prov("mb", 0.9, True)}, cfg)
+    assert v["fdr"]["n_tested"] == 2 and v["fdr"]["tested"] == ["m1", "m2"] and v["fdr"]["n_pass"] == 2
+    assert v["mechanisms"]["m1"]["fdr_pass"] is True and v["mechanisms"]["m2"]["fdr_pass"] is True
+    assert v["mechanisms"]["mb"]["verdict"] == "BLOCKED" and v["mechanisms"]["mb"]["fdr_pass"] is None
+    assert v["mechanisms"]["mb"]["fdr_q_value"] is None and v["fdr"]["p_values"]["mb"] == 0.9
+    # with the blocked one inside the family (m = 3) BH would have rejected nothing: 0.06 > 0.1·1/3, 0.09 > 0.1·2/3
+    keep, _ = bh_fdr(np.array([0.06, 0.09, 0.9]), 0.10)
+    assert not keep.any()
+
+
+def test_machinery_bh_fdr_matches_phase45():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("phase45", os.path.join(ROOT, "experiments", "phase45_footprints.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        p = rng.random(12) ** 3
+        p[rng.random(12) < 0.2] = np.nan
+        for q in (0.05, 0.10, 0.25):
+            k1, c1 = bh_fdr(p, q)
+            k2, c2 = mod.bh_fdr(p, q)
+            assert np.array_equal(k1, k2)
+            assert (np.isnan(c1) and np.isnan(c2)) or c1 == pytest.approx(c2)
+
+
+def test_machinery_empty_store_runs_and_writes_zero_denominator(tmp_path):
+    root = str(tmp_path / "empty")
+    os.makedirs(os.path.join(root, "states"))
+    out = str(tmp_path / "out")
+    res = run_experiment(root, out, CFG)
+    den = res["denominator"]
+    assert den["total_rows"] == 0 and den["eligible"] == 0 and den["sum_check"] is True
+    assert res["verdicts"]["counts"] == {"KEEP": 0, "KILL": 0, "BLOCKED": 0} and res["verdicts"]["fdr"]["n_tested"] == 0
+    for name in ("MECHANISM_RESULTS.csv", "FALSIFICATION.csv", "DENOMINATOR.json", "VERDICTS.json", "MANIFEST.json"):
+        assert os.path.exists(os.path.join(out, name)), name
+    assert len(pd.read_csv(os.path.join(out, "FALSIFICATION.csv"))) == 0
+
+
+def test_machinery_wall_free_geometry_edges():
+    from tower.experiment import wall_free_geometry
+    df = pd.DataFrame({
+        "bids": [[(10.0, 500.0), (9.9, 100.0)], [(10.0, 100.0)], [], [(10.0, 100.0), (9.9, 100.0)], [(10.0, 300.0), (9.9, 100.0)]],
+        "asks": [[(10.1, 100.0), (10.2, 100.0)], [], [(10.1, 100.0)], [(10.1, 100.0)], [(10.1, 300.0), (10.2, 100.0)]],
+        "tick_eff": [0.1, 0.1, 0.1, 0.1, np.nan]})
+    g = wall_free_geometry(df, 5)
+    # row 0: the 500 wall at the bid touch goes; l1 = (100−100)/200 = 0, topk = (100−200)/300
+    assert g.loc[0, "imb_l1_wf"] == pytest.approx(0.0)
+    assert g.loc[0, "imb_topk_wf"] == pytest.approx(-100.0 / 300.0)
+    assert g.loc[0, "depth_ratio_wf"] == pytest.approx(100.0 / 300.0)
+    # weighted: bid level 9.9 is 1 tick from the wall-free touch 9.9 → weight 1; asks 10.1 (w 1), 10.2 (w 0.5)
+    assert g.loc[0, "imb_weighted_wf"] == pytest.approx((100.0 - 150.0) / 250.0)
+    # one-sided books and an empty side after the removal → NaN, never 0
+    assert g.loc[1].isna().all() and g.loc[2].isna().all()
+    # tie between the two 100-lots on the bid side and the ask 100-lot: the first (bid touch) is removed
+    assert g.loc[3, "imb_l1_wf"] == pytest.approx(0.0) and g.loc[3, "depth_ratio_wf"] == pytest.approx(0.5)
+    # 300-lot tie between bid touch and ask touch → the bid one (first) goes; no tick known → index weights 1/(1+i):
+    # bids [100] → 100; asks [300, 100] → 300 + 50
+    assert g.loc[4, "imb_weighted_wf"] == pytest.approx((100.0 - 350.0) / 450.0)
+    assert g.loc[4, "imb_l1_wf"] == pytest.approx((100.0 - 300.0) / 400.0)
+
+
+def test_machinery_forward_outcomes_duplicate_timestamps_and_gaps():
+    t0 = pd.Timestamp("2026-09-06T05:00:00Z")
+    df = pd.DataFrame({"symbol": ["A"] * 5, "seq": [1, 2, 3, 4, 5],
+                       "t": [t0, t0, t0 + pd.Timedelta(seconds=100), t0 + pd.Timedelta(seconds=200), t0 + pd.Timedelta(seconds=380)],
+                       "mid": [10.0, 10.0, 10.2, np.nan, 10.5], "tick_size": [0.1] * 5})
+    for c in ("crossed", "locked", "one_sided", "empty_book"):
+        df[c] = False
+    out = add_forward_outcomes(df, (180,))
+    # rows 0 and 1 share a timestamp: t+180 → last state ≤ t+180 is row 2 (mid 10.2) → +2 ticks, window complete
+    assert out.loc[0, "fwd_valid_h180"] and out.loc[1, "fwd_valid_h180"]
+    assert out.loc[0, "fwd_mid_ticks_h180"] == pytest.approx(2.0) and out.loc[1, "fwd_mid_ticks_h180"] == pytest.approx(2.0)
+    # row 2: t+180 = 280 → last state ≤ 280 is row 3, whose mid is None → falls back to row 2 itself → no outcome
+    assert not out.loc[2, "fwd_valid_h180"] and np.isnan(out.loc[2, "fwd_mid_ticks_h180"])
+    # row 3 has no mid; row 4's window is incomplete
+    assert not out.loc[3, "fwd_valid_h180"] and not out.loc[4, "fwd_valid_h180"]
+    assert add_forward_outcomes(df.iloc[0:0], (180,)).empty
+
+
+def test_machinery_bootstrap_and_permutation_detect_a_planted_signal():
+    from tower.experiment import block_bootstrap_ci, permutation_p
+    rng = np.random.default_rng(1)
+    n = 400
+    rows = []
+    for sym in ("A", "B"):
+        t0 = pd.Timestamp("2026-09-06T05:00:00Z")
+        sig = np.zeros(n, dtype=bool)
+        for e in range(5, n - 5, 25):
+            sig[e:e + 3] = True
+        up = np.where(sig, rng.random(n) < 0.9, rng.random(n) < 0.3)
+        for i in range(n):
+            rows.append({"symbol": sym, "t": t0 + pd.Timedelta(seconds=10 * i), "sig": sig[i], "noise": rng.random() < 0.1,
+                         "fwd_up_h180": bool(up[i]), "fwd_valid_h180": True})
+    fs = pd.DataFrame(rows)
+    cfg = ExperimentConfig(n_boot=200, n_perm=200, seed=3)
+    ci = block_bootstrap_ci(fs, fs["sig"], None, "fwd_up_h180", "fwd_valid_h180", cfg, np.random.default_rng(1))
+    assert ci["n_boot_valid"] == 200 and ci["ci_lo"] > 0.3 and ci["ci_lo"] < ci["point"] < ci["ci_hi"]
+    ci2 = block_bootstrap_ci(fs, fs["sig"], fs["noise"], "fwd_up_h180", "fwd_valid_h180", cfg, np.random.default_rng(1))
+    assert ci2["ci_lo"] > 0.2                                 # incremental over an uninformative baseline
+    pp = permutation_p(fs, fs["sig"], "fwd_up_h180", "fwd_valid_h180", cfg, np.random.default_rng(2))
+    assert pp["p_value"] == pytest.approx(1.0 / 201.0) and pp["observed"] > 0.4 and pp["null_p95"] < pp["observed"]
+    pn = permutation_p(fs, fs["noise"], "fwd_up_h180", "fwd_valid_h180", cfg, np.random.default_rng(2))
+    assert pn["p_value"] > 0.05
+    # determinism: same generator seed → identical numbers
+    again = block_bootstrap_ci(fs, fs["sig"], None, "fwd_up_h180", "fwd_valid_h180", cfg, np.random.default_rng(1))
+    assert again == ci
+    # an all-False signal → NaN, never 0
+    empty = permutation_p(fs, pd.Series(False, index=fs.index), "fwd_up_h180", "fwd_valid_h180", cfg, np.random.default_rng(2))
+    assert np.isnan(empty["p_value"]) and empty["n_perm"] == 0
+
+
+def test_machinery_graded_variant_label_follows_config(synthetic, tmp_path):
+    from tower.experiment import run_mechanism, prepare
+    root, _ = synthetic
+    cfg = ExperimentConfig(horizons=(180,), primary_h=H, n_boot=10, n_perm=10, score_threshold=0.5, seed=1)
+    df = prepare(load_store(root, symbols=["AAA"]), cfg)
+    r = run_mechanism(df, "planted", cfg, "test")
+    assert {x["variant"] for x in r["results"]} == {"state", "score_ge_0.5", "mirror"}
+    assert [x["variant"] for x in r["falsification"] if x["test"] == "graded_score"] == ["score_ge_0.5"]

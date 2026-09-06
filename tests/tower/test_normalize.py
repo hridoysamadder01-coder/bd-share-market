@@ -353,7 +353,9 @@ def test_machinery_watch_quotes_breadth_and_out_of_order(tmp_path):
     assert len(ms) == 2 and all(e.symbol is None for e in ms)
     assert ms[0].payload["up"] == 1 and ms[0].payload["down"] == 1 and ms[0].payload["flat"] == 1 and ms[0].payload["unpriced"] == 1
     assert ms[1].payload["up"] == 2 and ms[1].payload["down"] == 0
-    assert ms[0].payload["inferred_fields"] == ["up", "down", "flat", "unpriced"] and ms[0].observed_fields == ("t_recv",)
+    assert ms[0].payload["inferred_fields"] == ["up", "down", "flat", "unpriced"]
+    assert ms[0].observed_fields == ("t_recv", "t_source")               # the poll stamp is observed; breadth is inferred
+    assert "up" not in ms[0].observed_fields and ms[0].t_exch == datetime(2026, 9, 6, 4, 15, tzinfo=timezone.utc)
     assert s.src("lankabd_watch").out_of_order == 1 and s.src("lankabd_watch").unchanged >= 1
 
 
@@ -373,7 +375,8 @@ def test_machinery_gap_records_seq_holes_heartbeat_silence_and_recovery(tmp_path
     gaps = by_type(ev, EventType.GAP)
     assert [(g.source, g.status) for g in gaps] == [("lankabd_depth", "http"), ("lankabd_depth", "seq_hole"), ("heartbeat", "heartbeat_silence")]
     assert gaps[0].symbol == "GP" and gaps[0].payload["http_status"] == 503 and gaps[0].flags == {"gap": True}
-    assert gaps[1].payload == {"reason": "seq_hole", "expected": 12, "got": 14, "missing": 2}
+    assert gaps[1].payload == {"reason": "seq_hole", "expected": 12, "got": 14, "missing": 2, "key": "GP"}
+    assert gaps[1].raw_ref[0] == "lankabd_depth" and len(gaps[1].raw_ref[2]) == 64
     assert gaps[2].payload["silence_s"] == 45.0 and gaps[2].t_recv == T0 + timedelta(seconds=50)
     bs = by_type(ev, EventType.BOOK_SNAPSHOT)
     assert [e.is_recovery for e in bs] == [False, True, False]
@@ -524,6 +527,98 @@ def test_machinery_records_fed_in_receipt_order_across_epochs(tmp_path):
     assert [bool(e.flags.get("stale")) for e in bs] == [False] * 5 + [True, False]     # 60 s hole vs 10 s cadence
     assert [bool(e.flags.get("duplicate")) for e in bs] == [False] * 6 + [True]
     assert bs[5].is_recovery is True                                                # epoch changed → recovery
+
+
+def test_machinery_breadth_is_over_the_whole_poll_not_the_symbol_filter(tmp_path):
+    """A replay's symbol filter must not change a market-wide derived number."""
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    items = [("GP", "2026-09-06 10:14:58", 244.1, 244.0), ("BRACBANK", "2026-09-06 10:14:50", 62.0, 62.5),
+             ("FLAT", "2026-09-06 10:14:00", 10.0, 10.0), ("NOPX", "2026-09-06 10:00:00", 0.0, 0.0)]
+    wd(st, "lankabd_watch", None, watch_body("2026-09-06 10:15:00", items), 0)
+    st.close()
+    full, _ = normalize_store(root)
+    only_gp, _ = normalize_store(root, symbols=["GP"])
+    none_of_them, _ = normalize_store(root, symbols=["ZZZ"])
+    breadth = lambda evs: [e.payload for e in by_type(evs, EventType.MARKET_STATS)]   # noqa: E731
+    want = {"up": 1, "down": 1, "flat": 1, "unpriced": 1, "n_items": 4}
+    for evs in (full, only_gp, none_of_them):
+        b = breadth(evs)
+        assert len(b) == 1 and {k: b[0][k] for k in want} == want
+    assert [e.symbol for e in by_type(only_gp, EventType.QUOTE)] == ["GP"]
+    assert not by_type(none_of_them, EventType.QUOTE)                       # filter honoured for per-symbol events
+    ms = by_type(full, EventType.MARKET_STATS)[0]
+    assert ms.t_exch == datetime(2026, 9, 6, 4, 15, tzinfo=timezone.utc) and "t_source" in ms.observed_fields
+    assert ms.freshness_s == 0.0
+
+
+def test_machinery_out_of_range_tape_stamp_is_flagged_not_fatal(tmp_path):
+    """The adapter keeps a row whose stamp it cannot convert (flagged, t_source_utc None);
+    normalize must place the good rows and flag the bad one — never abort the store."""
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "lankabd_tape", "GP", tape_body([(1e20, 244.1, 1, 100, 0.0244), (1788408960000, 244.2, 3, 300, 0.0733)]), 0)
+    st.close()
+    ev, s = normalize_store(root)
+    ct = by_type(ev, EventType.CUM_TOTALS)
+    assert len(ct) == 2 and s.totals()["parse_failures"] == 0
+    good = [e for e in ct if e.t_exch is not None]
+    bad = [e for e in ct if e.t_exch is None]
+    assert len(good) == 1 and good[0].payload["cum_trades"] == 3 and good[0].freshness_s is not None
+    assert len(bad) == 1 and bad[0].flags.get("bad_stamp") and bad[0].payload["t_source_ms"] == 1e20
+    assert any("bad stamp" in p for p in s.problems)
+    from tower.normalize import events_from_frames
+    hand = events_from_frames("lankabd_tape", [{"symbol": "GP", "t_source_ms": 1e20, "price": 1.0, "cum_trades": 2}],
+                              t_recv=T0, seq=1)                                     # no t_source_utc key at all
+    assert hand[0].t_exch is None and hand[0].flags == {"bad_stamp": True}
+    ok = events_from_frames("lankabd_tape", [{"symbol": "GP", "t_source_ms": 1788408900000, "price": 1.0}], t_recv=T0, seq=1)
+    assert ok[0].t_exch == datetime(2026, 9, 3, 4, 15, tzinfo=timezone.utc)
+
+
+def test_machinery_zero_sentinel_never_observed_on_any_quote_or_book_source():
+    from tower.normalize import events_from_frames
+    # watch: the adapter does not list zero_fields — the rule applies here all the same
+    q = events_from_frames("lankabd_watch", [{"symbol": "GP", "ltp": 0.0, "open": 0.0, "yclose": 10.0, "day_trades": 0,
+                                              "t_source_utc": "2026-09-06T04:14:58+00:00"}], t_recv=T0, seq=1)
+    quote = [e for e in q if e.event_type is EventType.QUOTE][0]
+    assert quote.price is None and quote.payload["ltp"] == 0.0
+    assert quote.payload["zero_fields"] == ["ltp", "open"]
+    assert "ltp" not in quote.observed_fields and "open" not in quote.observed_fields
+    assert "yclose" in quote.observed_fields and "day_trades" in quote.observed_fields    # a zero COUNT is observed
+    # dsebd_depth: same
+    b = events_from_frames("dsebd_depth", [{"symbol": "GP", "bid_levels": [], "ask_levels": [], "ltp": 0.0, "yclose": 10.0,
+                                            "stats_raw": {}, "bid_levels_src_order_preserved": True,
+                                            "ask_levels_src_order_preserved": True}], t_recv=T0, seq=1)[0]
+    assert b.price is None and b.payload["zero_fields"] == ["ltp"] and "ltp" not in b.observed_fields
+    assert "yclose" in b.observed_fields
+    # an adapter that DOES list zero_fields is trusted verbatim
+    b2 = events_from_frames("lankabd_depth", [{"symbol": "GP", "bid_levels": [], "ask_levels": [], "ltp": 0.0,
+                                               "zero_fields": []}], t_recv=T0, seq=1)[0]
+    assert b2.payload["zero_fields"] == [] and b2.price is None                 # 0 is still never a price
+
+
+def test_machinery_seq_hole_gap_carries_provenance_and_symbol(tmp_path):
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "lankabd_depth", "gp", depth_body("GP", [(244.0, 100)], []), 0, src_seq=1)
+    rec = wd(st, "lankabd_depth", "gp", depth_body("GP", [(244.0, 101)], []), 5, src_seq=3)
+    st.close()
+    ev, _ = normalize_store(root)
+    g = by_type(ev, EventType.GAP)
+    assert len(g) == 1 and g[0].symbol == "GP" and g[0].payload["key"] == "gp"
+    assert g[0].raw_ref == ("lankabd_depth", rec["seq"], rec["body_sha256"])
+    assert g[0].t_recv == T0 + timedelta(seconds=5) and g[0].seq_local < by_type(ev, EventType.BOOK_SNAPSHOT)[1].seq_local
+
+
+def test_machinery_streaming_malformed_record_is_a_problem_not_a_crash():
+    n = Normalizer()
+    n.on_record({"kind": "DATA", "source": "lankabd_depth", "key": "GP", "seq": 1}, True)      # no t_recv_utc
+    n.on_record({"kind": "HEARTBEAT", "source": "heartbeat", "seq": 1, "status": {}}, True)
+    n.on_record({"kind": "GAP", "source": "lankabd_depth", "seq": 2, "reason": "http"}, True)
+    n.on_record("not a dict", True)
+    n.on_record({"kind": "META", "source": "lankabd_depth", "seq": 0}, True)
+    assert n.events == [] and len(n.stats.problems) == 4 and n.stats.totals()["events"] == 0
+    assert all("t_recv_utc" in p or "unparseable" in p for p in n.stats.problems)
 
 
 # ---------------------------------------------------------------------------- real data

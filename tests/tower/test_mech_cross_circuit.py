@@ -583,6 +583,122 @@ def test_machinery_circuit_next_session_null_fade_and_missing():
     assert mild_rev.evidence["gap_factor"] == pytest.approx(0.5 / 4.5) and mild_rev.score < 0.35
 
 
+# ============================================================================= review: edge cases
+def test_machinery_basket_rebalance_share_none_is_missing_not_a_crash():
+    """Both cross dicts delivered but neither carries a share: a missing reading, never max() of nothing."""
+    cross = _basket_cross()
+    cross["simultaneous_liquidity_change"] = {"share": None, "n": 0}
+    cross["synchronized_expansion"] = {"share": None, "n": 0}
+    r = last(xf.BasketRebalance(), _basket_scenario(cross=cross))
+    assert r.score == 0.0 and r.evidence["missing"] == ["cross.simultaneous_liquidity_change.share"]
+    assert r.evidence["burst"] == 1.0 and r.evidence["direction"] == 0
+    _check_common(r, 0)
+
+
+def test_machinery_basket_rebalance_zero_base_rate_is_flagged_not_infinity():
+    """A burst against a flat tape: full burst, volume_rel None + volume_rel_inf (no Infinity token)."""
+    st = _basket_scenario()
+    for i, s in enumerate(st):
+        s.trade_volume = 1000.0 if 5 * i < 1800 else 1000.0 + 500.0 * (5 * i - 1800) / 5
+    r = last(xf.BasketRebalance(), st)
+    assert r.evidence["base_rate_per_min"] == 0.0 and r.evidence["burst"] == 1.0
+    assert r.evidence["volume_rel"] is None and r.evidence["volume_rel_inf"] is True
+    assert r.score >= 0.6 and "inf" in r.note
+    flat = _basket_scenario(burst=False)
+    for s in flat:
+        s.trade_volume = 1000.0
+    rf = last(xf.BasketRebalance(), flat)
+    assert rf.evidence["burst"] == 0.0 and rf.evidence["volume_rel_inf"] is False
+
+
+def test_machinery_circuit_lock_strength_zero_volume_rate_is_flagged_not_infinity():
+    r = last(cf.CircuitLockStrength(), _lock_states(_lock(), vol_step=0.0))
+    assert r.evidence["volume_rate_per_min"] == 0.0 and r.evidence["size"] == 1.0
+    assert r.evidence["queue_minutes_of_volume"] is None and r.evidence["queue_minutes_inf"] is True
+    empty = last(cf.CircuitLockStrength(), _lock_states(_lock(q=0.0, delta=0.0), vol_step=0.0))
+    assert empty.evidence["queue_minutes_of_volume"] == 0.0 and empty.evidence["queue_minutes_inf"] is False
+    assert empty.evidence["size"] == 0.0
+
+
+def test_machinery_circuit_prehit_pressure_moving_away_never_carries_the_velocity_term():
+    """Velocity −0.5 (away from the limit) against a baseline of −4…−6: the z is large and positive,
+    but the price is not approaching — the velocity factor is a measured 0, not 1."""
+    r = last(cf.CircuitPrehitPressure(), _prehit_scenario(vel_last=-0.5, vel_hist=[-5.0, -4.0, -6.0, -5.5, -4.5]))
+    assert r.evidence["velocity_z"] > 2.5 and r.evidence["velocity_z_factor"] == 0.0
+    assert r.evidence["velocity_abs_factor"] == 0.0 and r.evidence["velocity_factor"] == 0.0
+    assert r.score == pytest.approx(0.35 + 0.25)                     # pressure + door only
+    still = last(cf.CircuitPrehitPressure(), _prehit_scenario(vel_last=0.0, vel_hist=[-5.0, -4.0, -6.0, -5.5, -4.5]))
+    assert still.evidence["velocity_factor"] == 0.0
+    approaching = last(cf.CircuitPrehitPressure(), _prehit_scenario(vel_last=0.6, vel_hist=[-5.0, -4.0, -6.0, -5.5, -4.5]))
+    assert approaching.evidence["velocity_z_factor"] == 1.0 and approaching.evidence["velocity_factor"] == 1.0
+
+
+def test_machinery_circuit_prehit_pressure_z_baseline_is_same_side_only():
+    """The engine signs the approach velocity toward the nearer limit and restarts its series when that
+    side flips: velocities measured toward the lower limit are not a baseline for the upper one."""
+    st = [S(5 * i, circuit=C(price=9.05, approach_velocity=3.0 + 0.1 * (i % 5)), tv=1000.0 + 1000.0 * i, pd=1, ps=0.7)
+          for i in range(40)]
+    st.append(S(200, circuit=C(price=10.95, approach_velocity=0.6), tv=41000.0, pd=1, ps=0.7))
+    r = last(cf.CircuitPrehitPressure(), st)
+    assert r.evidence["side"] == "up" and r.evidence["velocity_z_points"] == 0 and r.evidence["velocity_z"] is None
+    assert r.evidence["velocity_factor"] == pytest.approx(ramp_(0.6, 0.5, 3.0))
+    same = st[:-1] + [S(200, circuit=C(price=9.05, approach_velocity=0.6), tv=41000.0, pd=-1, ps=0.7)]
+    rs = last(cf.CircuitPrehitPressure(), same)
+    assert rs.evidence["side"] == "down" and rs.evidence["velocity_z_points"] == 40 and rs.evidence["velocity_z"] < -2
+
+
+def ramp_(x, lo, hi):
+    return max(0.0, min(1.0, (x - lo) / (hi - lo)))
+
+
+def test_machinery_circuit_next_session_unobservable_terms_are_dropped_not_zero():
+    r = last(cf.CircuitNextSession(), states_with(_next(locked=False, lshare=None, elapsed=None)))
+    assert r.evidence["lock_factor"] is None and set(r.evidence["unverified"]) == {"lock", "time_factor"}
+    assert r.evidence["time_factor"] == 1.0
+    assert r.score == pytest.approx((0.5 * 0.6 + 0.2 / 3) / 0.7)
+    seen = last(cf.CircuitNextSession(), states_with(_next(locked=False, lshare=0.0)))
+    assert seen.evidence["lock_factor"] == 0.0 and "unverified" not in seen.evidence
+    assert seen.score == pytest.approx(0.5 * 0.6 + 0.2 / 3)
+
+
+def test_machinery_circuit_regime_lock_time_unobservable_is_named():
+    r = last(cf.CircuitRegime(), states_with(C(price=11.0, locked_up=True, hit_up=True, time_locked_s=None),
+                                             bids=[(11.0, 5000.0)], asks=[]))
+    assert r.score == pytest.approx(0.8) and r.evidence["lock_time_factor"] is None
+    assert r.evidence["unverified"] == ["time_locked_s"] and r.evidence["regime"] == "locked_up"
+
+
+def _walk_finite(x, path="evidence"):
+    if isinstance(x, float):
+        assert math.isfinite(x), path
+    elif isinstance(x, dict):
+        for k, v in x.items():
+            _walk_finite(v, f"{path}.{k}")
+    elif isinstance(x, (list, tuple)):
+        for i, v in enumerate(x):
+            _walk_finite(v, f"{path}[{i}]")
+
+
+@pytest.mark.parametrize("name", ALL_NAMES)
+def test_machinery_evidence_is_strict_json_on_degenerate_tapes(name):
+    """Zero volume rates, flat tapes, empty queues: no NaN / Infinity ever reaches the evidence."""
+    import json
+    scenarios = [
+        _lock_states(_lock(), vol_step=0.0), _lock_states(_lock(q=0.0, delta=0.0), vol_step=0.0),
+        _prehit_scenario(vol_step=0.0), _prehit_scenario(door=0.0, vol_step=0.0),
+        states_with(_break(q=0.0, qmax=0.0, delta=0.0), tv=1000.0), states_with(C(price=10.0), tv=0.0),
+    ]
+    flat = _basket_scenario()
+    for s in flat:
+        s.trade_volume = 1000.0 if s.t < T_CLOSE + timedelta(seconds=1800) else 1000.0 + 500.0 * ((s.t - T_CLOSE).total_seconds() - 1800)
+    scenarios.append(flat)
+    for st in scenarios:
+        for r in run(REGISTRY[name](), st):
+            _walk_finite(r.evidence)
+            _walk_finite(r.baseline, "baseline")
+            json.dumps(r.evidence, allow_nan=False, default=str)
+
+
 # ============================================================================= lifecycle
 def _prehit_lifecycle(outcome: str) -> List[MarketState]:
     """far (inactive) → 1.85 % away with modest pressure (building) → 0.46 % away with strong

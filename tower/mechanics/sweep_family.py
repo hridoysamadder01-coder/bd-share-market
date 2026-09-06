@@ -40,7 +40,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from ..state import MarketState
 from ..windows import clamp01, safe_div, sign
 from .base import Mechanism, MechanismReading, StateHistory, register
-from .queue_family import (Frame, _EPS, _median, _step_consistency, baselines, best_of, geo_mean, levels_of,
+from .queue_family import (Frame, TOP_K, _EPS, _median, _step_consistency, baselines, best_of, geo_mean, levels_of,
                            mid_of, missing_reading, ramp, spread_ticks_of, topk_depth, visible_depth)
 
 
@@ -79,23 +79,28 @@ class LiquiditySweep(Mechanism):
     """#3 Liquidity sweep.
 
     Rule: pre = the state at or before now − 30 s (else the oldest inside the
-    burst when it is ≥ 5 s old).  bid retreat = (pre.best_bid − best_bid) /
+    burst when it is ≥ 5 s old); a pre-burst state older than 3 × 30 s means
+    the feed has a hole where the burst would have started (the open, a gap)
+    and the burst is unobservable (``missing``).  bid retreat = (pre.best_bid − best_bid) /
     tick, ask retreat = (best_ask − pre.best_ask) / tick; the side with the
     larger positive retreat is the swept side.  levels_consumed = number of
     pre-burst displayed levels on that side whose price is better than the new
     best (bid: > best_bid; ask: < best_ask); qty_consumed = their qty;
     taken_share = qty_consumed / pre top-K depth.  mid_jump = (mid − pre.mid) /
     tick.  volume burst = (Δ cumulative volume over the burst / 30 s) / (Δ over
-    the 300-s baseline before the burst / its span); when the tape is not
-    observable the volume component is replaced by taken_share and the tape
-    fields are listed under ``missing``.  score = max(ramp(levels, 0.5 → 3),
-    ramp(retreat, 0.5 → 3)) × (0.4 + 0.3 × ramp(|mid_jump| in the sweep
-    direction, 0.5 → 3) + 0.3 × ramp(volume ratio, 1 → 5 | taken_share,
-    0.2 → 0.8)).  A side displayed before the burst and empty now was swept
-    through entirely: retreat = distance to its deepest pre-burst level + 1
-    tick and every pre-burst level is consumed (``side_emptied``).  When the
-    tape is observed and no volume traded inside the burst the vanished levels
-    were pulled, not swept: the score keeps a quarter (``no_trades_in_burst``).
+    the 300-s baseline before the burst / its span); with a tape but no usable
+    baseline (< 2 cumulative points before the burst) the volume component is
+    taken_share instead.  score = max(ramp(levels, 0.5 → 3), ramp(retreat,
+    0.5 → 3)) × (0.4 + 0.3 × ramp(|mid_jump| in the sweep direction, 0.5 → 3)
+    + 0.3 × ramp(volume ratio, 1 → 5 | taken_share, 0.2 → 0.8)).  A side
+    displayed before the burst and empty now was swept through entirely:
+    retreat = distance to its deepest pre-burst level + 1 tick and every
+    pre-burst level is consumed (``side_emptied``).  Levels vanishing are only a
+    sweep when something traded through them: with the tape observed and no
+    volume inside the burst they were pulled, not swept (``no_trades_in_burst``,
+    the score keeps a quarter); with no tape at all inside the burst a sweep
+    cannot be told from a pull — the geometry is reported (retreat, levels,
+    taken_share) and the reading is score 0 with ``missing = ["trade_volume"]``.
     direction: ask swept +1, bid swept −1.
     """
 
@@ -104,6 +109,7 @@ class LiquiditySweep(Mechanism):
     requires = ("best_bid", "best_ask", "bids", "asks", "mid", "tick_size", "trade_volume")
     burst_s = 30.0
     baseline_s = 300.0
+    max_pre_age_s = 90.0                      # 3 × burst_s: an older "pre" state is a feed hole, not a burst
 
     def compute(self, ms: MarketState, hist: StateHistory) -> MechanismReading:
         fr = Frame(ms, hist)
@@ -117,6 +123,11 @@ class LiquiditySweep(Mechanism):
             pre = st[0] if len(st) > 1 and (ms.t - st[0].t).total_seconds() >= 5.0 else None
         if pre is None or pre is ms:
             return missing_reading(self, ["history (no state ≥ 5 s before now)"], base)
+        pre_age = (ms.t - pre.t).total_seconds()
+        if pre_age > self.max_pre_age_s:
+            return missing_reading(self, ["history (no state between %.0f s and %.0f s before now)"
+                                          % (self.burst_s, self.max_pre_age_s)], base,
+                                   {"pre_t": pre.t.isoformat(), "pre_age_s": pre_age})
         retreat: Dict[str, Optional[float]] = {}
         emptied: Dict[str, bool] = {"bid": False, "ask": False}
         pb, _ = best_of(pre, "bid")
@@ -183,6 +194,8 @@ class LiquiditySweep(Mechanism):
         no_trades = bool(vol_burst is not None and vol_burst <= 0.0)
         if no_trades:
             score *= 0.25
+        if missing:
+            score = 0.0                                   # CONTRACTS: a needed input is None → score 0
         direction = sdir if score > 0 else 0
         ev = {"side": side, "retreat_ticks": r, "levels_consumed": levels, "qty_consumed": qty_consumed,
               "side_emptied": emptied[side],
@@ -280,7 +293,10 @@ class Exhaustion(Mechanism):
                  part of the window: z = (peak − mean) / std (≥ 4 earlier
                  points, std > 0) → ramp(z, 0.5 → 2.5); with a degenerate std
                  the ratio peak / mean → ramp(ratio, 1.2 → 3); a positive peak
-                 over an all-zero earlier window is the strongest spike (1);
+                 over an all-zero earlier window is the strongest spike (1, the
+                 limit of the ratio as the mean → 0); with no intensity point
+                 before the last 60 s there is nothing to compare the peak with
+                 (``missing``);
       decay      velocity series (``price_velocity`` or mid change over 60 s in
                  ticks/min): v_peak = the largest |v| in the last 180 s
                  (≥ 0.5 ticks/min), v_now = the latest; decay = 1 − |v_now| /
@@ -316,6 +332,9 @@ class Exhaustion(Mechanism):
         # intensity peak vs the earlier window
         recent = [v for t, v in ints if (ms.t - t).total_seconds() <= self.peak_s]
         earlier = [v for t, v in ints if (ms.t - t).total_seconds() > self.peak_s]
+        if not earlier:
+            return missing_reading(self, ["trade_intensity baseline (no point before the last %.0f s)" % self.peak_s],
+                                   base, {"intensity_points": len(ints)})
         peak = max(recent) if recent else ints[-1][1]
         z = ratio = None
         from_zero = False                                     # a burst out of a silent tape: strongest spike
@@ -546,8 +565,9 @@ class LiquidityRun(Mechanism):
     per minute between the window start and the extreme.  Consumed side = ask
     for an up run, bid for a down run.  flow consistency = |Σ direction ×
     volume| / Σ volume of the classified tape rows between the window start and
-    the extreme (0.5 neutral when no tape is observable, reported under
-    ``missing``).  thin = 1 − top-K depth of the consumed side at the window
+    the extreme — the "directional prints" of the rule: with no classified row
+    in the run the geometry is reported and the reading is score 0 with
+    ``missing`` naming the tape fields.  thin = 1 − top-K depth of the consumed side at the window
     start / max(its window median, its depth now) (clipped) — the reference is
     the book's normal capacity, not the thin run itself.  stall: seconds since the extreme →
     ramp(10 → 40 s) × (1 − |mid_now − extreme| / 1.5 ticks) clipped.
@@ -598,7 +618,7 @@ class LiquidityRun(Mechanism):
         flow_along = None
         if consistency is not None and signed_flow is not None:
             flow_along = consistency if sign(signed_flow) == rdir else 0.0
-        s_flow = ramp(flow_along, 0.3, 0.9) if flow_along is not None else 0.5
+        s_flow = ramp(flow_along, 0.3, 0.9)
         # thinness of the consumed side before the run
         deps = [(s.t, topk_depth(s, consumed)) for s in fr.states(self.window_s)]
         deps = [(t, d) for t, d in deps if d is not None]
@@ -613,6 +633,8 @@ class LiquidityRun(Mechanism):
         stall = ramp(dt, 10.0, 40.0) * clamp01(1.0 - dist_ext / 1.5)
         score = ramp(run_ticks, 2.0, 6.0) * (0.6 + 0.4 * ramp(run_speed, 1.0, 5.0)) * (0.4 + 0.6 * s_flow) * \
             (0.5 + 0.5 * ramp(thin, 0.1, 0.6)) * stall
+        if missing:
+            score = 0.0                                   # CONTRACTS: a needed input is None → score 0
         direction = -rdir if score > 0 else 0
         ev = {"run_direction": rdir, "run_ticks": run_ticks, "run_speed_ticks_per_min": run_speed,
               "consumed_side": consumed, "flow_consistency": consistency, "flow_along_run": flow_along,
@@ -699,18 +721,28 @@ class LiquidityDepletion(Mechanism):
     Rule (window 120 s): touch depth = bid_qty1 + ask_qty1 and top-K depth =
     Σ first 5 levels per side, each as a series (both sides together and per
     side); then = the first value in the window (≥ 10 s before now), now = the
-    latest: depletion = 1 − now / then for every series; the largest of them
+    latest: depletion = 1 − now / then for every series; the top-K comparison
+    is made over the price range displayed in *both* books (prices no worse
+    than the shallower of the two deepest displayed levels), because a best
+    that stepped scrolls the deepest level out of the truncated display —
+    unobservable, not depleted; the largest of them
     (and the queue engine's ``liquidity_depletion`` estimate, when present) is
     the depletion share — one side emptying is a depletion even when the other
     side is untouched.  Touch quantities are compared only while the best price
     is unchanged (a best that stepped to a fresh queue is a different queue:
     those touch series are None, ``touch_price_changed`` says so, and the top-K
-    series carries the measurement).
+    series carries the measurement).  A touch queue thinning while the depth
+    behind it grew (the same series' top-K depletion < −0.1, i.e. top-K up by
+    more than 10 %) is liquidity *migrating* back from the touch, not leaving:
+    that touch estimate (and the engine's touch-depth estimate, for the
+    combined series) is discarded, ``touch_migrated`` names the side.
     consistency = share of the non-zero touch-depth steps that fall.  price
     factor = 1 − |mid(now) − mid(then)| / 2 ticks, clipped ("without price
-    move").  score = ramp(depletion, 0.2 → 0.7) × (0.5 + 0.5 × consistency) ×
-    price factor.  direction: the side depleting more by ≥ 0.2 share sets it
-    (bid −1, ask +1), else 0.
+    move"; with no mid at either end — a one-sided book — or no tick the
+    condition cannot be evaluated: the depletion is reported and the reading is
+    score 0 with ``missing``).  score = ramp(depletion, 0.2 → 0.7) × (0.5 + 0.5
+    × consistency) × price factor.  direction: the side depleting more by ≥ 0.2
+    share sets it (bid −1, ask +1), else 0.
     """
 
     name = "liquidity_depletion"
@@ -718,6 +750,7 @@ class LiquidityDepletion(Mechanism):
     requires = ("bid_qty1", "ask_qty1", "bids", "asks", "mid", "tick_size", "liquidity_depletion")
     window_s = 120.0
     min_span_s = 10.0
+    migration_tol = 0.10                      # top-K up by more than this share: the touch thinning is migration
 
     def compute(self, ms: MarketState, hist: StateHistory) -> MechanismReading:
         fr = Frame(ms, hist)
@@ -737,10 +770,26 @@ class LiquidityDepletion(Mechanism):
                 return None
             return (b or 0.0) + (a or 0.0)
 
+        def topk_common(then: MarketState, now: MarketState, sd: str) -> Optional[Tuple[float, float]]:
+            """(then, now) top-K depth of a side over the price range both displays cover."""
+            lt, ln = levels_of(then, sd)[:TOP_K], levels_of(now, sd)[:TOP_K]
+            if not lt and not ln:
+                qt, qn = best_of(then, sd)[1], best_of(now, sd)[1]
+                return (qt, qn) if (qt is not None and qn is not None) else None
+            if not lt or not ln:
+                return (float(sum(q for _, q in lt)), float(sum(q for _, q in ln)))   # a side emptied / appeared
+            if sd == "bid":
+                floor = max(lt[-1][0], ln[-1][0])
+                return (float(sum(q for p, q in lt if p >= floor - _EPS)),
+                        float(sum(q for p, q in ln if p >= floor - _EPS)))
+            ceil = min(lt[-1][0], ln[-1][0])
+            return (float(sum(q for p, q in lt if p <= ceil + _EPS)),
+                    float(sum(q for p, q in ln if p <= ceil + _EPS)))
+
         window = fr.states(self.window_s)
         t_states = [s for s in window if touch(s) is not None]
         ts = [(s.t, touch(s)) for s in t_states]
-        ks = fr.series(topk, self.window_s)
+        k_states = [s for s in window if topk(s) is not None]
         if len(ts) < 2 or (ts[-1][0] - ts[0][0]).total_seconds() < self.min_span_s:
             miss = [k for k in ("bid_qty1", "ask_qty1") if getattr(ms, k) is None and not levels_of(ms, k[:3])] \
                 or ["touch depth history (span < %.0f s)" % self.min_span_s]
@@ -759,18 +808,35 @@ class LiquidityDepletion(Mechanism):
         touch_price_changed = {sd: not same_price(t_states[0], ms, sd) for sd in ("bid", "ask")}
         comparable = not (touch_price_changed["bid"] or touch_price_changed["ask"])
         d_touch = (1.0 - now_v / then_v) if (then_v > 0 and comparable) else None
-        d_topk = (1.0 - ks[-1][1] / ks[0][1]) if (len(ks) >= 2 and ks[0][1] > 0) else None
         per_side: Dict[str, Optional[float]] = {}
         per_side_touch: Dict[str, Optional[float]] = {}
+        migrated: List[str] = []
+        k_then_sum = k_now_sum = 0.0
+        k_any = False
         for side in ("bid", "ask"):
-            ser = fr.series(lambda s, sd=side: topk_depth(s, sd), self.window_s)
-            per_side[side] = (1.0 - ser[-1][1] / ser[0][1]) if (len(ser) >= 2 and ser[0][1] > 0) else None
+            pair = topk_common(k_states[0], ms, side) if len(k_states) >= 2 else None
+            if pair is not None:
+                k_any = True
+                k_then_sum += pair[0]
+                k_now_sum += pair[1]
+            per_side[side] = (1.0 - pair[1] / pair[0]) if (pair is not None and pair[0] > 0) else None
             s_states = [s for s in window if best_of(s, side)[1] is not None]
             if len(s_states) >= 2 and best_of(s_states[0], side)[1] > 0 and same_price(s_states[0], ms, side):
                 per_side_touch[side] = 1.0 - best_of(ms, side)[1] / best_of(s_states[0], side)[1]
             else:
                 per_side_touch[side] = None
-        cands = [x for x in (d_touch, d_topk, ms.liquidity_depletion, *per_side.values(), *per_side_touch.values())
+            # the touch thinned while the depth behind it grew: orders moved back, liquidity did not leave
+            if per_side_touch[side] is not None and per_side[side] is not None and \
+                    per_side[side] < -self.migration_tol:
+                migrated.append(side)
+                per_side_touch[side] = None
+        d_topk = (1.0 - k_now_sum / k_then_sum) if (k_any and k_then_sum > 0) else None
+        engine_est = ms.liquidity_depletion
+        if d_topk is not None and d_topk < -self.migration_tol:
+            if d_touch is not None or engine_est is not None:
+                migrated.append("both")
+            d_touch, engine_est = None, None
+        cands = [x for x in (d_touch, d_topk, engine_est, *per_side.values(), *per_side_touch.values())
                  if x is not None]
         depl = max(cands) if cands else None
         if depl is None:
@@ -778,10 +844,15 @@ class LiquidityDepletion(Mechanism):
                                    {"touch_price_changed": touch_price_changed})
         cons = _step_consistency([v for _, v in ts], down=True)
         cons = cons if cons is not None else 0.0
-        m_then = mid_of(fr.at_or_before(then_t)) if fr.at_or_before(then_t) is not None else None
+        m_then = mid_of(t_states[0])                 # the very state ``then`` was read from (not a timestamp twin)
         m_now = mid_of(ms)
         move = (abs(m_now - m_then) / tick) if (m_now is not None and m_then is not None and tick) else None
-        pf = clamp01(1.0 - move / 2.0) if move is not None else 0.5
+        missing: List[str] = []
+        if not tick:
+            missing.append("tick_size")
+        if m_now is None or m_then is None:
+            missing.append("mid")
+        pf = clamp01(1.0 - move / 2.0) if move is not None else None
         direction = 0
         pb, pa = per_side["bid"], per_side["ask"]
         if pb is not None and pa is not None:
@@ -793,13 +864,15 @@ class LiquidityDepletion(Mechanism):
             direction = -1
         elif pa is not None and pa >= 0.2:
             direction = 1
-        score = ramp(depl, 0.2, 0.7) * (0.5 + 0.5 * cons) * pf
+        score = ramp(depl, 0.2, 0.7) * (0.5 + 0.5 * cons) * (pf if pf is not None else 0.0)
         if score <= 0:
             direction = 0
         ev = {"depletion": depl, "depletion_touch": d_touch, "depletion_topk": d_topk,
               "engine_depletion": ms.liquidity_depletion, "consistency": cons, "mid_move_ticks": move,
               "price_factor": pf, "touch_then": then_v, "touch_now": now_v, "span_s": (ts[-1][0] - then_t).total_seconds(),
-              "per_side_topk": per_side, "per_side_touch": per_side_touch,
+              "per_side_topk": per_side, "per_side_touch": per_side_touch, "touch_migrated": migrated,
               "touch_price_changed": touch_price_changed, "direction": direction, "window_s": self.window_s}
+        if missing:
+            ev["missing"] = missing
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
                                 note=f"depleted {depl:.2f} with {move} ticks move")

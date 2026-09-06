@@ -24,7 +24,7 @@ from tower.ui.server import StoreReader, create_app
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FIXTURE = os.path.join(ROOT, "tests", "fixtures", "capture_closed")
-T0 = datetime(2026, 9, 6, 4, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 9, 6, 4, 0, 0, 250, tzinfo=timezone.utc)     # microseconds, like every real t_recv
 STEP_S = 10
 
 
@@ -173,12 +173,24 @@ def test_machinery_state_at_or_before(client):
     r = c.get(f"/api/state/ALPHA?at={mid}").json()
     assert r["index"] == 2 and r["t"] == ts[2] and r["state"]["seq"] == 3
     assert r["prev_t"] == ts[1] and r["next_t"] == ts[3] and not r["is_last"]
-    # exactly at a state time → that state (<=)
+    # exactly at a state time (microseconds intact) → that state (<=)
+    assert ".000250" in ts[3]
     r = c.get(f"/api/state/ALPHA?at={ts[3]}").json()
     assert r["index"] == 3
-    # 'Z' suffix accepted
+    # the same instant truncated to milliseconds lies BEFORE the state → the previous one (never rounded up)
+    assert c.get("/api/state/ALPHA?at=" + ts[3][:23] + "Z").json()["index"] == 2
+    # next_t / prev_t round-trip exactly (what the step buttons send)
+    assert c.get(f"/api/state/ALPHA?at={r['next_t']}").json()["index"] == 4
+    assert c.get(f"/api/state/ALPHA?at={r['prev_t']}").json()["index"] == 2
+    # 'Z' suffix accepted; '+' of the offset arriving URL-decoded as a space is restored
     r = c.get("/api/state/ALPHA?at=" + ts[4].replace("+00:00", "Z")).json()
     assert r["index"] == 4
+    assert c.get("/api/state/ALPHA?at=" + ts[4].replace("+00:00", " 00:00")).json()["index"] == 4
+    # a space date/time separator (ISO-8601 allows it) is a time, not an offset
+    assert c.get("/api/state/ALPHA?at=2026-09-06 04:00:10").json()["index"] == 0
+    assert c.get("/api/state/ALPHA?at=2026-09-06 04:01").json()["index"] == 5
+    assert c.get("/api/state/ALPHA?at=2026-09-06 04:00").status_code == 404      # 250 µs before the first state
+    assert c.get("/api/state/ALPHA?at=2026-13-40T00:00:00Z").status_code == 400
     # far future → last; before the first → 404 (nothing observable yet, never a made-up state)
     assert c.get("/api/state/ALPHA?at=2030-01-01T00:00:00Z").json()["index"] == 5
     assert c.get("/api/state/ALPHA?at=2020-01-01T00:00:00Z").status_code == 404
@@ -268,6 +280,60 @@ def test_machinery_tailing_growing_store(client):
     assert c.get("/api/timeline/GAMMA").json()["n"] == 1
 
 
+def test_machinery_late_state_and_unusable_lines(tmp_path):
+    """A live tailer can release an event late: a state whose t is below its
+    predecessor's. 'At or before' must stay causal in event order (a state written
+    after one with t > at is never served for at), and lines without a usable frame
+    time are skipped rather than turned into a state."""
+    root = str(tmp_path / "store")
+    os.makedirs(os.path.join(root, "states"))
+    order = [0, 10, 10, 20, 15, 30]                   # seconds; two states share 10 s, 15 s arrives after 20 s
+    p = os.path.join(root, "states", "LATE.jsonl")
+    with open(p, "w") as fh:
+        for k, s in enumerate(order):
+            ms = MarketState("LATE", T0 + timedelta(seconds=s), seq=k + 1)
+            fh.write(json.dumps(ms.to_dict(), separators=(",", ":")) + "\n")
+            if k == 1:                                # junk between states: no t, numeric t, broken json
+                fh.write('{"symbol":"LATE","t":null,"seq":99}\n{"symbol":"LATE","t":5}\n{"symbol":"LATE",\n')
+    with TestClient(create_app(root)) as c:
+        at = lambda s: (T0 + timedelta(seconds=s)).isoformat()
+        assert c.get("/api/state/LATE").json()["count"] == 6             # junk lines never became states
+        r = c.get(f"/api/state/LATE?at={at(10)}").json()
+        assert r["index"] == 2 and r["state"]["seq"] == 3 and r["prev_t"] == r["t"]   # a time addresses the last of a same-t group
+        r = c.get(f"/api/state/LATE?at={at(15)}").json()
+        assert r["index"] == 2 and r["state"]["seq"] == 3                # the 15 s state was not yet produced then
+        r = c.get(f"/api/state/LATE?at={at(20)}").json()
+        assert r["index"] == 4 and r["state"]["seq"] == 5 and r["t"] == at(15)   # everything up to the late one is <= 20 s
+        assert c.get(f"/api/state/LATE?at={at(25)}").json()["index"] == 4
+        assert c.get(f"/api/state/LATE?at={at(30)}").json()["index"] == 5
+        h = c.get(f"/api/history/LATE?fields=seq&from={at(15)}&to={at(20)}").json()
+        assert [pt["seq"] for pt in h["points"]] == [4, 5]
+        assert c.get("/api/symbols").json()["symbols"][0]["count"] == 6
+        # exact event-order addressing reaches the first of the same-t pair (what the step buttons use)
+        r = c.get("/api/state/LATE?index=1").json()
+        assert r["index"] == 1 and r["state"]["seq"] == 2 and r["t"] == at(10) and r["at"] == "#1" and r["next_t"] == r["t"]
+        assert c.get("/api/state/LATE?index=5").json()["state"]["seq"] == 6
+        assert c.get("/api/state/LATE?index=6").status_code == 404
+        assert c.get("/api/state/LATE?index=-1").status_code == 422
+        assert c.post("/api/replay/seek?symbol=LATE&index=4").json()["state"]["seq"] == 5
+        assert c.get("/api/replay").json()["cursor"]["LATE"] == {"at": "#4", "t": at(15), "index": 4, "count": 6}
+
+
+def test_machinery_episodes_survive_a_late_transition(tmp_path):
+    root = str(tmp_path / "store")
+    _write_store(root, {"ALPHA": 2})
+    at = lambda s: (T0 + timedelta(seconds=s)).isoformat()
+    with open(os.path.join(root, "timeline.jsonl"), "w") as fh:    # replace the fixture timeline
+        for t, layer, a, b in ((50, "mechanism:x", "inactive", "active"), (200, "mechanism:x", "active", "resolved"),
+                               (150, "mechanism:y", "inactive", "building")):          # y's row released late
+            fh.write(json.dumps({"symbol": "ALPHA", "t": at(t), "from_state": a, "to_state": b, "layer": layer, "duration_prev_s": 0.0}) + "\n")
+    with TestClient(create_app(root)) as c:
+        eps = c.get(f"/api/history/ALPHA?fields=mid&to={at(160)}").json()["episodes"]
+        assert [(e["name"], e["end"], e["outcome"]) for e in eps] == [("x", None, None), ("y", None, None)]
+        eps = c.get("/api/history/ALPHA?fields=mid").json()["episodes"]
+        assert [(e["name"], e["end"], e["outcome"]) for e in eps] == [("x", at(200), "resolved"), ("y", None, None)]
+
+
 def test_machinery_store_reader_direct(store):
     root, rows = store
     rd = StoreReader(root)
@@ -355,6 +421,11 @@ def test_machinery_browser_renders_tower_and_scrubs(tmp_path):
         pytest.skip("playwright not installed")
     root = str(tmp_path / "store")
     rows = _write_store(root)
+    with open(os.path.join(root, "states", "DUP.jsonl"), "w") as fh:      # two states sharing one frame time
+        for seq in (1, 2):
+            d = _state("DUP", 0).to_dict()
+            d["seq"] = seq
+            fh.write(json.dumps(d, separators=(",", ":")) + "\n")
     port = _free_port()
     proc = subprocess.Popen([sys.executable, "-m", "tower.ui.server", "--store", root, "--port", str(port), "--host", "127.0.0.1"],
                             cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -420,13 +491,47 @@ def test_machinery_browser_renders_tower_and_scrubs(tmp_path):
             assert page.locator("#ladder tbody tr.bid.best td.qty span").text_content().strip() == str(int(first["bids"][0][1]))
             assert page.locator("#mech-table tbody tr.mech-row").count() >= 1
             assert "inactive" in page.locator("#mech-table tbody tr.mech-row", has_text="absorption").text_content()
-            # step forward one state
+            # step forward / back one state: exact microsecond times, no off-by-one from ms rounding
             page.click("#btn-next")
             page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(rows['ALPHA'][1]['t'])}", timeout=15000)
+            page.click("#btn-next")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(rows['ALPHA'][2]['t'])}", timeout=15000)
+            page.click("#btn-prev")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(rows['ALPHA'][1]['t'])}", timeout=15000)
+            assert page.text_content("#replay-pos").startswith("2/6")
+            page.click("#btn-last")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(last['t'])}", timeout=15000)
+            assert page.text_content("#mode") == "REPLAY"
+            # the timeline only shows transitions at or before the cursor (µs-exact comparison)
+            page.click("#btn-first")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(first['t'])}", timeout=15000)
+            assert page.evaluate("window.TOWER.S.tlSegments.filter(s => s.from !== null).length") == 0
+            page.click("#btn-next")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(rows['ALPHA'][1]['t'])}", timeout=15000)
+            assert page.evaluate("window.TOWER.S.tlSegments.filter(s => s.from !== null).map(s => s.layer + ':' + s.to)") == ["pressure:pressure_building"]
             # back to live
             page.click("#btn-live")
             page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(last['t'])}", timeout=15000)
             assert page.text_content("#mode").startswith("LIVE")
+            # play from the first state runs the virtual clock through every state to the end and stops
+            page.click("#btn-first")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(first['t'])}", timeout=15000)
+            page.select_option("#speed", "5")                                    # 1 s virtual per 200 ms tick, states 10 s apart
+            page.click("#btn-play")
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(rows['ALPHA'][2]['t'])}", timeout=20000)
+            assert page.evaluate("window.TOWER.S.playing") is True and page.text_content("#mode") == "REPLAY"
+            page.wait_for_function(f"document.querySelector('#state-time').textContent === {json.dumps(last['t'])}", timeout=30000)
+            page.wait_for_function("window.TOWER.S.playing === false", timeout=5000)
+            # two states with one frame time: stepping reaches BOTH (the first is unreachable by time alone)
+            page.select_option("#symbol", "DUP")
+            page.wait_for_function("document.querySelector('#replay-pos').textContent.startsWith('2/2')", timeout=15000)
+            assert page.text_content("#state-seq") == "2"
+            page.click("#btn-prev")
+            page.wait_for_function("document.querySelector('#replay-pos').textContent.startsWith('1/2')", timeout=15000)
+            assert page.text_content("#state-seq") == "1" and page.text_content("#mode") == "REPLAY"
+            page.click("#btn-next")
+            page.wait_for_function("document.querySelector('#replay-pos').textContent.startsWith('2/2')", timeout=15000)
+            assert page.text_content("#state-seq") == "2"
             assert not errors, errors
             browser.close()
     finally:

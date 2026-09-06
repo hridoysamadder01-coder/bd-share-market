@@ -44,7 +44,13 @@ is hermetic (`vendor/` is used automatically by `go build`).
 * `MANIFEST.json` `{schema_version:1, capturer_id, epoch, software_version,
   opened_utc, segments:[{source,path,records,first_seq,last_seq,sha256,bytes,
   epoch,closed_utc}], previous_epochs, closed_utc}` rewritten (tmp + rename) on
-  every segment close. `status.json` mirrors the last heartbeat.
+  every segment close. Entries read from an existing manifest are kept
+  verbatim, so the `gz_path`/`gz_sha256`/`gz_bytes` fields the Python
+  `compress_and_verify` adds survive a Go restart, and `-verify` reads a
+  segment through `gz_path` when the plain file was replaced (same rule as
+  `raw_store.verify_store`). `status.json` mirrors the last heartbeat.
+* The runner's final META carries `stopped_by` (`signal:<name>`, `deadline`
+  for `-run-for`, or `cancel`) and `stopped_by_signal`.
 
 ## Loss accounting — nothing is ever silent
 
@@ -54,11 +60,13 @@ is hermetic (`vendor/` is used automatically by `go build`).
 | established connection lost | `GAP{reason:"disconnect"}` then reconnect with backoff (1 s doubling to 60 s, reset after a frame arrives) |
 | connection attempt failed | `GAP{reason:"connect_error"}` per attempt |
 | framer skipped bytes to resynchronise | `GAP{reason:"resync"}` with the count |
-| connection ended inside a frame | `GAP{reason:"partial_frame"}` with the bytes in `body` |
+| connection ended inside a frame (peer hang-up, reset, read timeout or daemon shutdown) | `GAP{reason:"partial_frame"}` with the bytes in `body` |
 | HTTP non-2xx | `GAP{reason:"http"}` with the envelope and the body |
 | HTTP transport error | `GAP{reason:"exception"}` with the envelope |
 | anti-forgery token unavailable | `GAP{reason:"token"}` |
-| tailed file truncated / rotated | `GAP{reason:"truncate"/"rotate"}`, restart at offset 0, unframed bytes kept in `body` |
+| tailed file truncated / rotated | `GAP{reason:"truncate"/"rotate"}`, restart at offset 0, unframed bytes kept in `body` (also at start-up when the file was replaced or shortened since the persisted offset) |
+| tailed file read error | `GAP{reason:"exception"}`, then re-open at the consumed offset with fresh framing (the unframed tail is re-read, nothing lost or duplicated) |
+| `from_end` skipped an existing prefix | `GAP{reason:"from_end"}` with the skipped byte count |
 
 Polling/tailing transports (`http_poll`, `file_tail`) use a **blocking** put
 (back-pressure instead of drops — the upstream can wait). Streaming transports
@@ -120,10 +128,14 @@ Transport fields:
   `send_on_connect`, `read_timeout_ms`. Frames are **wire-exact**: delimiters,
   length prefixes and FIX trailers stay in the body, so concatenating a
   connection's frames reproduces the stream.
-* `file_tail`: `path`, `framing` (`line` / `len16` / `soh`), `poll_ms`. The
-  consumed offset is persisted in `<out>/state/<source>.offset.json` (after
-  each frame, saved at most once per second and at exit); a restart resumes
-  there. A partial trailing frame is never emitted — it waits for its end.
+* `file_tail`: `path`, `framing` (`line` / `len16` / `soh`), `poll_ms`,
+  `from_end` (first run only, no persisted offset: start at the current end
+  of the file like `tail -f`; the skipped prefix is a `GAP{from_end}`;
+  default false = capture the whole file). The consumed offset is persisted
+  in `<out>/state/<source>.offset.json` (after each frame, saved at most once
+  per second and at exit); a restart resumes there unless the file was
+  replaced (inode) or shortened, which restarts at 0 with a GAP. A partial
+  trailing frame is never emitted — it waits for its end.
 
 ## Tests
 
@@ -133,7 +145,9 @@ restart, deterministic drop accounting, tamper detection, every framing
 (including straddled reads, FIX resync and wrong BodyLength), an `httptest`
 poll (envelope, token flow, 503 → GAP, connection refused → GAP), local TCP
 servers with FIX and len16 framing (disconnect → GAP → reconnect), a
-websocket server, file_tail (partial line, resume, truncation) and a whole
-daemon run. `tests/tower/test_ingest_go_compat.py` builds the daemon, runs it
+websocket server, file_tail (partial line, resume, truncation, `from_end`,
+rotation between runs), partial frames at hang-up and at shutdown,
+transient framer errors, manifest round trip with Python-added gz fields, and
+a whole daemon run (stop cause). `tests/tower/test_ingest_go_compat.py` builds the daemon, runs it
 against a local `python -m http.server`, and checks the output with
 `seeing.capture.raw_store.verify_store` and `seeing.replay`.

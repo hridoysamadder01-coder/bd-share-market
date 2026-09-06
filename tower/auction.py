@@ -24,11 +24,14 @@ transition
     the first update in CONTINUOUS after a non-continuous update (PRE_OPEN, or
     CLOSED when no pre-open update was delivered) of the SAME trading date is the
     auction → continuous transition: ``transition_time`` is that update's time
-    and ``open_gap_ticks`` = (opening ltp − reference) / tick where the reference
+    and ``open_gap_ticks`` = (opening print − reference) / tick where the reference
     is the indicative price when one was delivered, else yclose
-    (``open_reference`` names which). When no ltp is available at the transition
-    the gap is filled by the first later update that carries one (the opening
-    price is the first print of the continuous session); when the tick is not
+    (``open_reference`` names which). The opening print (``open_ltp``) is the
+    published ``open`` of the session quote when it is carried (``open_basis`` =
+    'published'), else the first continuous ltp ('ltp' — which may still be the
+    previous close carried into the first frame, so a published open arriving
+    later replaces it). When no print is available at the transition the gap is
+    filled by the first later update that carries one; when the tick is not
     known yet the gap is computed as soon as it is. A replay that starts inside
     the continuous session has no transition (``None``).
 
@@ -90,6 +93,7 @@ class AuctionEngine:
         self._transition_time: Optional[datetime] = None
         self._transition_date: Any = None
         self._open_ltp: Optional[float] = None
+        self._open_basis: Optional[str] = None       # 'published' (quote open) | 'ltp' (first continuous print)
         self._open_gap_ticks: Optional[float] = None
         self._open_reference: Optional[str] = None
         self._open_reference_price: Optional[float] = None
@@ -120,7 +124,7 @@ class AuctionEngine:
         d: Dict[str, Any] = {
             "phase": phase, "source": None, "indicative_price": None, "matched_qty": None,
             "imbalance_qty": None, "imbalance_side": None, "auction_pressure": None, "auction_age_s": None,
-            "auction_events": self._n_events, "transition_time": None, "open_ltp": None,
+            "auction_events": self._n_events, "transition_time": None, "open_ltp": None, "open_basis": None,
             "open_gap_ticks": None, "open_reference": None, "open_reference_price": None,
             "last_phase_change": None,
         }
@@ -132,6 +136,7 @@ class AuctionEngine:
                 self._transition_time = ms.t
                 self._transition_date = today
                 self._open_ltp = None
+                self._open_basis = None
                 self._open_gap_ticks = None
                 self._open_reference = None
                 self._open_reference_price = None
@@ -167,8 +172,17 @@ class AuctionEngine:
         # auction → continuous transition and the opening gap
         if self._transition_time is not None and self._transition_date == today:
             d["transition_time"] = self._transition_time
+            quote = (ms.session_state or {}).get("quote") or {}
+            pub_open = _f(quote.get("open"))
+            pub_open = pub_open if (pub_open is not None and pub_open > 0) else None
+            if phase == "CONTINUOUS" and pub_open is not None and self._open_basis != "published":
+                # the published open is the opening print itself: it replaces an open taken from the
+                # first continuous ltp (which may still be the previous close carried into the session)
+                self._open_ltp, self._open_basis = pub_open, "published"
+                self._open_gap_ticks = None
             if self._open_ltp is None and phase == "CONTINUOUS" and ms.ltp is not None:
-                self._open_ltp = ms.ltp
+                self._open_ltp, self._open_basis = ms.ltp, "ltp"
+            if self._open_ltp is not None and self._open_reference is None:
                 ref_px, ref_name = None, None
                 if a is not None and a.date == today and a.indicative_price is not None:
                     ref_px, ref_name = a.indicative_price, "indicative"
@@ -182,6 +196,7 @@ class AuctionEngine:
                 # the opening print and its reference are frozen; the gap needs a tick, taken when known
                 self._open_gap_ticks = (self._open_ltp - self._open_reference_price) / ms.tick_size
             d["open_ltp"] = self._open_ltp
+            d["open_basis"] = self._open_basis
             d["open_gap_ticks"] = self._open_gap_ticks
             d["open_reference"] = self._open_reference
             d["open_reference_price"] = self._open_reference_price

@@ -455,6 +455,113 @@ def test_machinery_fill_state_is_deterministic_and_causal():
     assert build(False) == build(True)
 
 
+def test_machinery_wall_persistence_exact_over_many_changes():
+    # a busy level that changes far more often than any bounded history would hold: persistence must
+    # still date back to the true run start (the old 512-entry deque reported 511 s here)
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100), (9.7, 1000)], [(10.1, 10)])
+    for i in range(1, 601):
+        b.apply_snapshot(_t(i), [(10.0, 100), (9.7, 1000 + (i % 2))], [(10.1, 10)])
+    w = b.geometry()["bid"]["wall"]
+    assert w["price"] == 9.7 and w["persistence_s"] == 600.0
+    lv = {l.price: l for l in b.levels("bid")}[9.7]
+    assert len(lv.history) <= 2                                   # suffix-minimum staircase, not 601 entries
+    # a dip below 50 % of the eventual size restarts the run at the dip's end, exactly
+    b.apply_snapshot(_t(700), [(10.0, 100), (9.7, 400)], [(10.1, 10)])
+    b.apply_snapshot(_t(710), [(10.0, 100), (9.7, 1000)], [(10.1, 10)])
+    for i in range(711, 1311):
+        b.apply_snapshot(_t(i), [(10.0, 100), (9.7, 1000 + (i % 3))], [(10.1, 10)])
+    w = b.geometry()["bid"]["wall"]
+    assert w["persistence_s"] == 1310.0 - 710.0
+    # the run start is the earliest instant the bound held: 1000 → 300 → 1000 → 1000 → threshold 500 → since the
+    # recovery; 1000 → 600 → 1000 (600 ≥ 500) → since the first observation
+    a = EvolvingBook(tick=0.1)
+    a.apply_snapshot(_t(0), [(10.0, 1000)], [(10.1, 10)])
+    a.apply_snapshot(_t(10), [(10.0, 600)], [(10.1, 10)])
+    a.apply_snapshot(_t(20), [(10.0, 1000)], [(10.1, 10)])
+    a.apply_snapshot(_t(50), [(10.0, 1000)], [(10.1, 10)])
+    assert a.geometry()["bid"]["wall"]["persistence_s"] == 50.0
+    a.apply_snapshot(_t(60), [(10.0, 300)], [(10.1, 10)])
+    a.apply_snapshot(_t(70), [(10.0, 1000)], [(10.1, 10)])
+    a.apply_snapshot(_t(90), [(10.0, 1000)], [(10.1, 10)])
+    assert a.geometry()["bid"]["wall"]["persistence_s"] == 20.0
+
+
+def test_machinery_level_keyed_new_without_price_does_not_overwrite():
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100), (9.9, 50)], [(10.1, 10)])
+    # an insertion at rank 1 whose price was not delivered cannot be placed: the book must not change
+    ev = b.apply_update(_t(1), "bid", None, 77, action="NEW", level=1)
+    assert ev == [] and b.bids() == [(10.0, 100.0), (9.9, 50.0)] and b.n_updates == 2 and b.unchanged_run == 1
+    # a level-keyed DELETE / CHANGE acts on the level displayed at that rank
+    ev = b.apply_update(_t(2), "bid", None, None, action="DELETE", level=2)
+    assert ev[0]["price"] == 9.9 and ev[0]["kind"] == "REMOVE" and b.bids() == [(10.0, 100.0)]
+    ev = b.apply_update(_t(3), "bid", None, 120, action="CHANGE", level=1)
+    assert ev[0]["price"] == 10.0 and b.bids() == [(10.0, 120.0)]
+    # a rank beyond the displayed range with no price: counted, nothing changes
+    assert b.apply_update(_t(4), "bid", None, 5, action="CHANGE", level=9) == [] and b.bids() == [(10.0, 120.0)]
+    # with a price the NEW is placed normally (level is informational)
+    b.apply_update(_t(5), "bid", 10.05, 7, action="NEW", level=1)
+    assert b.bids() == [(10.05, 7.0), (10.0, 120.0)]
+
+
+def test_machinery_lookback_references_survive_long_gaps_and_fast_feeds():
+    # sparse feed: the acceleration / migration references are the last points at or before t − W, however
+    # old — they must not be dropped by a retention cap (the old 600 s cap returned None here)
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100), (9.7, 300)], [(10.1, 100)])
+    b.apply_snapshot(_t(10), [(10.0, 160), (9.7, 300)], [(10.1, 100)])       # v = 60 / 10 = 6
+    b.apply_snapshot(_t(2000), [(10.0, 190), (9.5, 300)], [(10.1, 100)])     # |Δ| = 30 + 300 + 300 → v = 630 / 60
+    assert b.velocity == 10.5 and abs(b.acceleration - (10.5 - 6.0) / 1990) < 1e-15
+    g = b.geometry()
+    assert g["bid"]["wall"]["migrated_ticks"] == -2.0 and g["bid"]["wall"]["migrated_dist_ticks"] == 2.0
+    assert abs(g["bid"]["migration"] - (5 * 300 / 490 - 3 * 300 / 460)) < 1e-12
+    # fast feed: 6000 updates inside one 60 s window — the window sums must cover all of them
+    # (a 5000-point ring would silently shorten the window)
+    f = EvolvingBook(tick=0.1)
+    f.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 100)])
+    for i in range(1, 6001):
+        f.apply_update(_t(i * 0.005), "bid", 10.0, 100 + (i % 2))            # |Δ| = 1 per update, e_n = ±1
+    assert f.velocity == 6000 / 30.0                                          # 6000 over the 30 s observed
+    assert f.ofi_window() == 0.0 and f.geometry()["ofi_window_n"] == 6000
+    # after the window rolls, only the updates inside (t − 60, t] remain
+    f.apply_update(_t(65), "bid", 10.0, 100)                                  # unchanged (|Δ| = 0, e = 0)
+    assert f.geometry()["ofi_window_n"] == 6000 - 1000 + 1 and abs(f.velocity - 5000 / 60) < 1e-12
+    # the running window sum shows no drift after roll-off: nothing changed in the last 60 s → exactly 0
+    f.apply_update(_t(200), "bid", 10.0, 100)
+    assert f.velocity == 0.0 and f.ofi_window() == 0.0 and f.geometry()["ofi_window_n"] == 1
+
+
+def test_machinery_ofi_window_reports_unobservable_steps():
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 100)])
+    b.apply_update(_t(1), "bid", 10.0, 150)                                  # e = +50
+    g = b.geometry()
+    assert g["ofi_window"] == 50 and g["ofi_window_n"] == 1 and g["ofi_window_missing"] == 0
+    b.apply_snapshot(_t(2), [(10.0, 150)], [])                              # ask side vanishes: step unobservable
+    b.apply_snapshot(_t(3), [(10.0, 150)], [(10.2, 30)])                    # returns: still unobservable
+    g = b.geometry()
+    assert b.ofi is None and g["ofi_window"] == 50 and g["ofi_window_missing"] == 2 and g["ofi_window_n"] == 1
+    # once the only observable step rolls out of the window the sum is None, not 0 (the t=2 step rolls out too)
+    b.apply_snapshot(_t(62), [(10.0, 150)], [])
+    g = b.geometry()
+    assert g["ofi_window"] is None and g["ofi_window_n"] == 0 and g["ofi_window_missing"] == 2
+    # the closed-market case: never observable → None throughout, missing counts every step
+    c = EvolvingBook(tick=0.1)
+    c.apply_snapshot(_t(0), [(10.0, 1)], [])
+    c.apply_snapshot(_t(1), [(10.0, 1)], [])
+    assert c.ofi_window() is None and c.geometry()["ofi_window_missing"] == 1
+
+
+def test_machinery_flat_orders_argument_is_rejected():
+    b = EvolvingBook(tick=0.1)
+    with pytest.raises(ValueError):
+        b.apply_snapshot(_t(0), [(10.0, 100), (9.9, 50)], [(10.1, 10)], orders=[3, 4])
+    assert b.n_updates == 0 and b.bids() == []                                # nothing applied
+    b.apply_snapshot(_t(0), [(10.0, 100), (9.9, 50)], [(10.1, 10)], orders=([3, 4], None))
+    assert b.geometry()["bid_orders"] == [3, 4] and b.geometry()["ask_orders"] == [None]
+
+
 # ---------------------------------------------------------------- real data
 def test_realdata_fixture_depth_snapshots():
     tables = replay(FIXTURE)

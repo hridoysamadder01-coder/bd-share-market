@@ -19,7 +19,10 @@ module never reads a clock):
   event (GAP events are not updates), ``t_exch`` the last exchange stamp
   carried, ``updates`` counts accepted events, ``duplicates`` the ones the
   normalizer flagged ``duplicate``, ``gaps`` the GAP events naming that key,
-  ``field_coverage`` is the union of ``observed_fields`` seen.
+  ``field_coverage`` is the union of ``observed_fields`` seen. Events must
+  be fed in ``sort_key`` order; a receipt that nevertheless arrives with an
+  older ``t_recv`` than what is already held (a live reorder-buffer leak) is
+  counted for status but never replaces a newer image / observation.
 * **Cadence** of a (source, symbol) is learned causally as the median of the
   inter-update receipt gaps seen so far (bounded ring of the last 64 gaps),
   exposed as ``SourceStatus.cadence_s``. A source is **stale** at ``now`` when
@@ -39,7 +42,11 @@ module never reads a clock):
   cause a switch). Otherwise the primary is the concurrent source with the most
   recent non-duplicate (content-changing) snapshot, ties broken by freshest
   receipt, then ``SOURCE_PRIORITY``, then name. If every source is stale the
-  freshest one is used (and reported stale in ``sources``).
+  freshest one is used (and reported stale in ``sources``). The sticky memory
+  advances **at event receipt** (``on_event`` re-evaluates the symbol's
+  primary at the event's time); ``primary_book_source(symbol, now)`` is a pure
+  read of that memory evaluated at ``now``, so the answer is a function of the
+  event stream and ``now`` — never of which frames happened to be queried.
 * **Book comparison**: when at least two sources are concurrent, the
   primary's displayed levels are compared level-by-level (index-aligned, best
   first; price and quantity) with each other concurrent source. Identical on
@@ -58,7 +65,11 @@ module never reads a clock):
   most ``total_tol`` (5 %) — a lagging poller is expected, a *leading* one or
   a larger gap is a disagreement. Fields a page marks as unpopulated zeros
   (``zero_fields``) and fields absent from ``observed_fields`` are not
-  observations. Tape rows (``CUM_TOTALS`` / ``TRADE``) whose exchange stamp
+  observations; a non-positive ``ltp`` / print price is a feed's "not
+  populated" sentinel, never a traded price (the normalizer's rule), a
+  negative day total is a parse artefact (a count), and a displayed level
+  needs a finite price and a positive quantity (the EvolvingBook's rule, so
+  the compared image is the displayed one). Tape rows (``CUM_TOTALS`` / ``TRADE``) whose exchange stamp
   falls on another trading date than their receipt are the previous session's
   tape (a pull made before the day's first trade returns it): they count as a
   receipt for the source's status but are neither quote observations nor a
@@ -74,10 +85,15 @@ module never reads a clock):
   its last current-session row) when the tape engine has not named a feed. Fused quote
   values fill ``ms.ltp`` / ``ms.trade_count`` / ``ms.trade_volume`` /
   ``ms.trade_value`` and the displayed book only where upstream engines left
-  them empty — the primary's value, never a blend.
+  them empty — the primary's value, never a blend. When the fuser displays
+  the book itself it also derives the L1 fields the book engine would
+  (``spread`` / ``spread_ticks`` / ``mid`` / ``microprice`` / ``crossed`` /
+  ``locked`` / ``one_sided`` / ``empty_book``) from that same image, so a
+  one-sided or crossed display is never left at the dataclass defaults.
 """
 from __future__ import annotations
 
+import math
 import statistics
 from collections import deque
 from dataclasses import dataclass, field, replace
@@ -89,6 +105,8 @@ from seeing.clock import trading_date
 from .events import SOURCE_PRIORITY, Event, EventType
 from .state import MarketState, SourceStatus
 
+# Known feed vocabulary (documentation, not a gate): any source delivering a BOOK_SNAPSHOT /
+# BOOK_UPDATE is a book source and any source delivering CUM_TOTALS / TRADE is a tape source.
 BOOK_SOURCES: Tuple[str, ...] = ("lankabd_depth", "dsebd_depth", "fix_md", "itch", "broker_l2_export")
 TAPE_SOURCES: Tuple[str, ...] = ("lankabd_tape", "broker_tns_export", "minute_dataset")
 QUOTE_FIELDS: Tuple[str, ...] = ("ltp", "day_trades", "day_volume", "day_value")
@@ -114,12 +132,15 @@ def _num(v: Any) -> Optional[float]:
 
 
 def _levels(levels: Any) -> List[Tuple[float, float]]:
+    """Displayed levels of one side: a finite price and a positive, finite quantity
+    (the EvolvingBook's rule — a 0 / negative / missing quantity is not a resting
+    level, so the image compared here is the image the book engine displays)."""
     out: List[Tuple[float, float]] = []
     for lv in levels or []:
         if lv is None or len(lv) < 2:
             continue
         p, q = _num(lv[0]), _num(lv[1])
-        if p is None or q is None:
+        if p is None or q is None or not math.isfinite(p) or not math.isfinite(q) or q <= 0:
             continue
         out.append((p, q))
     return out
@@ -178,6 +199,15 @@ class _Snap:
 
 
 @dataclass
+class _BookMem:
+    """What one book source has delivered for one symbol so far."""
+
+    t_last: datetime                             # last book observation receipt (snapshot or update)
+    t_change: Optional[datetime] = None          # last content-changing book receipt
+    snap: Optional[_Snap] = None                 # None for incremental sources (image lives in their book)
+
+
+@dataclass
 class _Cand:
     """A book source's standing for one symbol at ``now``."""
 
@@ -199,14 +229,14 @@ class Fuser:
         self.total_tol = float(total_tol)
         self.max_diff_examples = int(max_diff_examples)
         self._tracks: Dict[Tuple[str, Optional[str]], _Track] = {}
-        self._books: Dict[Tuple[str, str], _Snap] = {}                 # (source, symbol) → latest image
-        self._book_last: Dict[Tuple[str, str], datetime] = {}          # (source, symbol) → last book receipt
-        self._book_change: Dict[Tuple[str, str], datetime] = {}        # (source, symbol) → last content change
+        self._book: Dict[str, Dict[str, _BookMem]] = {}                 # symbol → source → book memory
         self._quotes: Dict[Tuple[str, str], Dict[str, _Obs]] = {}       # (source, symbol) → field → obs
         self._tape_last: Dict[Tuple[str, str], datetime] = {}          # (source, symbol) → last current-session tape row
-        self._primary: Dict[str, str] = {}                              # symbol → sticky book primary
+        self._primary: Dict[str, str] = {}                              # symbol → sticky book primary (advanced in on_event)
+        self._t_now: Optional[datetime] = None                          # newest t_recv fed so far
         self.events_seen = 0
         self.previous_session_rows = 0                                  # tape rows stamped on another trading date
+        self.out_of_order = 0                                           # receipts older than what was already held
 
     # ------------------------------------------------------------------ status helpers
     def _track(self, source: str, symbol: Optional[str]) -> _Track:
@@ -260,6 +290,10 @@ class Fuser:
         if et == EventType.GAP:
             tr.status.gaps += 1          # counted on the key the gap names; a GAP is not an update
             return
+        if self._t_now is None or ev.t_recv >= self._t_now:
+            self._t_now = ev.t_recv
+        else:
+            self.out_of_order += 1
         dup_flag = bool(ev.flags.get("duplicate"))
         unchanged = dup_flag or bool(ev.flags.get("unchanged"))
         tr.on_receipt(ev.t_recv, unchanged)
@@ -278,31 +312,43 @@ class Fuser:
         k = (ev.source, symbol)
         if et == EventType.BOOK_SNAPSHOT:
             p = ev.payload or {}
-            self._books[k] = _Snap(t=ev.t_recv, t_exch=ev.t_exch, bids=_levels(p.get("bids")),
-                                   asks=_levels(p.get("asks")), unchanged=unchanged)
-            self._note_book_receipt(k, ev.t_recv, unchanged)
+            snap = _Snap(t=ev.t_recv, t_exch=ev.t_exch, bids=_levels(p.get("bids")),
+                         asks=_levels(p.get("asks")), unchanged=unchanged)
+            self._note_book_receipt(symbol, ev.source, ev.t_recv, unchanged, snap)
             self._observe_quote(ev, symbol, unchanged)
         elif et == EventType.BOOK_UPDATE:
-            self._note_book_receipt(k, ev.t_recv, unchanged)
+            self._note_book_receipt(symbol, ev.source, ev.t_recv, unchanged, None)
         elif et in (EventType.CUM_TOTALS, EventType.TRADE):
             if ev.t_exch is not None and trading_date(ev.t_exch) != trading_date(ev.t_recv):
                 # a pull made before the day's first trade returns the previous session's rows:
                 # a receipt (the feed is alive), not an observation of today's tape
                 self.previous_session_rows += 1
                 return
-            self._tape_last[k] = ev.t_recv
+            prev_t = self._tape_last.get(k)
+            if prev_t is None or ev.t_recv >= prev_t:
+                self._tape_last[k] = ev.t_recv
             self._observe_quote(ev, symbol, unchanged)
         elif et == EventType.QUOTE:
             self._observe_quote(ev, symbol, unchanged)
+        # the sticky book primary advances with the event stream, at the event's time — the same
+        # instant the engine builds the frame — so it is a function of the events, not of queries
+        chosen = self._choose_primary(symbol, self._t_now)
+        if chosen is not None:
+            self._primary[symbol] = chosen
 
-    def _note_book_receipt(self, k: Tuple[str, str], t: datetime, unchanged: bool) -> None:
-        prev = self._book_last.get(k)
-        if prev is None or t >= prev:
-            self._book_last[k] = t
-        if not unchanged:
-            prev_c = self._book_change.get(k)
-            if prev_c is None or t >= prev_c:
-                self._book_change[k] = t
+    def _note_book_receipt(self, symbol: str, source: str, t: datetime, unchanged: bool,
+                           snap: Optional[_Snap]) -> None:
+        mems = self._book.setdefault(symbol, {})
+        mem = mems.get(source)
+        if mem is None:
+            mem = _BookMem(t_last=t)
+            mems[source] = mem
+        elif t >= mem.t_last:
+            mem.t_last = t
+        if snap is not None and (mem.snap is None or t >= mem.snap.t):
+            mem.snap = snap                      # an older (out-of-order) image never replaces a newer one
+        if not unchanged and (mem.t_change is None or t >= mem.t_change):
+            mem.t_change = t
 
     def _observe_quote(self, ev: Event, symbol: str, unchanged: bool) -> None:
         p = ev.payload or {}
@@ -313,6 +359,8 @@ class Fuser:
 
         def put(fld: str, value: float) -> None:
             cur = obs.get(fld)
+            if cur is not None and cur.t > ev.t_recv:
+                return          # out-of-order receipt: the newer observation stays
             if cur is not None and cur.t == ev.t_recv and cur.t_exch is not None and (
                     ev.t_exch is None or cur.t_exch > ev.t_exch):
                 return          # same pull, an older exchange stamp: the newer row stays the observation
@@ -322,28 +370,31 @@ class Fuser:
             if key not in p or fld in seen or fld not in observed or key in zero:
                 continue
             v = _num(p.get(key))
-            if v is None:
+            if v is None or not math.isfinite(v):
                 continue
+            if fld == "ltp" and v <= 0:
+                continue        # a traded price is strictly positive: 0 is a feed's 'not populated' sentinel
+            if fld != "ltp" and v < 0:
+                continue        # a day total is a count: a negative one is a parse artefact, not an observation
             seen.add(fld)
             put(fld, v)
         if ev.event_type == EventType.TRADE and "ltp" not in seen and ev.price is not None:
             # a print IS the last traded price: the trade itself is the observation
-            put("ltp", float(ev.price))
+            px = _num(ev.price)
+            if px is not None and math.isfinite(px) and px > 0:
+                put("ltp", px)
 
     # ------------------------------------------------------------------ book fusion
     def _book_candidates(self, symbol: str, now: datetime) -> Dict[str, _Cand]:
         """Book sources with an observation for ``symbol`` at or before ``now``."""
         out: Dict[str, _Cand] = {}
-        for (src, sym), t_last in self._book_last.items():
-            if sym != symbol or t_last > now:
+        for src, mem in self._book.get(symbol, {}).items():
+            if mem.t_last > now:
                 continue
-            snap = self._books.get((src, sym))
-            if snap is not None and snap.t > now:
+            if mem.snap is not None and mem.snap.t > now:
                 continue            # only the latest image is held; nothing observable for this source yet
-            t_change = self._book_change.get((src, sym))
-            if t_change is not None and t_change > now:
-                t_change = None
-            out[src] = _Cand(src, t_last, t_change, snap)
+            t_change = mem.t_change if (mem.t_change is None or mem.t_change <= now) else None
+            out[src] = _Cand(src, mem.t_last, t_change, mem.snap)
         return out
 
     def _concurrent(self, symbol: str, now: datetime, cands: Dict[str, _Cand]) -> List[str]:
@@ -361,8 +412,14 @@ class Fuser:
         return [best.source]
 
     def primary_book_source(self, symbol: str, now: datetime) -> Optional[str]:
-        """The book source the frame at ``now`` is built from (rule in the module docstring)."""
-        symbol = symbol.upper()
+        """The book source the frame at ``now`` is built from (rule in the module
+        docstring). A pure read: the sticky memory it consults advances only in
+        :meth:`on_event`, so querying never changes a later answer."""
+        return self._choose_primary(symbol.upper(), now)
+
+    def _choose_primary(self, symbol: str, now: Optional[datetime]) -> Optional[str]:
+        if now is None:
+            return None
         cands = self._book_candidates(symbol, now)
         if not cands:
             return None
@@ -376,9 +433,7 @@ class Fuser:
             tc = c.t_change.timestamp() if c.t_change else float("-inf")
             return (-tc, -c.t_last.timestamp(), _priority(src), src)
 
-        chosen = sorted(conc, key=rank)[0]
-        self._primary[symbol] = chosen
-        return chosen
+        return sorted(conc, key=rank)[0]
 
     def _primary_lags(self, cands: Dict[str, _Cand], cur: str, conc: List[str], now: datetime) -> bool:
         """The sticky primary lags when another concurrent source observed a content
@@ -543,17 +598,13 @@ class Fuser:
         # ---- book
         if primary is not None:
             ms.book_source = primary
-            t_last = self._book_last.get((primary, symbol))
-            ms.book_age_s = (now - t_last).total_seconds() if t_last is not None else None
+            mem = self._book.get(symbol, {}).get(primary)
+            ms.book_age_s = (now - mem.t_last).total_seconds() if mem is not None else None
             provenance["book"] = primary
             if snap is not None and not ms.bids and not ms.asks and ms.best_bid is None and ms.best_ask is None:
                 # nothing upstream displayed a book: show the primary's image (its own values, unblended)
-                ms.bids, ms.asks = list(snap.bids), list(snap.asks)
-                ms.best_bid = snap.bids[0][0] if snap.bids else None
-                ms.best_ask = snap.asks[0][0] if snap.asks else None
-                ms.bid_qty1 = snap.bids[0][1] if snap.bids else None
-                ms.ask_qty1 = snap.asks[0][1] if snap.asks else None
-                ms.empty_book = not (snap.bids or snap.asks)
+                # and derive the same L1 fields the book engine would from that image
+                _display_image(ms, snap)
             if ms.best_bid is not None:
                 provenance["best_bid"] = primary
             if ms.best_ask is not None:
@@ -625,6 +676,29 @@ class Fuser:
             st.agreement = dict(src_agree.get(src, {}))
             st.disagreement = dict(src_disagree.get(src, {}))
         ms.sources = sources
+
+
+# ---------------------------------------------------------------------------- display
+def _display_image(ms: MarketState, snap: _Snap) -> None:
+    """Show ``snap`` as the frame's book: levels, L1 and the L1-derived fields
+    (same definitions as ``EvolvingBook.geometry``; None where a side is absent)."""
+    ms.bids, ms.asks = list(snap.bids), list(snap.asks)
+    bb = snap.bids[0][0] if snap.bids else None
+    ba = snap.asks[0][0] if snap.asks else None
+    bq1 = snap.bids[0][1] if snap.bids else None
+    aq1 = snap.asks[0][1] if snap.asks else None
+    ms.best_bid, ms.best_ask, ms.bid_qty1, ms.ask_qty1 = bb, ba, bq1, aq1
+    spread = (ba - bb) if (bb is not None and ba is not None) else None
+    ms.spread = spread
+    ms.spread_ticks = round(spread / ms.tick_size, 6) if (spread is not None and ms.tick_size) else None
+    ms.mid = (ba + bb) / 2.0 if spread is not None else None
+    ms.microprice = None
+    if spread is not None and (bq1 + aq1) > 0:
+        ms.microprice = (ba * bq1 + bb * aq1) / (bq1 + aq1)
+    ms.crossed = bool(spread is not None and spread < 0)
+    ms.locked = bool(spread is not None and spread == 0)
+    ms.one_sided = bool(snap.bids) != bool(snap.asks)
+    ms.empty_book = not (snap.bids or snap.asks)
 
 
 # ---------------------------------------------------------------------------- comparison rules

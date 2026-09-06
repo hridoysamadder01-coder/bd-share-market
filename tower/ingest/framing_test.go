@@ -147,3 +147,54 @@ func TestLen16Framing(t *testing.T) {
 		t.Fatal("unknown framing must error")
 	}
 }
+
+// flaky returns its chunks in order; a nil chunk is a transient error. The
+// last non-nil chunk is delivered together with the error that follows it
+// (n > 0 with err != nil, as a raw io.Reader may do).
+type flaky struct {
+	chunks [][]byte
+	errs   []error
+}
+
+func (f *flaky) Read(p []byte) (int, error) {
+	if len(f.chunks) == 0 {
+		return 0, io.EOF
+	}
+	c, e := f.chunks[0], f.errs[0]
+	f.chunks, f.errs = f.chunks[1:], f.errs[1:]
+	n := copy(p, c)
+	return n, e
+}
+
+func TestFramersSurviveTransientErrorsAndFrameDataThatArrivesWithAnError(t *testing.T) {
+	transient := errors.New("transient")
+	m := fixMsg(3, "55=X\x01")
+	cases := []struct {
+		kind   string
+		frames [][]byte
+	}{
+		{"line", [][]byte{[]byte("a\n"), []byte("b\n")}},
+		{"soh", [][]byte{m, m}},
+		{"len16", [][]byte{len16([]byte("p")), len16([]byte("qq"))}},
+	}
+	for _, c := range cases {
+		stream := bytes.Join(c.frames, nil)
+		half := len(c.frames[0]) / 2
+		// chunk 1: half of frame 0 with a transient error; chunk 2: the rest of the stream with EOF
+		r := &flaky{chunks: [][]byte{stream[:half], stream[half:]}, errs: []error{transient, io.EOF}}
+		fr, _ := NewFramer(c.kind, r, "")
+		_, err := fr.Next()
+		if !errors.Is(err, transient) || len(fr.Partial()) != half {
+			t.Fatalf("%s: first Next must surface the transient error after buffering %d bytes: %v %d", c.kind, half, err, len(fr.Partial()))
+		}
+		// the error is not sticky: the next call reads again and both frames come out
+		f0, err0 := fr.Next()
+		f1, err1 := fr.Next()
+		if err0 != nil || err1 != nil || !bytes.Equal(f0, c.frames[0]) || !bytes.Equal(f1, c.frames[1]) {
+			t.Fatalf("%s: after a transient error: %q %v %q %v", c.kind, f0, err0, f1, err1)
+		}
+		if _, err := fr.Next(); !errors.Is(err, io.EOF) || len(fr.Partial()) != 0 {
+			t.Fatalf("%s: clean EOF expected, got %v", c.kind, err)
+		}
+	}
+}
