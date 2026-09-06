@@ -29,6 +29,7 @@ class SourceStatus:
     gaps: int = 0
     agreement: Dict[str, bool] = field(default_factory=dict)      # field → agreed with the other source
     disagreement: Dict[str, Any] = field(default_factory=dict)    # field → {this, other, other_source}
+    cadence_s: Optional[float] = None            # learned median inter-update gap (None until 1 gap seen)
 
 
 @dataclass

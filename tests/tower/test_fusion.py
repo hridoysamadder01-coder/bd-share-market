@@ -1,0 +1,422 @@
+"""tower.fusion — synthetic multi-source scenarios (machinery) and the real closed-market fixture."""
+from __future__ import annotations
+
+import json
+import os
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from tower.events import Event, EventType
+from tower.fusion import Fuser, QUOTE_FIELDS
+from tower.normalize import normalize_store
+from tower.state import MarketState
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FIXTURE = os.path.join(ROOT, "tests", "fixtures", "capture_closed")
+T0 = datetime(2026, 9, 6, 4, 15, 0, tzinfo=timezone.utc)
+
+_SEQ = {}
+
+
+def _t(s: float) -> datetime:
+    return T0 + timedelta(seconds=s)
+
+
+def _seq(source: str) -> int:
+    n = _SEQ.get(source, 0)
+    _SEQ[source] = n + 1
+    return n
+
+
+def snap(source, symbol, s, bids, asks, ltp=None, trades=None, volume=None, value=None, dup=False, zero=()):
+    payload = {"bids": bids, "asks": asks, "ltp": ltp, "day_trades": trades, "day_volume": volume,
+               "day_value_mn": value, "zero_fields": list(zero)}
+    observed = ["t_recv", "bid_levels", "ask_levels"]
+    for k, canon in (("ltp", "ltp"), ("day_trades", "day_trades"), ("day_volume", "day_volume"),
+                     ("day_value_mn", "day_value")):
+        if payload[k] is not None:
+            observed.append(canon)
+    return Event(source=source, event_type=EventType.BOOK_SNAPSHOT, t_recv=_t(s), seq_local=_seq(source),
+                 symbol=symbol, session_phase="CONTINUOUS", is_snapshot=True, price=ltp, payload=payload,
+                 observed_fields=tuple(observed), flags={"duplicate": True} if dup else {})
+
+
+def quote(source, symbol, s, ltp=None, trades=None, volume=None, value=None, t_exch=None, unchanged=False):
+    payload = {"ltp": ltp, "day_trades": trades, "day_volume": volume, "day_value_mn": value}
+    observed = ["t_recv"] + (["t_source"] if t_exch else [])
+    for k, canon in (("ltp", "ltp"), ("day_trades", "day_trades"), ("day_volume", "day_volume"),
+                     ("day_value_mn", "day_value")):
+        if payload[k] is not None:
+            observed.append(canon)
+    return Event(source=source, event_type=EventType.QUOTE, t_recv=_t(s), seq_local=_seq(source), symbol=symbol,
+                 t_exch=t_exch, session_phase="CONTINUOUS", price=ltp, payload=payload,
+                 observed_fields=tuple(observed), flags={"unchanged": True} if unchanged else {})
+
+
+def cum(source, symbol, s, price, trades, volume, value, t_exch_s=None):
+    return Event(source=source, event_type=EventType.CUM_TOTALS, t_recv=_t(s), seq_local=_seq(source),
+                 symbol=symbol, t_exch=_t(t_exch_s) if t_exch_s is not None else None, session_phase="CONTINUOUS",
+                 price=price, payload={"cum_trades": trades, "cum_volume": volume, "cum_value_mn": value,
+                                       "price": price},
+                 observed_fields=("t_recv", "t_source", "day_trades", "day_volume", "day_value", "ltp"))
+
+
+def gap(source, symbol, s):
+    return Event(source=source, event_type=EventType.GAP, t_recv=_t(s), seq_local=_seq(source), symbol=symbol,
+                 status="http_error", payload={"reason": "http_error"}, flags={"gap": True})
+
+
+def fill(f: Fuser, symbol: str, s: float) -> MarketState:
+    ms = MarketState(symbol=symbol, t=_t(s))
+    f.fill_state(ms, _t(s))
+    return ms
+
+
+BIDS = [(10.0, 100.0), (9.9, 300.0), (9.8, 250.0)]
+ASKS = [(10.1, 80.0), (10.2, 400.0)]
+
+
+# ---------------------------------------------------------------- two-source agreement
+def test_machinery_two_source_agreement_book_and_quote():
+    f = Fuser(coalesce_s=6.0)
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS, ltp=10.1, trades=50, volume=5000, value=0.05))
+    # only one source yet: no comparison possible, agreement carries no 'book' key (not a silent True)
+    bids, asks, src, agr, dis = f.fuse_book("SYN", _t(0))
+    assert (bids, asks, src) == (BIDS, ASKS, "lankabd_depth") and agr == {} and dis == {}
+    f.on_event(snap("dsebd_depth", "SYN", 2, BIDS, ASKS, ltp=10.1, trades=50, volume=5000, value=0.05))
+    bids, asks, src, agr, dis = f.fuse_book("SYN", _t(2))
+    assert src == "lankabd_depth"            # first primary is kept while both sensors are concurrent
+    assert agr == {"book": True} and dis == {}
+    values, prov, qagr, qdis = f.fuse_quote("SYN", _t(2))
+    assert values == {"ltp": 10.1, "day_trades": 50.0, "day_volume": 5000.0, "day_value": 0.05}
+    assert prov == {fld: "dsebd_depth" for fld in QUOTE_FIELDS}     # freshest receipt of each field
+    assert qagr == {fld: True for fld in QUOTE_FIELDS} and qdis == {}
+    ms = fill(f, "SYN", 2)
+    assert ms.source_agreement == {"book": True, "ltp": True, "day_trades": True, "day_volume": True, "day_value": True}
+    assert ms.source_disagreement == {}
+    assert ms.book_source == "lankabd_depth" and ms.book_age_s == 2.0
+    assert ms.provenance["book"] == "lankabd_depth" and ms.provenance["best_bid"] == "lankabd_depth"
+    assert ms.provenance["ltp"] == "dsebd_depth"
+    assert ms.bids == BIDS and ms.best_bid == 10.0 and ms.best_ask == 10.1 and ms.empty_book is False
+    assert ms.ltp == 10.1 and ms.trade_count == 50 and ms.trade_volume == 5000 and ms.trade_value == 0.05
+    for s in ("lankabd_depth", "dsebd_depth"):
+        assert ms.sources[s].agreement == {"book": True, "ltp": True, "day_trades": True, "day_volume": True,
+                                           "day_value": True}
+        assert ms.sources[s].disagreement == {}
+    assert ms.sources["lankabd_depth"].freshness_s == 2.0 and ms.sources["dsebd_depth"].freshness_s == 0.0
+    # the state serialises (tuples inside disagreement / status are JSON-able)
+    json.dumps(ms.to_dict())
+
+
+def test_machinery_disagreement_exposes_both_values_and_sources():
+    f = Fuser(coalesce_s=6.0)
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS, ltp=10.1, trades=50, volume=5000, value=0.05))
+    assert f.primary_book_source("SYN", _t(0)) == "lankabd_depth"        # the engine asks at every frame
+    other_bids = [(10.0, 100.0), (9.9, 280.0), (9.8, 250.0)]
+    other_asks = [(10.1, 80.0)]
+    # dsebd (fresher → quote primary): one bid qty differs, one ask level missing; ltp differs;
+    # trades 60 vs lankabd 50 (other lags 17 % → beyond tolerance); volume 4900 vs 5000 (other LEADS);
+    # value equal
+    f.on_event(snap("dsebd_depth", "SYN", 3, other_bids, other_asks, ltp=10.2, trades=60, volume=4900, value=0.05))
+    ms = fill(f, "SYN", 3)
+    assert ms.book_source == "lankabd_depth"
+    assert ms.source_agreement == {"book": False, "ltp": False, "day_trades": False, "day_volume": False,
+                                   "day_value": True}
+    b = ms.source_disagreement["book"]
+    assert b["n_diff_levels"] == 2 and b["this_source"] == "lankabd_depth" and b["other_source"] == "dsebd_depth"
+    assert b["this_best_bid"] == 10.0 and b["other_best_bid"] == 10.0
+    assert b["this_n_levels"] == (3, 2) and b["other_n_levels"] == (3, 1) and b["dt_s"] == -3.0
+    assert b["examples"] == [{"side": "bid", "level": 1, "this": (9.9, 300.0), "other": (9.9, 280.0)},
+                             {"side": "ask", "level": 1, "this": (10.2, 400.0), "other": None}]
+    assert b["others_compared"] == ["dsebd_depth"]
+    # fused quote values are the primary's (dsebd), the other is listed — never a blend
+    assert ms.ltp == 10.2 and ms.trade_count == 60 and ms.trade_volume == 4900 and ms.trade_value == 0.05
+    d = ms.source_disagreement["ltp"]
+    assert (d["this"], d["this_source"], d["other"], d["other_source"]) == (10.2, "dsebd_depth", 10.1, "lankabd_depth")
+    assert d["rule"] == "ltp exact" and d["dt_s"] == 3.0
+    d = ms.source_disagreement["day_trades"]
+    assert (d["this"], d["other"]) == (60.0, 50.0) and d["rule"].startswith("other lags beyond")
+    d = ms.source_disagreement["day_volume"]
+    assert (d["this"], d["other"]) == (4900.0, 5000.0) and d["rule"].startswith("other leads")
+    assert "day_value" not in ms.source_disagreement
+    # both per-source views carry the disagreement, each from its own side
+    assert ms.sources["dsebd_depth"].agreement == {"book": False, "ltp": False, "day_trades": False,
+                                                   "day_volume": False, "day_value": True}
+    assert ms.sources["lankabd_depth"].agreement == ms.sources["dsebd_depth"].agreement
+    assert ms.sources["lankabd_depth"].disagreement["ltp"] == {"this": 10.1, "other": 10.2,
+                                                                "other_source": "dsebd_depth",
+                                                                "rule": "ltp exact", "dt_s": -3.0}
+    bk = ms.sources["dsebd_depth"].disagreement["book"]
+    assert bk["other_source"] == "lankabd_depth" and bk["n_diff_levels"] == 2 and bk["dt_s"] == 3.0
+    assert bk["this"] == {"best_bid": 10.0, "best_ask": 10.1, "n_levels": (3, 1)}
+    assert ms.provenance == {"book": "lankabd_depth", "best_bid": "lankabd_depth", "best_ask": "lankabd_depth",
+                             "ltp": "dsebd_depth", "day_trades": "dsebd_depth", "day_volume": "dsebd_depth",
+                             "day_value": "dsebd_depth"}
+    json.dumps(ms.to_dict())
+
+
+def test_machinery_total_tolerance_rules():
+    f = Fuser(coalesce_s=6.0)
+    # other lags within 5 %: agreement; other leads: disagreement; other lags beyond 5 %: disagreement
+    f.on_event(quote("lankabd_watch", "SYN", 0, volume=9700))
+    f.on_event(snap("lankabd_depth", "SYN", 1, BIDS, ASKS, volume=10000))
+    _, prov, agr, dis = f.fuse_quote("SYN", _t(1))
+    assert prov["day_volume"] == "lankabd_depth" and agr["day_volume"] is True and dis == {}
+    f.on_event(quote("dsebd_latest", "SYN", 2, volume=10200))        # fresher, leads the depth page
+    values, prov, agr, dis = f.fuse_quote("SYN", _t(2))
+    assert prov["day_volume"] == "dsebd_latest" and values["day_volume"] == 10200
+    assert agr["day_volume"] is True                                  # both others lag within 5 % of 10200
+    f.on_event(snap("lankabd_depth", "SYN", 3, BIDS, ASKS, volume=10000, dup=False))
+    values, prov, agr, dis = f.fuse_quote("SYN", _t(3))
+    assert prov["day_volume"] == "lankabd_depth" and values["day_volume"] == 10000
+    assert agr["day_volume"] is False
+    d = dis["day_volume"]
+    assert d["other_source"] == "dsebd_latest" and d["other"] == 10200 and "leads" in d["rule"]
+    others = {o["other_source"]: o for o in d["others"]}
+    assert others["lankabd_watch"]["agree"] is True and others["dsebd_latest"]["agree"] is False
+    f.on_event(quote("lankabd_watch", "SYN", 4, volume=9000))         # lags 10 % behind → disagreement
+    _, prov, agr, dis = f.fuse_quote("SYN", _t(4))
+    # freshest is the watch (9000): the depth page (10000) and dsebd (10200) both LEAD it
+    assert prov["day_volume"] == "lankabd_watch" and agr["day_volume"] is False
+    assert {o["other_source"] for o in dis["day_volume"]["others"] if not o["agree"]} == {"lankabd_depth", "dsebd_latest"}
+
+
+def test_machinery_zero_fields_and_unobserved_are_not_observations():
+    f = Fuser()
+    f.on_event(snap("lankabd_depth", "SYN", 0, [], [], ltp=0.0, trades=0, volume=0, zero=("ltp",)))
+    values, prov, _, _ = f.fuse_quote("SYN", _t(0))
+    assert values["ltp"] is None and "ltp" not in prov
+    assert values["day_trades"] == 0.0 and prov["day_trades"] == "lankabd_depth"   # a delivered 0 is observed
+    assert values["day_value"] is None and "day_value" not in prov              # never delivered
+    ms = fill(f, "SYN", 0)
+    assert ms.ltp is None and ms.trade_count == 0.0 and ms.trade_value is None
+    assert ms.empty_book is True and ms.best_bid is None and "best_bid" not in ms.provenance
+    assert ms.provenance["book"] == "lankabd_depth"
+
+
+# ---------------------------------------------------------------- primary selection over time
+def test_machinery_primary_sticky_then_switches_when_lagging_or_stale():
+    f = Fuser(coalesce_s=6.0)
+    for i in range(4):
+        f.on_event(snap("lankabd_depth", "SYN", 6 * i, BIDS, ASKS, dup=i > 0))
+        assert f.primary_book_source("SYN", _t(6 * i)) == "lankabd_depth"
+        f.on_event(snap("dsebd_depth", "SYN", 6 * i + 2, BIDS, ASKS, dup=i > 0))
+        # dsebd's first snapshot is a "change" too, but the images are identical: no switch
+        assert f.primary_book_source("SYN", _t(6 * i + 2)) == "lankabd_depth"
+    assert f.primary_book_source("SYN", _t(25)) == "lankabd_depth"
+    # lankabd keeps polling but its image no longer changes; dsebd sees a change at 26 s
+    new_bids = [(10.0, 150.0)] + BIDS[1:]
+    f.on_event(snap("lankabd_depth", "SYN", 24, BIDS, ASKS, dup=True))
+    f.on_event(snap("dsebd_depth", "SYN", 26, new_bids, ASKS))
+    # within the coalesce window of that change lankabd is still primary, but the disagreement is exposed
+    bids, _, src, agr, dis = f.fuse_book("SYN", _t(26))
+    assert src == "lankabd_depth" and agr == {"book": False} and dis["book"]["n_diff_levels"] == 1
+    assert bids == BIDS
+    f.on_event(snap("lankabd_depth", "SYN", 30, BIDS, ASKS, dup=True))
+    f.on_event(snap("dsebd_depth", "SYN", 32, new_bids, ASKS, dup=True))
+    f.on_event(snap("lankabd_depth", "SYN", 36, BIDS, ASKS, dup=True))
+    # lankabd's last content change (0 s) is > 6 s behind dsebd's (26 s): primary switches to dsebd
+    bids, _, src, agr, dis = f.fuse_book("SYN", _t(36))
+    assert src == "dsebd_depth" and bids == new_bids and agr == {"book": False}
+    assert dis["book"]["this_source"] == "dsebd_depth" and dis["book"]["other_source"] == "lankabd_depth"
+    # dsebd stops; lankabd continues → dsebd leaves the concurrent set (beyond coalesce), lankabd is primary
+    for s in (42, 48, 54, 60):
+        f.on_event(snap("lankabd_depth", "SYN", s, new_bids, ASKS, dup=s > 42))
+    bids, _, src, agr, dis = f.fuse_book("SYN", _t(60))
+    assert src == "lankabd_depth" and bids == new_bids and agr == {} and dis == {}
+    ms = fill(f, "SYN", 60)
+    # dsebd: 28 s old, cadence 6 s → threshold max(30, 18) = 30 s: out of the coalesce window but not yet stale
+    assert ms.sources["dsebd_depth"].stale is False and ms.sources["dsebd_depth"].freshness_s == 28.0
+    assert ms.sources["dsebd_depth"].cadence_s == 6.0
+    ms = fill(f, "SYN", 70)
+    assert ms.sources["dsebd_depth"].stale is True and ms.sources["dsebd_depth"].freshness_s == 38.0
+    assert ms.sources["lankabd_depth"].stale is False and ms.book_source == "lankabd_depth"
+    # everything silent for a long time: the freshest source is still named, and reported stale
+    ms = fill(f, "SYN", 400)
+    assert ms.book_source == "lankabd_depth" and ms.book_age_s == 340.0
+    assert ms.sources["lankabd_depth"].stale is True and ms.sources["dsebd_depth"].stale is True
+
+
+def test_machinery_book_fusion_is_causal_in_now():
+    f = Fuser()
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS, ltp=10.0))
+    f.on_event(snap("lankabd_depth", "SYN", 10, [(10.0, 1.0)], ASKS, ltp=10.5))
+    # only the latest image is held; asked about an instant before it, the fuser answers "nothing
+    # observable yet" rather than showing a book from the future
+    assert f.fuse_book("SYN", _t(5)) == (None, None, None, {}, {})
+    assert f.fuse_quote("SYN", _t(5)) == ({fld: None for fld in QUOTE_FIELDS}, {}, {}, {})
+    bids, _, src, _, _ = f.fuse_book("SYN", _t(10))
+    assert src == "lankabd_depth" and bids == [(10.0, 1.0)]
+    assert f.fuse_quote("SYN", _t(-1)) == ({fld: None for fld in QUOTE_FIELDS}, {}, {}, {})
+    assert f.fuse_book("SYN", _t(-1))[2] is None
+    assert f.tape_source("SYN", _t(-1)) == (None, None)
+
+
+# ---------------------------------------------------------------- freshness / stale evolution
+def test_machinery_freshness_and_stale_follow_learned_cadence():
+    f = Fuser()
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS))
+    st = fill(f, "SYN", 10).sources["lankabd_depth"]
+    assert st.cadence_s is None and st.freshness_s == 10.0 and st.stale is False
+    st = fill(f, "SYN", 31).sources["lankabd_depth"]
+    assert st.stale is True                       # no cadence yet: the 30 s floor applies
+    # a 20 s poller: threshold = max(30, 3 × 20) = 60 s
+    for i in range(1, 5):
+        f.on_event(snap("lankabd_depth", "SYN", 20 * i, BIDS, ASKS, dup=True))
+    assert f.cadence_s("lankabd_depth", "SYN") == 20.0 and f.stale_threshold_s("lankabd_depth", "SYN") == 60.0
+    assert fill(f, "SYN", 80 + 45).sources["lankabd_depth"].stale is False
+    assert fill(f, "SYN", 80 + 61).sources["lankabd_depth"].stale is True
+    # a fast poller (5 s) is protected by the floor: stale only beyond 30 s
+    for i in range(6):
+        f.on_event(snap("dsebd_depth", "SYN", 100 + 5 * i, BIDS, ASKS, dup=i > 0))
+    assert f.cadence_s("dsebd_depth", "SYN") == 5.0 and f.stale_threshold_s("dsebd_depth", "SYN") == 30.0
+    assert fill(f, "SYN", 125 + 20).sources["dsebd_depth"].stale is False
+    assert fill(f, "SYN", 125 + 31).sources["dsebd_depth"].stale is True
+    # cadence is a median: one long outage does not stretch it
+    f.on_event(snap("dsebd_depth", "SYN", 125 + 300, BIDS, ASKS, dup=True))
+    assert f.cadence_s("dsebd_depth", "SYN") == 5.0
+    assert f.is_stale("nowhere", "SYN", _t(0)) is None
+
+
+def test_machinery_status_counters_coverage_gaps_and_market_wide_sources():
+    f = Fuser()
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS, ltp=10.0))
+    f.on_event(snap("lankabd_depth", "SYN", 6, BIDS, ASKS, ltp=10.0, dup=True))
+    f.on_event(gap("lankabd_depth", "SYN", 9))
+    f.on_event(snap("lankabd_depth", "SYN", 12, BIDS, ASKS, ltp=10.0, trades=3))
+    f.on_event(quote("lankabd_watch", "SYN", 13, ltp=10.0, t_exch=_t(12.5)))
+    f.on_event(quote("lankabd_watch", "OTHER", 13, ltp=5.0, t_exch=_t(12.5)))
+    f.on_event(Event(source="lankabd_market", event_type=EventType.MARKET_STATS, t_recv=_t(14), seq_local=0,
+                     payload={"market_trades": 10.0}, observed_fields=("t_recv", "market_trades")))
+    f.on_event(gap("heartbeat", None, 15))
+    ms = fill(f, "SYN", 15)
+    st = ms.sources["lankabd_depth"]
+    assert (st.updates, st.duplicates, st.gaps) == (3, 1, 1)
+    assert st.last_update == _t(12) and st.freshness_s == 3.0 and st.duplicate is False
+    assert st.field_coverage == ("t_recv", "bid_levels", "ask_levels", "ltp", "day_trades")
+    w = ms.sources["lankabd_watch"]
+    assert w.updates == 1 and w.t_exch == _t(12.5) and "t_source" in w.field_coverage
+    assert ms.sources["lankabd_market"].updates == 1 and ms.sources["lankabd_market"].freshness_s == 1.0
+    assert ms.sources["heartbeat"].gaps == 1 and ms.sources["heartbeat"].last_update is None
+    assert ms.sources["heartbeat"].freshness_s is None and ms.sources["heartbeat"].stale is False
+    assert ms.ltp == 10.0 and ms.provenance["ltp"] == "lankabd_watch"      # freshest, exchange-stamped
+    other = fill(f, "OTHER", 15)
+    assert other.sources["lankabd_watch"].updates == 1 and "lankabd_depth" not in other.sources
+    assert other.ltp == 5.0 and other.provenance == {"ltp": "lankabd_watch"}
+    # a GAP is not an update: freshness is measured from the last accepted observation
+    g = Fuser()
+    g.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS))
+    g.on_event(gap("lankabd_depth", "SYN", 9))
+    st = g.source_status("lankabd_depth", "SYN", _t(9.5))
+    assert st.freshness_s == 9.5 and st.gaps == 1 and st.updates == 1 and st.last_update == _t(0)
+    assert g.source_status("lankabd_depth", None, _t(9.5)) is None      # a keyed gap creates no market-wide entry
+
+
+# ---------------------------------------------------------------- quote comparison window & provenance
+def test_machinery_quote_window_widens_to_the_slower_source_cadence():
+    f = Fuser(coalesce_s=6.0)
+    # watch polls every 60 s, depth every 6 s: the watch is compared within one of its own cycles
+    for i in range(3):
+        f.on_event(quote("lankabd_watch", "SYN", 60 * i, ltp=10.0 + i, trades=10 * i))
+    for s in range(120, 160, 6):
+        f.on_event(snap("lankabd_depth", "SYN", s, BIDS, ASKS, ltp=12.0, trades=20, dup=s > 120))
+    _, prov, agr, dis = f.fuse_quote("SYN", _t(156))
+    assert prov == {"ltp": "lankabd_depth", "day_trades": "lankabd_depth"}
+    assert agr == {"ltp": True, "day_trades": True} and dis == {}
+    # the watch's next poll carries a stale price: compared (dt 36 s ≤ 60 s window), disagreement exposed
+    f.on_event(quote("lankabd_watch", "SYN", 180, ltp=12.0, trades=20))
+    f.on_event(snap("lankabd_depth", "SYN", 186, BIDS, ASKS, ltp=12.5, trades=22))
+    _, prov, agr, dis = f.fuse_quote("SYN", _t(186))
+    assert prov["ltp"] == "lankabd_depth" and agr["ltp"] is False and dis["ltp"]["other_source"] == "lankabd_watch"
+    assert dis["ltp"]["window_s"] == 60.0 and dis["ltp"]["dt_s"] == 6.0
+    assert agr["day_trades"] is False                     # 20 lags 22 by 9 % > 5 %
+    assert dis["day_trades"]["rule"] == "other lags beyond 5%"
+    ms = fill(f, "SYN", 186)
+    assert ms.sources["lankabd_watch"].agreement["ltp"] is False
+    assert ms.sources["lankabd_watch"].disagreement["ltp"] == {"this": 12.0, "other": 12.5,
+                                                                "other_source": "lankabd_depth",
+                                                                "rule": "ltp exact", "dt_s": -6.0}
+    # far outside every window (watch silent for > 60 s) the comparison stops instead of guessing
+    f.on_event(snap("lankabd_depth", "SYN", 300, BIDS, ASKS, ltp=13.0, trades=30))
+    _, _, agr, dis = f.fuse_quote("SYN", _t(300))
+    assert "ltp" not in agr and dis == {}
+
+
+def test_machinery_tape_source_and_provenance_from_cum_totals():
+    f = Fuser(coalesce_s=6.0)
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS, ltp=10.1, trades=50, volume=5000, value=0.05))
+    f.on_event(cum("lankabd_tape", "SYN", 2, price=10.1, trades=50, volume=5000, value=0.05, t_exch_s=1))
+    ms = fill(f, "SYN", 3)
+    assert ms.tape_source == "lankabd_tape" and ms.tape_age_s == 1.0 and ms.provenance["tape"] == "lankabd_tape"
+    assert ms.provenance["ltp"] == "lankabd_tape"           # freshest observation of ltp
+    assert ms.source_agreement == {"ltp": True, "day_trades": True, "day_volume": True, "day_value": True}
+    assert ms.sources["lankabd_tape"].t_exch == _t(1)
+    # a tape engine that already named its feed keeps it; the fuser records its own view in provenance
+    ms2 = MarketState(symbol="SYN", t=_t(3), tape_source="lankabd_depth", tape_age_s=3.0)
+    f.fill_state(ms2, _t(3))
+    assert ms2.tape_source == "lankabd_depth" and ms2.tape_age_s == 3.0 and ms2.provenance["tape"] == "lankabd_tape"
+    # upstream engines' values are never overwritten
+    ms3 = MarketState(symbol="SYN", t=_t(3), ltp=99.0, trade_count=1.0)
+    f.fill_state(ms3, _t(3))
+    assert ms3.ltp == 99.0 and ms3.trade_count == 1.0 and ms3.trade_volume == 5000.0
+
+
+def test_machinery_unchanged_flag_counts_as_no_content_change():
+    f = Fuser()
+    f.on_event(quote("lankabd_watch", "SYN", 0, ltp=10.0))
+    f.on_event(quote("lankabd_watch", "SYN", 60, ltp=10.0, unchanged=True))
+    st = fill(f, "SYN", 60).sources["lankabd_watch"]
+    assert st.duplicate is True and st.duplicates == 0 and st.updates == 2   # 'unchanged' is not a raw duplicate
+
+
+# ---------------------------------------------------------------- real data
+def test_realdata_fixture_two_depth_sensors_agree_on_closed_books():
+    events, _ = normalize_store(FIXTURE)
+    f = Fuser(coalesce_s=6.0)
+    states = {}
+    for ev in events:
+        f.on_event(ev)
+        if ev.symbol and ev.event_type in (EventType.BOOK_SNAPSHOT, EventType.CUM_TOTALS, EventType.QUOTE):
+            ms = MarketState(symbol=ev.symbol, t=ev.t_recv, session_phase=ev.session_phase)
+            f.fill_state(ms, ev.t_recv)
+            states.setdefault(ev.symbol, []).append((ev, ms))
+    assert set(states) >= {"MALEKSPIN", "SHARPIND", "FINEFOODS"}
+    for sym in ("MALEKSPIN", "SHARPIND", "FINEFOODS"):
+        # the first dsebd snapshot arrives within the coalesce window of the lankabd one
+        ev, ms = next((e, m) for e, m in states[sym] if e.source == "dsebd_depth")
+        assert ms.book_source == "lankabd_depth"                     # first sensor, kept while concurrent
+        assert ms.source_agreement["book"] is True and "book" not in ms.source_disagreement
+        assert ms.source_agreement["ltp"] is True and ms.source_agreement["day_trades"] is True
+        assert ms.provenance["book"] == "lankabd_depth" and ms.provenance["ltp"] == "dsebd_depth"
+        assert ms.ltp == ev.payload["ltp"] and ms.ltp is not None
+        assert ms.trade_count == ev.payload["day_trades"] and ms.trade_value == ev.payload["day_value_mn"]
+        assert ms.sources["lankabd_depth"].agreement["book"] is True
+        assert ms.sources["dsebd_depth"].agreement["book"] is True
+        assert 0.0 < ms.sources["lankabd_depth"].freshness_s < 6.0 and ms.sources["dsebd_depth"].freshness_s == 0.0
+        json.dumps(ms.to_dict())
+    _, ms = states["MALEKSPIN"][-1]
+    assert ms.tape_source == "lankabd_tape" and ms.provenance["tape"] == "lankabd_tape" and ms.tape_age_s > 0
+    # SHARPIND: both sides empty on both sensors → agreement, empty book, no best prices, no silent zero
+    _, ms = states["SHARPIND"][-1]
+    assert ms.bids == [] and ms.asks == [] and ms.best_bid is None and ms.empty_book is True
+    assert ms.source_agreement["book"] is True and "best_bid" not in ms.provenance
+    # MALEKSPIN: one ask level on both sensors, no bids; the last frame sees 3 snapshots per sensor, 2 duplicates
+    _, ms = states["MALEKSPIN"][-1]
+    assert ms.bids == [] and ms.asks == [(51.3, 1000.0)] and ms.best_ask == 51.3 and ms.provenance["best_ask"] == "lankabd_depth"
+    for s in ("lankabd_depth", "dsebd_depth"):
+        st = ms.sources[s]
+        assert st.updates == 3 and st.duplicates == 2 and st.gaps == 0 and st.stale is False
+        assert st.cadence_s is not None and 5.0 < st.cadence_s < 8.0
+        assert st.field_coverage[:3] == ("t_recv", "bid_levels", "ask_levels") and "day_value" in st.field_coverage
+    # every fused quote field comes from a named source and no disagreement exists on this closed market
+    assert {"ltp", "day_trades", "day_volume", "day_value"} <= set(ms.provenance)
+    assert ms.source_disagreement == {}
+    # at the capture's final instant: the tape (many rows per pull, then a no_new_rows status) learned a
+    # pull cadence rather than a 0 s row cadence, and nothing is reported from the future
+    end = MarketState(symbol="MALEKSPIN", t=events[-1].t_recv)
+    f.fill_state(end, events[-1].t_recv)
+    tape = end.sources["lankabd_tape"]
+    assert tape.cadence_s is not None and tape.cadence_s > 1.0 and tape.updates > 200
+    assert all(st.freshness_s is None or st.freshness_s >= 0.0 for st in end.sources.values())
+    assert end.tape_age_s > tape.freshness_s          # last data row is older than the last liveness status
