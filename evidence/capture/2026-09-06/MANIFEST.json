@@ -15,6 +15,17 @@
    "bytes": 19373,
    "epoch": "de0d58682abc47a3b6e0462a041727a6",
    "closed_utc": "2026-09-06T02:00:10.993509+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__ccr-vm__de0d5868__20260906T02__00000043.jsonl",
+   "records": 122,
+   "first_seq": 43,
+   "last_seq": 164,
+   "sha256": "9695f80cb3b4c8f73629208e41dc13a56930d228ed544728661ddd8f5cfeeaf6",
+   "bytes": 55628,
+   "epoch": "de0d58682abc47a3b6e0462a041727a6",
+   "closed_utc": "2026-09-06T03:00:11.253249+00:00"
   }
  ]
 }
