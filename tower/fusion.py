@@ -26,8 +26,10 @@ module never reads a clock):
   ``now − last_update`` exceeds ``max(stale_min_s, stale_factor × cadence)``
   (defaults 30 s, 3×); before the first gap the floor alone applies.
 * **Book primary** (``fuse_book``): among book sources holding an image for
-  the symbol, the *concurrent set* is the sources whose last receipt lies
-  within ``coalesce_s`` of the newest receipt and that are not stale; the
+  the symbol, the *concurrent set* is the sources whose last **book
+  observation** (snapshot or incremental update receipt — a ``STATUS`` such as
+  an unparsed page keeps a source alive but does not refresh its image) lies
+  within ``coalesce_s`` of the newest one and that are not stale; the
   previous primary is kept while it is in that set and does not *lag*: it
   lags when another concurrent source saw a content change after the
   primary's last change, that change is older than ``coalesce_s`` at ``now``
@@ -56,14 +58,20 @@ module never reads a clock):
   most ``total_tol`` (5 %) — a lagging poller is expected, a *leading* one or
   a larger gap is a disagreement. Fields a page marks as unpopulated zeros
   (``zero_fields``) and fields absent from ``observed_fields`` are not
-  observations.
+  observations. Tape rows (``CUM_TOTALS`` / ``TRADE``) whose exchange stamp
+  falls on another trading date than their receipt are the previous session's
+  tape (a pull made before the day's first trade returns it): they count as a
+  receipt for the source's status but are neither quote observations nor a
+  tape delivery for the symbol. Several rows of one pull share a receipt time;
+  the row with the newest exchange stamp is the observation.
 * **fill_state**: copies per-source status with ``freshness_s`` / ``stale``
   at ``now`` into ``ms.sources`` (each with its own ``agreement`` /
   ``disagreement`` view), sets ``ms.source_agreement`` /
   ``ms.source_disagreement``, ``ms.provenance`` (field → source) for the fused
   fields (plus ``book`` and ``tape``), ``ms.book_source`` / ``ms.book_age_s``
-  from the book primary and ``ms.tape_source`` / ``ms.tape_age_s`` from the
-  freshest tape source when the tape engine has not named a feed. Fused quote
+  (age of the primary's last book observation) from the book primary and
+  ``ms.tape_source`` / ``ms.tape_age_s`` from the freshest tape source (age of
+  its last current-session row) when the tape engine has not named a feed. Fused quote
   values fill ``ms.ltp`` / ``ms.trade_count`` / ``ms.trade_volume`` /
   ``ms.trade_value`` and the displayed book only where upstream engines left
   them empty — the primary's value, never a blend.
@@ -75,6 +83,8 @@ from collections import deque
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any, Deque, Dict, List, Optional, Tuple
+
+from seeing.clock import trading_date
 
 from .events import SOURCE_PRIORITY, Event, EventType
 from .state import MarketState, SourceStatus
@@ -127,7 +137,6 @@ class _Track:
     status: SourceStatus
     gaps: Deque[float] = field(default_factory=lambda: deque(maxlen=64))
     cadence_s: Optional[float] = None
-    t_change: Optional[datetime] = None          # last content-changing (non-duplicate) receipt
 
     def on_receipt(self, t: datetime, unchanged: bool) -> None:
         prev = self.status.last_update
@@ -140,8 +149,6 @@ class _Track:
         self.status.last_update = t if prev is None or t >= prev else prev
         self.status.updates += 1
         self.status.duplicate = unchanged
-        if not unchanged and (self.t_change is None or t >= self.t_change):
-            self.t_change = t
 
     def stale_threshold(self, stale_min_s: float, stale_factor: float) -> float:
         if self.cadence_s is None or self.cadence_s <= 0:
@@ -175,8 +182,8 @@ class _Cand:
     """A book source's standing for one symbol at ``now``."""
 
     source: str
-    t_last: datetime
-    t_change: Optional[datetime]
+    t_last: datetime                             # last book observation receipt (snapshot or update)
+    t_change: Optional[datetime]                 # last content-changing book receipt
     snap: Optional[_Snap]                        # None for incremental sources (image lives in their book)
 
 
@@ -193,11 +200,13 @@ class Fuser:
         self.max_diff_examples = int(max_diff_examples)
         self._tracks: Dict[Tuple[str, Optional[str]], _Track] = {}
         self._books: Dict[Tuple[str, str], _Snap] = {}                 # (source, symbol) → latest image
-        self._book_touch: Dict[Tuple[str, str], _Track] = {}           # incremental sources: liveness only
+        self._book_last: Dict[Tuple[str, str], datetime] = {}          # (source, symbol) → last book receipt
+        self._book_change: Dict[Tuple[str, str], datetime] = {}        # (source, symbol) → last content change
         self._quotes: Dict[Tuple[str, str], Dict[str, _Obs]] = {}       # (source, symbol) → field → obs
-        self._tape_last: Dict[Tuple[str, str], datetime] = {}          # (source, symbol) → last tape receipt
+        self._tape_last: Dict[Tuple[str, str], datetime] = {}          # (source, symbol) → last current-session tape row
         self._primary: Dict[str, str] = {}                              # symbol → sticky book primary
         self.events_seen = 0
+        self.previous_session_rows = 0                                  # tape rows stamped on another trading date
 
     # ------------------------------------------------------------------ status helpers
     def _track(self, source: str, symbol: Optional[str]) -> _Track:
@@ -266,17 +275,34 @@ class Fuser:
             tr.status.field_coverage = tuple(cov)
         if symbol is None:
             return
+        k = (ev.source, symbol)
         if et == EventType.BOOK_SNAPSHOT:
             p = ev.payload or {}
-            self._books[(ev.source, symbol)] = _Snap(t=ev.t_recv, t_exch=ev.t_exch, bids=_levels(p.get("bids")),
-                                                     asks=_levels(p.get("asks")), unchanged=unchanged)
+            self._books[k] = _Snap(t=ev.t_recv, t_exch=ev.t_exch, bids=_levels(p.get("bids")),
+                                   asks=_levels(p.get("asks")), unchanged=unchanged)
+            self._note_book_receipt(k, ev.t_recv, unchanged)
             self._observe_quote(ev, symbol, unchanged)
         elif et == EventType.BOOK_UPDATE:
-            self._book_touch[(ev.source, symbol)] = tr
-        elif et in (EventType.QUOTE, EventType.CUM_TOTALS, EventType.TRADE):
-            if et in (EventType.CUM_TOTALS, EventType.TRADE):
-                self._tape_last[(ev.source, symbol)] = ev.t_recv
+            self._note_book_receipt(k, ev.t_recv, unchanged)
+        elif et in (EventType.CUM_TOTALS, EventType.TRADE):
+            if ev.t_exch is not None and trading_date(ev.t_exch) != trading_date(ev.t_recv):
+                # a pull made before the day's first trade returns the previous session's rows:
+                # a receipt (the feed is alive), not an observation of today's tape
+                self.previous_session_rows += 1
+                return
+            self._tape_last[k] = ev.t_recv
             self._observe_quote(ev, symbol, unchanged)
+        elif et == EventType.QUOTE:
+            self._observe_quote(ev, symbol, unchanged)
+
+    def _note_book_receipt(self, k: Tuple[str, str], t: datetime, unchanged: bool) -> None:
+        prev = self._book_last.get(k)
+        if prev is None or t >= prev:
+            self._book_last[k] = t
+        if not unchanged:
+            prev_c = self._book_change.get(k)
+            if prev_c is None or t >= prev_c:
+                self._book_change[k] = t
 
     def _observe_quote(self, ev: Event, symbol: str, unchanged: bool) -> None:
         p = ev.payload or {}
@@ -284,6 +310,14 @@ class Fuser:
         obs = self._quotes.setdefault((ev.source, symbol), {})
         observed = set(ev.observed_fields or ())
         seen: set = set()
+
+        def put(fld: str, value: float) -> None:
+            cur = obs.get(fld)
+            if cur is not None and cur.t == ev.t_recv and cur.t_exch is not None and (
+                    ev.t_exch is None or cur.t_exch > ev.t_exch):
+                return          # same pull, an older exchange stamp: the newer row stays the observation
+            obs[fld] = _Obs(value=value, t=ev.t_recv, t_exch=ev.t_exch, unchanged=unchanged)
+
         for key, fld in _PAYLOAD_TO_FIELD.items():
             if key not in p or fld in seen or fld not in observed or key in zero:
                 continue
@@ -291,33 +325,31 @@ class Fuser:
             if v is None:
                 continue
             seen.add(fld)
-            obs[fld] = _Obs(value=v, t=ev.t_recv, t_exch=ev.t_exch, unchanged=unchanged)
+            put(fld, v)
         if ev.event_type == EventType.TRADE and "ltp" not in seen and ev.price is not None:
             # a print IS the last traded price: the trade itself is the observation
-            obs["ltp"] = _Obs(value=float(ev.price), t=ev.t_recv, t_exch=ev.t_exch, unchanged=unchanged)
+            put("ltp", float(ev.price))
 
     # ------------------------------------------------------------------ book fusion
     def _book_candidates(self, symbol: str, now: datetime) -> Dict[str, _Cand]:
         """Book sources with an observation for ``symbol`` at or before ``now``."""
         out: Dict[str, _Cand] = {}
-        for (src, sym), snap in self._books.items():
-            if sym != symbol or snap.t > now:
+        for (src, sym), t_last in self._book_last.items():
+            if sym != symbol or t_last > now:
                 continue
-            tr = self._tracks.get((src, sym))
-            t_last = tr.status.last_update if tr and tr.status.last_update else snap.t
-            t_change = tr.t_change if tr else (None if snap.unchanged else snap.t)
+            snap = self._books.get((src, sym))
+            if snap is not None and snap.t > now:
+                continue            # only the latest image is held; nothing observable for this source yet
+            t_change = self._book_change.get((src, sym))
             if t_change is not None and t_change > now:
                 t_change = None
-            out[src] = _Cand(src, min(t_last, now), t_change, snap)
-        for (src, sym), tr in self._book_touch.items():
-            if sym != symbol or src in out or tr.status.last_update is None or tr.status.last_update > now:
-                continue
-            out[src] = _Cand(src, tr.status.last_update, tr.t_change, None)
+            out[src] = _Cand(src, t_last, t_change, snap)
         return out
 
     def _concurrent(self, symbol: str, now: datetime, cands: Dict[str, _Cand]) -> List[str]:
-        """Sources whose last receipt lies within ``coalesce_s`` of the newest and that are not stale
-        at ``now``; when none qualifies, the single freshest receipt."""
+        """Sources whose last book observation lies within ``coalesce_s`` of the newest one and that
+        are not stale at ``now``; when none qualifies (the newest is itself stale), the single
+        freshest one — shown, and reported stale in ``sources``."""
         if not cands:
             return []
         newest = max(c.t_last for c in cands.values())
@@ -511,8 +543,7 @@ class Fuser:
         # ---- book
         if primary is not None:
             ms.book_source = primary
-            tr = self._tracks.get((primary, symbol))
-            t_last = tr.status.last_update if tr and tr.status.last_update else None
+            t_last = self._book_last.get((primary, symbol))
             ms.book_age_s = (now - t_last).total_seconds() if t_last is not None else None
             provenance["book"] = primary
             if snap is not None and not ms.bids and not ms.asks and ms.best_bid is None and ms.best_ask is None:

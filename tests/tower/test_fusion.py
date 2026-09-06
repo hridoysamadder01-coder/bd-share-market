@@ -67,6 +67,25 @@ def gap(source, symbol, s):
                  status="http_error", payload={"reason": "http_error"}, flags={"gap": True})
 
 
+def unparsed(source, symbol, s):
+    """The page answered but showed no book (layout change / error page): liveness, not an image."""
+    return Event(source=source, event_type=EventType.STATUS, t_recv=_t(s), seq_local=_seq(source), symbol=symbol,
+                 status="book_unparsed", payload={"kind": "book_unparsed", "sides_missing": ["bid", "ask"]},
+                 flags={"parse_problem": True}, observed_fields=("t_recv",))
+
+
+def update(source, symbol, s, side, price, qty):
+    return Event(source=source, event_type=EventType.BOOK_UPDATE, t_recv=_t(s), seq_local=_seq(source),
+                 symbol=symbol, session_phase="CONTINUOUS", side=side, price=price, qty=qty,
+                 payload={"action": "CHANGE"}, observed_fields=("t_recv", "bid_levels", "ask_levels"))
+
+
+def trade(source, symbol, s, price, qty, t_exch_s=None):
+    return Event(source=source, event_type=EventType.TRADE, t_recv=_t(s), seq_local=_seq(source), symbol=symbol,
+                 t_exch=_t(t_exch_s) if t_exch_s is not None else None, session_phase="CONTINUOUS",
+                 price=price, qty=qty, payload={}, observed_fields=("t_recv", "trade_prints"))
+
+
 def fill(f: Fuser, symbol: str, s: float) -> MarketState:
     ms = MarketState(symbol=symbol, t=_t(s))
     f.fill_state(ms, _t(s))
@@ -370,6 +389,150 @@ def test_machinery_unchanged_flag_counts_as_no_content_change():
     assert st.duplicate is True and st.duplicates == 0 and st.updates == 2   # 'unchanged' is not a raw duplicate
 
 
+def test_machinery_previous_session_tape_rows_are_receipts_not_observations():
+    f = Fuser(coalesce_s=6.0)
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS, ltp=10.1, trades=50, volume=5000, value=0.05))
+    # a pull before the day's first trade returns the previous session's rows (stamped 3 days earlier)
+    prev = -3 * 86400
+    f.on_event(cum("lankabd_tape", "SYN", 2, price=9.0, trades=3000, volume=900000, value=8.1, t_exch_s=prev + 4 * 3600))
+    f.on_event(trade("lankabd_tape", "SYN", 2, price=9.0, qty=100, t_exch_s=prev + 4 * 3600))
+    assert f.previous_session_rows == 2
+    assert f.tape_source("SYN", _t(2)) == (None, None)
+    values, prov, agr, dis = f.fuse_quote("SYN", _t(2))
+    assert prov == {fld: "lankabd_depth" for fld in QUOTE_FIELDS} and agr == {} and dis == {}
+    assert values["day_trades"] == 50.0 and values["ltp"] == 10.1          # never yesterday's 3000 / 9.0
+    ms = fill(f, "SYN", 2)
+    assert ms.tape_source is None and ms.tape_age_s is None and "tape" not in ms.provenance
+    assert ms.trade_count == 50.0 and ms.ltp == 10.1
+    st = ms.sources["lankabd_tape"]
+    assert st.updates == 2 and st.freshness_s == 0.0 and st.last_update == _t(2)   # the feed itself is alive
+    # today's first row: now it is the tape and (freshest) the quote primary
+    f.on_event(cum("lankabd_tape", "SYN", 4, price=10.2, trades=51, volume=5010, value=0.051, t_exch_s=3.5))
+    ms = fill(f, "SYN", 5)
+    assert ms.tape_source == "lankabd_tape" and ms.tape_age_s == 1.0 and ms.provenance["tape"] == "lankabd_tape"
+    assert ms.provenance["ltp"] == "lankabd_tape" and ms.ltp == 10.2 and ms.trade_count == 51.0
+    assert ms.source_agreement["day_trades"] is True and ms.source_agreement["ltp"] is False
+    assert f.previous_session_rows == 2
+
+
+def test_machinery_same_pull_rows_share_a_receipt_and_the_newest_stamp_is_the_observation():
+    # a many-row pull arrives with one t_recv; whichever order the rows come in, the observation
+    # is the row with the newest exchange stamp
+    for order in ("forward", "reverse"):
+        f = Fuser()
+        rows = [(1.0, 10.0, 50), (1.5, 10.5, 60)]
+        if order == "reverse":
+            rows = rows[::-1]
+        for t_exch_s, price, trades in rows:
+            f.on_event(cum("lankabd_tape", "SYN", 2, price=price, trades=trades, volume=100, value=1.0,
+                           t_exch_s=t_exch_s))
+        values, prov, _, _ = f.fuse_quote("SYN", _t(2))
+        assert (values["ltp"], values["day_trades"], prov["ltp"]) == (10.5, 60.0, "lankabd_tape"), order
+        st = f.source_status("lankabd_tape", "SYN", _t(2))
+        assert st.updates == 2 and st.cadence_s is None            # one receipt: no 0 s cadence learned
+    # a later pull (newer receipt) always wins over an earlier one, whatever its stamp
+    f.on_event(cum("lankabd_tape", "SYN", 8, price=10.6, trades=61, volume=101, value=1.01, t_exch_s=7.0))
+    assert f.fuse_quote("SYN", _t(8))[0]["day_trades"] == 61.0
+    assert f.cadence_s("lankabd_tape", "SYN") == 6.0
+
+
+def test_machinery_unparsed_page_keeps_a_source_alive_but_not_concurrent():
+    f = Fuser(coalesce_s=6.0)
+    f.on_event(snap("lankabd_depth", "SYN", 0, BIDS, ASKS))
+    f.on_event(snap("dsebd_depth", "SYN", 2, BIDS, ASKS))
+    assert f.fuse_book("SYN", _t(2))[3] == {"book": True}
+    # dsebd's page stops showing a book (layout change): it keeps answering, but its image is old
+    new_bids = [(10.0, 150.0)] + BIDS[1:]
+    for s, ev in ((6, snap("lankabd_depth", "SYN", 6, BIDS, ASKS, dup=True)),
+                  (8, unparsed("dsebd_depth", "SYN", 8)),
+                  (12, snap("lankabd_depth", "SYN", 12, new_bids, ASKS)),
+                  (14, unparsed("dsebd_depth", "SYN", 14)),
+                  (18, snap("lankabd_depth", "SYN", 18, new_bids, ASKS, dup=True)),
+                  (20, unparsed("dsebd_depth", "SYN", 20))):
+        f.on_event(ev)
+    bids, _, src, agr, dis = f.fuse_book("SYN", _t(20))
+    # its 18 s old image is NOT compared against the live primary: no false disagreement
+    assert src == "lankabd_depth" and bids == new_bids and agr == {} and dis == {}
+    ms = fill(f, "SYN", 20)
+    assert ms.sources["dsebd_depth"].freshness_s == 0.0 and ms.sources["dsebd_depth"].stale is False
+    assert ms.sources["dsebd_depth"].updates == 4 and ms.sources["dsebd_depth"].agreement == {}
+    assert ms.book_source == "lankabd_depth" and ms.book_age_s == 2.0          # age of the image, not of liveness
+    # the reverse: the PRIMARY's page breaks while the other sensor keeps delivering images → switch
+    for ev in (unparsed("lankabd_depth", "SYN", 24), snap("dsebd_depth", "SYN", 26, new_bids, ASKS),
+               unparsed("lankabd_depth", "SYN", 30), snap("dsebd_depth", "SYN", 32, new_bids, ASKS, dup=True)):
+        f.on_event(ev)
+    bids, _, src, agr, dis = f.fuse_book("SYN", _t(32))
+    assert src == "dsebd_depth" and bids == new_bids and agr == {} and dis == {}
+    ms = fill(f, "SYN", 32)
+    assert ms.book_source == "dsebd_depth" and ms.book_age_s == 0.0
+    assert ms.sources["lankabd_depth"].freshness_s == 2.0 and ms.sources["lankabd_depth"].stale is False
+
+
+def test_machinery_incremental_source_is_a_candidate_without_an_image():
+    f = Fuser(coalesce_s=6.0)
+    for s, side, px, q in ((0, "bid", 10.0, 100), (1, "ask", 10.1, 80), (2, "bid", 9.9, 300)):
+        f.on_event(update("itch", "SYN", s, side, px, q))
+    assert f.primary_book_source("SYN", _t(2)) == "itch"
+    assert f.fuse_book("SYN", _t(2)) == (None, None, "itch", {}, {})
+    ms = MarketState(symbol="SYN", t=_t(2), bids=list(BIDS), best_bid=10.0)         # its EvolvingBook displayed it
+    f.fill_state(ms, _t(2))
+    assert ms.book_source == "itch" and ms.book_age_s == 0.0 and ms.bids == BIDS and ms.best_bid == 10.0
+    assert ms.provenance == {"book": "itch", "best_bid": "itch"} and ms.source_agreement == {}
+    # a snapshot sensor joins: both concurrent; the incremental image cannot be compared level by level
+    f.on_event(snap("lankabd_depth", "SYN", 3, BIDS, ASKS))
+    assert f.primary_book_source("SYN", _t(3)) == "itch"                        # sticky while concurrent
+    assert f.fuse_book("SYN", _t(3))[3] == {}                                    # nothing comparable: no verdict
+    for k in range(3):
+        assert f.primary_book_source("SYN", _t(3)) == "itch"                    # idempotent per frame
+    # itch still receives (a heartbeat-like unchanged update) but sees no content change while the
+    # snapshot sensor does, for more than a window: an image that cannot be compared counts as
+    # differing → the primary switches
+    f.on_event(update("itch", "SYN", 8, "bid", 9.9, 310))
+    f.on_event(snap("lankabd_depth", "SYN", 9, [(10.0, 120.0)] + BIDS[1:], ASKS))
+    assert f.primary_book_source("SYN", _t(9)) == "itch"                        # change 0 s old: not yet
+    keep = update("itch", "SYN", 12, "bid", 9.9, 310)
+    keep.flags["unchanged"] = True
+    f.on_event(keep)
+    assert f.primary_book_source("SYN", _t(12)) == "itch"                       # 3 s old: not yet
+    f.on_event(snap("lankabd_depth", "SYN", 15.5, [(10.0, 120.0)] + BIDS[1:], ASKS, dup=True))
+    assert f.primary_book_source("SYN", _t(15.5)) == "lankabd_depth"
+    bids, _, src, agr, _ = f.fuse_book("SYN", _t(15.5))
+    assert src == "lankabd_depth" and bids == [(10.0, 120.0)] + BIDS[1:] and agr == {}
+    # and once the incremental source is silent beyond the window it is simply not concurrent
+    f.on_event(snap("lankabd_depth", "SYN", 21, [(10.0, 120.0)] + BIDS[1:], ASKS, dup=True))
+    assert f.primary_book_source("SYN", _t(21)) == "lankabd_depth"
+    assert fill(f, "SYN", 21).sources["itch"].freshness_s == 9.0
+
+
+def test_machinery_one_sided_and_empty_books_compare_level_by_level():
+    f = Fuser(coalesce_s=6.0)
+    f.on_event(snap("lankabd_depth", "SYN", 0, [], ASKS))                # no bids resting
+    assert f.primary_book_source("SYN", _t(0)) == "lankabd_depth"        # the engine asks at every frame
+    f.on_event(snap("dsebd_depth", "SYN", 1, [(10.0, 100.0)], ASKS))     # the other sensor shows one
+    bids, asks, src, agr, dis = f.fuse_book("SYN", _t(1))
+    assert (bids, asks, src) == ([], ASKS, "lankabd_depth") and agr == {"book": False}
+    b = dis["book"]
+    assert b["n_diff_levels"] == 1 and b["this_best_bid"] is None and b["other_best_bid"] == 10.0
+    assert b["this_best_ask"] == 10.1 and b["other_best_ask"] == 10.1
+    assert b["examples"] == [{"side": "bid", "level": 0, "this": None, "other": (10.0, 100.0)}]
+    ms = fill(f, "SYN", 1)
+    assert ms.best_bid is None and ms.bid_qty1 is None and ms.best_ask == 10.1 and ms.ask_qty1 == 80.0
+    assert ms.empty_book is False and "best_bid" not in ms.provenance and ms.provenance["best_ask"] == "lankabd_depth"
+    # both empty: identical → agreement, and nothing invented
+    g = Fuser(coalesce_s=6.0)
+    g.on_event(snap("lankabd_depth", "SYN", 0, [], []))
+    g.on_event(snap("dsebd_depth", "SYN", 1, [], []))
+    bids, asks, src, agr, dis = g.fuse_book("SYN", _t(1))
+    assert (bids, asks, agr, dis) == ([], [], {"book": True}, {})
+    ms = fill(g, "SYN", 1)
+    assert ms.empty_book is True and ms.best_bid is None and ms.best_ask is None
+    assert set(ms.provenance) == {"book"}
+    # a level with a missing quantity is not a level (never a silent zero)
+    h = Fuser()
+    h.on_event(snap("lankabd_depth", "SYN", 0, [(10.0, None), (9.9, 5.0)], [(10.1, float("nan"))]))
+    assert h.fuse_book("SYN", _t(0))[:2] == ([(9.9, 5.0)], [])
+
+
 # ---------------------------------------------------------------- real data
 def test_realdata_fixture_two_depth_sensors_agree_on_closed_books():
     events, _ = normalize_store(FIXTURE)
@@ -396,7 +559,13 @@ def test_realdata_fixture_two_depth_sensors_agree_on_closed_books():
         assert 0.0 < ms.sources["lankabd_depth"].freshness_s < 6.0 and ms.sources["dsebd_depth"].freshness_s == 0.0
         json.dumps(ms.to_dict())
     _, ms = states["MALEKSPIN"][-1]
-    assert ms.tape_source == "lankabd_tape" and ms.provenance["tape"] == "lankabd_tape" and ms.tape_age_s > 0
+    # the fixture's tape pulls were made before the day's first trade: every one of their rows is
+    # stamped on the PREVIOUS session (2026-09-03). The feed is alive (status), but nothing it
+    # delivered is today's tape: no tape source, no tape provenance, no quote observation from it
+    assert f.previous_session_rows == sum(1 for e in events if e.source == "lankabd_tape"
+                                          and e.event_type == EventType.CUM_TOTALS) > 500
+    assert ms.tape_source is None and ms.tape_age_s is None and "tape" not in ms.provenance
+    assert "lankabd_tape" not in ms.provenance.values()
     # SHARPIND: both sides empty on both sensors → agreement, empty book, no best prices, no silent zero
     _, ms = states["SHARPIND"][-1]
     assert ms.bids == [] and ms.asks == [] and ms.best_bid is None and ms.empty_book is True
@@ -418,5 +587,6 @@ def test_realdata_fixture_two_depth_sensors_agree_on_closed_books():
     f.fill_state(end, events[-1].t_recv)
     tape = end.sources["lankabd_tape"]
     assert tape.cadence_s is not None and tape.cadence_s > 1.0 and tape.updates > 200
+    assert tape.freshness_s >= 0.0 and tape.stale is False and tape.duplicates >= 1   # no_new_rows polls
     assert all(st.freshness_s is None or st.freshness_s >= 0.0 for st in end.sources.values())
-    assert end.tape_age_s > tape.freshness_s          # last data row is older than the last liveness status
+    assert end.tape_source is None and end.tape_age_s is None
