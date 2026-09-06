@@ -282,6 +282,83 @@
    "bytes": 69517,
    "epoch": "28052b83d33d473cac130d0ba8a252b2",
    "closed_utc": "2026-09-06T04:55:49.312818+00:00"
+  },
+  {
+   "source": "dsebd_depth",
+   "path": "segments/dsebd_depth__ccr-vm__28052b83__20260906T04__00000087.jsonl",
+   "records": 1078,
+   "first_seq": 87,
+   "last_seq": 1164,
+   "sha256": "5dc17b7fa519b989473321faf75ebb031a64c0edcae3c2761dfaa1d1bfa55a31",
+   "bytes": 11653505,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:00:06.285911+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__ccr-vm__28052b83__20260906T04__00000039.jsonl",
+   "records": 460,
+   "first_seq": 39,
+   "last_seq": 498,
+   "sha256": "d8fb571edb8fb6c905a356e06cf56dbaf2fb256b04b0d1f1c6e3c00e7c4c1332",
+   "bytes": 1152202,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:00:06.291580+00:00"
+  },
+  {
+   "source": "lankabd_depth",
+   "path": "segments/lankabd_depth__ccr-vm__28052b83__20260906T04__00000088.jsonl",
+   "records": 1078,
+   "first_seq": 88,
+   "last_seq": 1165,
+   "sha256": "b6ebdf6b468e7610366e3367abd4399d022880afde542e2f867c75c93ef95355",
+   "bytes": 5900158,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:00:08.688603+00:00"
+  },
+  {
+   "source": "lankabd_watch",
+   "path": "segments/lankabd_watch__ccr-vm__28052b83__20260906T04__00000011.jsonl",
+   "records": 112,
+   "first_seq": 11,
+   "last_seq": 122,
+   "sha256": "1697a7dda15c4bc1e147630494befb49f99384d53e399dcef5a8fcbcdce0b030",
+   "bytes": 68407982,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:00:21.674700+00:00"
+  },
+  {
+   "source": "lankabd_tape",
+   "path": "segments/lankabd_tape__ccr-vm__28052b83__20260906T04__00000030.jsonl",
+   "records": 278,
+   "first_seq": 30,
+   "last_seq": 307,
+   "sha256": "82d85bf83a9c0948d677f6749130f6f7c18dc709206011b47d46d6a04f63dd4d",
+   "bytes": 862359,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:00:27.863080+00:00"
+  },
+  {
+   "source": "lankabd_market",
+   "path": "segments/lankabd_market__ccr-vm__28052b83__20260906T04__00000007.jsonl",
+   "records": 58,
+   "first_seq": 7,
+   "last_seq": 64,
+   "sha256": "8fd224cdb4be13d936681686119d49badd2cee1fe7ca52fd5c9b1259d9910f45",
+   "bytes": 121779,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:00:51.588641+00:00"
+  },
+  {
+   "source": "lankabd_block",
+   "path": "segments/lankabd_block__ccr-vm__28052b83__20260906T04__00000003.jsonl",
+   "records": 14,
+   "first_seq": 3,
+   "last_seq": 16,
+   "sha256": "3b4e3d3e8ec84d77d358acc575772b86ecce6f41db545938981e3439a13f853a",
+   "bytes": 225767,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:01:29.652429+00:00"
   }
  ],
  "previous_epochs": [
