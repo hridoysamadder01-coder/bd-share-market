@@ -301,6 +301,124 @@ def test_machinery_engine_keeps_symbols_apart():
     assert eng.active_curve("A") is not None and eng.active_curve("B") is None
 
 
+def test_machinery_pulled_wall_above_baseline_is_not_a_depth_shock():
+    """A 2.5× wall appears and is pulled back to 1.5× the median: the burst fall is 1.0 median (≥ 0.5) but the
+    depth is still above baseline — not a depletion, no curve (before the fix this opened a curve that closed
+    as 'overshoot' on the same update).  Pulling it further, to 0.8×, IS a shock with share 0.8 at the shock."""
+    eng = ResilienceEngine()
+    wall = _scale(BIDS, 2.5, only_first=True)
+    steps = list(_calm(275)) + [(s, wall, ASKS) for s in (280, 285, 290, 295, 300, 305)]
+    steps.append((310, _scale(BIDS, 1.5, only_first=True), ASKS))
+    states = _run(eng, steps)
+    assert states[-1].resilience_state == "none" and eng.curves("SYN") == [] and eng.active_curve("SYN") is None
+    states = _run(eng, [(315, _scale(BIDS, 0.8, only_first=True), ASKS)])
+    c = eng.active_curve("SYN")
+    assert states[-1].resilience_state == "shocked" and c is not None
+    assert c["triggers"][0]["kind"] == "depth" and c["measure"] == "qty1"
+    assert abs(c["baseline"]["bid"] - 1000.0) < 1e-9 and abs(c["share_at_shock"] - 0.8) < 1e-9
+    assert c["overshoot"] is False
+
+
+def test_machinery_repricing_with_intact_depth_is_not_a_sweep_shock():
+    """Both bests move down 2 ticks with every level intact (a repricing): the sweep rule matches the bid
+    but nothing was consumed — the would-be curve is already 'recovered' at its first sample, so no curve is
+    opened.  The reversion 30 s later (bests back up) must not fire either (the bid-sweep rule would see the
+    old, lower bid as `pre`)."""
+    eng = ResilienceEngine()
+    down = [(round(p - 0.2, 6), q) for p, q in BIDS], [(round(p - 0.2, 6), q) for p, q in ASKS]
+    steps = list(_calm(300)) + [(s, down[0], down[1]) for s in (305, 310, 315, 320, 325, 330, 335, 340)]
+    steps += [(s, BIDS, ASKS) for s in (345, 350, 355, 360, 365, 370, 375, 380)]
+    states = _run(eng, steps)
+    assert all(ms.resilience_state == "none" for ms in states[-16:])
+    assert eng.curves("SYN") == [] and eng.active_curve("SYN") is None
+    assert all(ms.recovery_curve is None and ms.liquidity_response is None for ms in states)
+
+
+def test_machinery_overshoot_needs_a_depleted_side_and_is_not_read_on_the_shock_sample():
+    """Sweep of two thin touch levels exposing much bigger deep levels: top-K share at the shock is > 1.3 while
+    the spread is 3 ticks wide (not recovered).  The shock sample never counts as overshoot and a side that
+    was never below baseline cannot overshoot — the curve closes as plain 'recovered' once the spread is back."""
+    eng = ResilienceEngine()
+    thin = [(10.0, 100.0), (9.9, 100.0), (9.8, 2000.0), (9.7, 2000.0), (9.6, 2000.0)]      # top-K 6200
+    swept = thin[2:] + [(9.5, 3000.0), (9.4, 3000.0)]                                       # top-K 12000, +3 ticks
+    steps = list(_calm(300, bids=thin)) + [(305, swept, ASKS), (310, swept, ASKS), (320, thin, ASKS)]
+    states = _run(eng, steps)
+    assert [ms.resilience_state for ms in states[-3:]] == ["shocked", "shocked", "recovered"]
+    c = eng.curves("SYN")[0]
+    assert c["triggers"][0]["kind"] == "sweep" and c["side"] == "bid"
+    assert c["share_at_shock"] > 1.3 and c["overshoot"] is False and c["overshoot_kind"] is None
+    assert c["state"] == "recovered" and c["time_to_recovery_s"] == 15.0
+
+
+def test_machinery_book_vanishes_during_curve_closes_at_timeout_with_consistent_flags():
+    eng = ResilienceEngine()
+    steps = list(_calm(300)) + [(305, _scale(BIDS, 0.20, only_first=True), ASKS)]
+    steps += [(s, [], []) for s in range(310, 305 + int(TIMEOUT_S) + 10, 5)]                 # the book disappears
+    states = _run(eng, steps)
+    by_t = {ms.t: ms for ms in states}
+    assert by_t[_t(305)].resilience_state == "shocked"
+    assert by_t[_t(310)].resilience_state == "shocked"                                      # clock keeps running
+    closing = by_t[_t(305 + TIMEOUT_S)]
+    assert closing.resilience_state == "vacuum"                                             # last seen share 0.2
+    c = eng.curves("SYN")
+    assert len(c) == 1 and c[0]["state"] == "vacuum" and c[0]["vacuum"] is True and c[0]["partial"] is False
+    assert c[0]["t_end"] == _t(305 + TIMEOUT_S) and c[0]["duration_s"] == TIMEOUT_S
+    assert c[0]["time_to_recovery_s"] is None and abs(c[0]["final_share"] - 0.2) < 1e-9
+    assert closing.liquidity_response is None                                               # unobservable now
+    assert states[-1].resilience_state == "none" and states[-1].session_state["resilience"]["active"] is False
+    # last seen share 0.6 → partial, with the partial flag set
+    eng2 = ResilienceEngine()
+    steps2 = list(_calm(300)) + [(305, _scale(BIDS, 0.20, only_first=True), ASKS),
+                                 (310, _scale(BIDS, 0.60, only_first=True), ASKS)]
+    steps2 += [(s, [], []) for s in range(315, 305 + int(TIMEOUT_S) + 10, 5)]
+    _run(eng2, steps2)
+    c2 = eng2.curves("SYN")[0]
+    assert c2["state"] == "partial" and c2["partial"] is True and c2["vacuum"] is False
+
+
+def test_machinery_one_sided_book_shock_and_recovery_without_a_spread():
+    """Bids only (no ask, no spread, no mid): a bid depth drop is a shock, the spread terms stay None (never 0)
+    and the curve recovers on depth alone."""
+    eng = ResilienceEngine()
+    steps = list(_calm(300, asks=[])) + [(305, _scale(BIDS, 0.25, only_first=True), []),
+                                         (310, _scale(BIDS, 0.95, only_first=True), [])]
+    states = _run(eng, steps)
+    assert [ms.resilience_state for ms in states[-3:]] == ["none", "shocked", "recovered"]
+    c = eng.curves("SYN")[0]
+    assert c["side"] == "bid" and c["direction"] == -1 and c["shock"]["move_ticks"] is None
+    assert c["baseline"]["spread_ticks"] is None and c["shock"]["spread_ticks"] is None
+    assert all(x["spread_share"] is None and x["mid_share"] is None for x in c["samples"])
+    assert c["spread_share_at_shock"] is None and c["time_to_recovery_s"] == 5.0
+    assert c["recovery_speed_ask"] is None and c["asymmetry"] is None
+
+
+def test_machinery_duplicate_timestamps_do_not_break_speeds_or_counts():
+    eng = ResilienceEngine()
+    shocked = _scale(BIDS, 0.30, only_first=True)
+    steps = list(_calm(300)) + [(305, shocked, ASKS), (305, shocked, ASKS), (305, _scale(BIDS, 0.5, only_first=True), ASKS),
+                                (310, BIDS, ASKS)]
+    states = _run(eng, steps)
+    assert [ms.resilience_state for ms in states[-4:]] == ["shocked", "shocked", "recovering", "recovered"]
+    assert states[-3].recovery_speed is None and states[-2].recovery_speed is None      # no time has passed
+    c = eng.curves("SYN")[0]
+    assert c["updates_to_recovery"] == 3 and c["time_to_recovery_s"] == 5.0
+    assert c["curve"] == [(0.0, 0.3), (0.0, 0.3), (0.0, 0.5), (5.0, 1.0)]
+    assert abs(states[-1].recovery_speed - (1.0 - 0.3) / 5.0) < 1e-9
+
+
+def test_machinery_session_record_is_a_bounded_snapshot():
+    """The per-state record must not carry the full sample list (state-store lines would grow quadratically
+    over a curve); it carries the count and the last sample, and the curve itself."""
+    eng = ResilienceEngine()
+    steps = list(_calm(300)) + [(s, _scale(BIDS, 0.5, only_first=True), ASKS) for s in range(305, 400, 5)]
+    states = _run(eng, steps)
+    rec = states[-1].session_state["resilience"]
+    assert "samples" not in rec and rec["samples_n"] == len(eng.active_curve("SYN")["samples"]) == 19
+    assert rec["last_sample"]["s"] == 90.0 and abs(rec["last_sample"]["share"] - 0.5) < 1e-9
+    assert rec["curve"] == eng.active_curve("SYN")["curve"] and rec["active"] is True
+    assert states[-1].to_dict()["session_state"]["resilience"]["samples_n"] == 19
+
+
 # ============================================================================ real data
 def test_realdata_fixture_closed_market_books_produce_no_shock_and_no_silent_zero():
     """The committed capture is a closed market: static one-sided or empty pre-open books from two

@@ -20,7 +20,9 @@ against the **burst window** of the last 30 s (``pre`` = the last observation
 at or before now − 30 s) and the **baseline window** [now − 300 s, now − 30 s]:
   depth drop   a side's qty1 or top-K depth fell inside the burst by at least
                50 % of its baseline-window median (≥ 3 observations):
-               depth(pre) − depth(now) ≥ 0.5 × median — a slow bleed whose
+               depth(pre) − depth(now) ≥ 0.5 × median, and the depth now is
+               below 90 % of the median (a wall that is pulled back to
+               above-baseline depth is not a depletion) — a slow bleed whose
                30-s fall is small never qualifies, however deep it goes;
   spread       spread_ticks(now) − spread_ticks(pre) ≥ 2 ticks; the side is
                the best that retreated more (bid down / ask up), "both" on
@@ -31,6 +33,10 @@ at or before now − 30 s) and the **baseline window** [now − 300 s, now − 3
 All triggers that fire are recorded; the primary one (sweep > depth > spread)
 sets ``side`` and the depth ``measure`` used by the curve ("qty1" or "topk";
 sweeps and spread shocks use "topk" because they consume whole levels).
+A candidate whose first sample already satisfies the recovered condition
+(depth share ≥ 90 % and spread within 1 tick of baseline — e.g. both bests
+repriced together with the displayed depth intact) is not a shock: nothing
+was consumed, so there is nothing to recover, and no curve is opened.
 
 Pre-shock baseline: depth per side and per measure = the baseline-window
 median (≥ 3 points) else the ``pre`` value; spread, mid and bests = ``pre``.
@@ -59,9 +65,12 @@ Recovery curve — one sample per update while the curve is active:
   partial                  the final share lies in [30 %, 90 %) at timeout
                            (or depth is back but the spread is not);
   vacuum                   share < 30 % once 120 s have passed;
-  overshoot                a shocked side's depth > 130 % of baseline, or the
-                           mid reverted past its pre-shock level by ≥ 1 tick
-                           (mid share > 1);  sticky once seen;
+  overshoot                a shocked side's depth > 130 % of baseline (only a
+                           side whose share was < 1 at the shock — it has to
+                           have been depleted to overshoot on the way back),
+                           or the mid reverted past its pre-shock level by
+                           ≥ 1 tick (mid share > 1);  evaluated on the samples
+                           after the shock sample; sticky once seen;
   snapback                 mid share ≥ 80 % within 60 s of the shock; sticky.
 
 State per update:  none (no active curve; the terminal state is reported on the
@@ -70,14 +79,19 @@ over the share at the shock, or spread share improved ≥ 0.25) | partial
 (≥ 120 s, no improvement, share ≥ 30 %) | vacuum (≥ 120 s, share < 30 %) |
 recovered | overshoot (recovered with the overshoot flag).  The terminal
 states are recovered / overshoot (recovered condition), partial / vacuum (at
-timeout).  Before the first book observation the state is None (not
-observable).
+timeout).  A book that disappears during a curve keeps the clock running: the
+curve closes at the timeout on what was last seen (vacuum if the last share
+was < 30 %, else partial).  Before the first book observation the state is
+None (not observable).
 
 ``fill_state`` writes ``resilience_state``, ``recovery_speed``,
 ``recovery_asymmetry``, ``recovery_curve`` = [(s, share)] of the active or
 last curve, ``liquidity_response`` = share(now) − share(at shock) on the
 shocked side while the last shock is < 600 s old, and
-``session_state["resilience"]`` = the current (active or last) curve record.
+``session_state["resilience"]`` = a snapshot of the current (active or last)
+curve record (the full per-update ``samples`` list is kept on the engine's
+record only — ``curves()`` / ``active_curve()`` — and the snapshot carries
+``last_sample`` and ``samples_n`` so state-store lines stay bounded).
 All times are the event times carried by the states; nothing reads a clock.
 """
 from __future__ import annotations
@@ -229,13 +243,15 @@ class ResilienceEngine:
                 self._sample(tr, rec, o)
             elif (o.t - rec["shock_t"]).total_seconds() >= TIMEOUT_S:
                 # the book vanished and never came back inside the window: close on what was last seen
-                self._close(tr, rec, o.t, "vacuum" if rec["final_share"] is not None and
-                            rec["final_share"] < PARTIAL_LO else "partial")
+                self._close_at_timeout(tr, rec, o.t, rec["final_share"])
             state = tr.state
         else:
             state = None if tr.state is None and not tr.obs else "none"
             if observed:
                 shock = self._detect(tr, o, ms)
+                if shock is not None and self._recovered(shock, self._shares(shock, o)):
+                    # nothing was consumed (e.g. both bests repriced with the depth intact): no curve to track
+                    shock = None
                 if shock is not None:
                     tr.active = shock
                     tr.last = shock
@@ -255,6 +271,7 @@ class ResilienceEngine:
             ms.recovery_speed = None
             ms.recovery_asymmetry = None
             ms.recovery_curve = None
+            ms.liquidity_response = None
             ms.session_state["resilience"] = {"state": None, "observed": False, "curves_completed": 0}
             return
         f = tr.out
@@ -281,7 +298,8 @@ class ResilienceEngine:
                 if med is None or med <= 0 or cur is None or prev is None:
                     continue
                 fall = (prev - cur) / med                                 # the fall inside the burst, in medians
-                if fall >= DEPTH_DROP_SHARE - 1e-9:
+                depleted = cur / med < RECOVERED_SHARE - 1e-9            # a pulled wall is not a depletion
+                if fall >= DEPTH_DROP_SHARE - 1e-9 and depleted:
                     triggers.append({"kind": "depth", "side": side, "measure": measure,
                                      "drop_share": fall, "median": med, "pre": prev, "now": cur})
         bid_move = ask_move = None
@@ -387,6 +405,20 @@ class ResilienceEngine:
         return {"share": share, "share_bid": share_bid, "share_ask": share_ask,
                 "spread_share": spread_share, "spread_ok": spread_ok, "mid_share": mid_share}
 
+    @staticmethod
+    def _recovered(rec: Dict[str, Any], sh: Dict[str, Optional[float]]) -> bool:
+        """The recovered condition: shocked-side share ≥ 90 % and the spread within 1 tick of baseline.
+
+        When the spread is unobservable now (or had no baseline) it counts as back only if the shock
+        never widened it."""
+        spread_ok = sh["spread_ok"]
+        if spread_ok is None:
+            shock_sp, base_sp = rec["shock"]["spread_ticks"], rec["baseline"]["spread_ticks"]
+            widened = shock_sp is not None and base_sp is not None and shock_sp - base_sp > 1e-9
+            spread_ok = not widened
+        share = sh["share"]
+        return share is not None and share >= RECOVERED_SHARE - 1e-9 and bool(spread_ok)
+
     def _sample(self, tr: _Track, rec: Dict[str, Any], o: _Obs) -> None:
         s = (o.t - rec["shock_t"]).total_seconds()
         first = not rec["samples"]
@@ -420,36 +452,29 @@ class ResilienceEngine:
         if ms_ is not None and s <= SNAPBACK_W_S and ms_ >= SNAPBACK_SHARE and not rec["snapback"]:
             rec["snapback"] = True
             rec["snapback_s"] = s
-        # overshoot: depth beyond 130 % on a shocked side, or mid past its pre-shock level by ≥ 1 tick
-        sides = ("bid", "ask") if rec["side"] == "both" else (rec["side"],)
-        for sd in sides:
-            v = sh["share_" + sd]
-            if v is not None and v > OVERSHOOT_SHARE:
+        # overshoot: depth beyond 130 % on a shocked side, or mid past its pre-shock level by ≥ 1 tick.
+        # It describes the recovery, so the shock sample itself is not eligible.
+        if not first:
+            sides = ("bid", "ask") if rec["side"] == "both" else (rec["side"],)
+            for sd in sides:
+                v = sh["share_" + sd]
+                v0 = rec["share_" + sd + "_at_shock"]
+                # only a side that was actually depleted (share < 1 at the shock) can overshoot on its way back
+                if v is not None and v0 is not None and v0 < 1.0 - 1e-9 and v > OVERSHOOT_SHARE:
+                    rec["overshoot"] = True
+                    rec["overshoot_kind"] = rec["overshoot_kind"] or "depth"
+            move = rec["shock"]["move_ticks"]
+            if move and ms_ is not None and (ms_ - 1.0) * abs(move) >= 1.0 - 1e-9:
                 rec["overshoot"] = True
-                rec["overshoot_kind"] = rec["overshoot_kind"] or "depth"
-        move = rec["shock"]["move_ticks"]
-        if move and ms_ is not None and (ms_ - 1.0) * abs(move) >= 1.0 - 1e-9:
-            rec["overshoot"] = True
-            rec["overshoot_kind"] = rec["overshoot_kind"] or "mid"
+                rec["overshoot_kind"] = rec["overshoot_kind"] or "mid"
         # state
-        spread_ok = sh["spread_ok"]
-        if spread_ok is None:
-            widened = rec["shock"]["spread_ticks"] is not None and rec["baseline"]["spread_ticks"] is not None and \
-                rec["shock"]["spread_ticks"] - rec["baseline"]["spread_ticks"] > 1e-9
-            spread_ok = not widened
-        recovered = share is not None and share >= RECOVERED_SHARE - 1e-9 and spread_ok
-        if recovered:
+        if self._recovered(rec, sh):
             rec["time_to_recovery_s"] = s
             rec["updates_to_recovery"] = rec["updates"]
             self._close(tr, rec, o.t, "overshoot" if rec["overshoot"] else "recovered")
             return
         if s >= TIMEOUT_S:
-            if share is not None and share < PARTIAL_LO:
-                rec["vacuum"] = True
-                self._close(tr, rec, o.t, "vacuum")
-            else:
-                rec["partial"] = True
-                self._close(tr, rec, o.t, "partial")
+            self._close_at_timeout(tr, rec, o.t, share)
             return
         improving = False
         if share is not None and rec["share_at_shock"] is not None and \
@@ -469,6 +494,16 @@ class ResilienceEngine:
             st = "shocked"
         rec["state"] = st
         tr.state = st
+
+    @classmethod
+    def _close_at_timeout(cls, tr: _Track, rec: Dict[str, Any], t: datetime, share: Optional[float]) -> None:
+        """Timeout close: vacuum when the (last seen) share is < 30 %, else partial; the flags follow the state."""
+        if share is not None and share < PARTIAL_LO:
+            rec["vacuum"] = True
+            cls._close(tr, rec, t, "vacuum")
+        else:
+            rec["partial"] = True
+            cls._close(tr, rec, t, "partial")
 
     @staticmethod
     def _close(tr: _Track, rec: Dict[str, Any], t: datetime, terminal: str) -> None:
@@ -501,7 +536,10 @@ class ResilienceEngine:
             record = {"state": state, "observed": bool(tr.obs), "curves_completed": len(tr.completed)}
         else:
             record = dict(rec)                      # snapshot: the live lists keep growing
-            record["samples"] = [dict(x) for x in rec["samples"]]
+            samples = rec["samples"]
+            del record["samples"]                   # per-update samples stay on the engine record (curves())
+            record["samples_n"] = len(samples)
+            record["last_sample"] = dict(samples[-1]) if samples else None
             record["curve"] = list(rec["curve"])
             record["curves_completed"] = len(tr.completed)
             record["active"] = tr.active is not None
