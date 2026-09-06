@@ -458,6 +458,17 @@
    "bytes": 1130502,
    "epoch": "28052b83d33d473cac130d0ba8a252b2",
    "closed_utc": "2026-09-06T06:01:05.206076+00:00"
+  },
+  {
+   "source": "lankabd_block",
+   "path": "segments/lankabd_block__ccr-vm__28052b83__20260906T05__00000017.jsonl",
+   "records": 12,
+   "first_seq": 17,
+   "last_seq": 28,
+   "sha256": "eb3218a9dcdcff7c53cb29015b60b4fb461229998e1fba730fe3c1c7ca45d581",
+   "bytes": 76001,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:02:50.266450+00:00"
   }
  ],
  "previous_epochs": [
