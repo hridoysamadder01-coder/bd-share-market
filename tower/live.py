@@ -21,8 +21,8 @@ import time
 from typing import Dict, List, Optional
 
 from .engine import Engine, EngineConfig
-from .events import Event
-from .normalize import RecordNormalizer
+from .events import Event, utc
+from .normalize import Normalizer
 from .store import StateStore
 
 
@@ -64,7 +64,9 @@ def run(capture: str, out: str, poll_s: float = 2.0, reorder_s: float = 3.0, sym
         once: bool = False, max_seconds: Optional[float] = None) -> Dict[str, int]:
     engine = Engine(EngineConfig(live=True))
     store = StateStore(out)
-    norm = RecordNormalizer(symbols=[s.upper() for s in symbols] if symbols else None)
+    # the same causal Normalizer replay uses; events accumulate in norm.events and are drained incrementally
+    norm = Normalizer(symbols=[s.upper() for s in symbols] if symbols else None)
+    drained = 0
     tailer = Tailer(capture)
     pending: List[Event] = []
     t0 = time.time()
@@ -72,8 +74,13 @@ def run(capture: str, out: str, poll_s: float = 2.0, reorder_s: float = 3.0, sym
     while True:
         recs = tailer.poll()
         n_rec += len(recs)
+        # feed in receipt order across sources (as normalize_store does for a whole store)
+        recs.sort(key=lambda r: (str(r.get("t_recv_utc", "")), str(r.get("source")), int(r.get("seq", 0))))
         for rec in recs:
-            pending.extend(norm.record_to_events(rec))
+            norm.on_record(rec, True)
+        if len(norm.events) > drained:
+            pending.extend(norm.events[drained:])
+            drained = len(norm.events)
         if pending:
             pending.sort(key=lambda e: e.sort_key())
             newest = pending[-1].t_recv

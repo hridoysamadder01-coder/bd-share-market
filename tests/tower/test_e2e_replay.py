@@ -90,13 +90,21 @@ def test_machinery_replay_is_deterministic_and_states_are_populated(tmp_path):
     assert len(rows) >= 40
     last = rows[-1]
     assert last["best_bid"] == 10.0 and last["best_ask"] == 10.1 and last["spread_ticks"] == 1.0
-    assert last["imb_topk"] is not None and last["imb_topk"] > 0.3            # planted bid pressure
+    # planted bid pressure: bids 900+700+300 vs asks 50+200+800 → (1900−1050)/2950 = 0.288
+    assert last["imb_topk"] is not None and abs(last["imb_topk"] - 850 / 2950) < 1e-6
     assert last["circuit"]["upper_limit"] == 11.0 and last["circuit"]["dist_up_ticks"] is not None
     assert last["book_source"] in ("lankabd_depth", "dsebd_depth")
     assert "lankabd_depth" in last["sources"] and "dsebd_depth" in last["sources"]
     assert last["sources"]["lankabd_depth"]["freshness_s"] is not None
     assert last["source_agreement"].get("book") is True                          # two sensors identical
-    assert last["mechanisms"] and any(m["score"] > 0 for m in last["mechanisms"].values())
+    # mechanisms are computed, not constant: scores move with the scenario (rise during the build, fall at the flat tail)
+    assert last["mechanisms"]
+    max_scores = {}
+    for r_ in rows:
+        for n, m in r_["mechanisms"].items():
+            max_scores[n] = max(max_scores.get(n, 0.0), m["score"])
+    assert any(v > 0.3 for v in max_scores.values()), max_scores
+    assert any(m["score"] == 0.0 for m in last["mechanisms"].values())
     assert last["layer_states"]["pressure"] in ("pressure_building", "expansion", "rejection", "reversal", "balanced")
     assert last["trade_count"] is not None and last["interval_volume"] is not None
     tl = read_timeline(str(tmp_path / "out1"))
@@ -130,14 +138,26 @@ def test_realdata_fixture_replay_closed_market(tmp_path):
     assert h, "no symbols replayed from the real fixture"
     for sym in h:
         rows = read_states(str(tmp_path / "out"), sym)
-        assert rows and all(r["empty_book"] for r in rows)                 # market was closed
-        assert all(r["imb_l1"] is None for r in rows)                        # NOT_OBSERVABLE, never 0
+        assert rows
+        # market was closed: no two-sided book anywhere (some symbols carry resting one-sided orders)
+        assert all(r["spread"] is None and r["mid"] is None for r in rows)
+        for r in rows:
+            if r["empty_book"]:
+                assert r["imb_l1"] is None                                       # NOT_OBSERVABLE, never 0
+            else:
+                assert r["one_sided"] and r["imb_l1"] in (1.0, -1.0)
         assert rows[-1]["trade_count"] is not None                           # day totals were observed
         assert rows[-1]["sources"]
     assert replay_hashes(FIXTURE, str(tmp_path / "out2")) == h
 
 
-@pytest.mark.skipif(not os.path.exists(os.path.join(LIVE, "segments")), reason="live session capture not present")
+def _live_has_market_data() -> bool:
+    import glob
+    return bool(glob.glob(os.path.join(LIVE, "segments", "lankabd_depth*")) or
+                glob.glob(os.path.join(LIVE, "segments", "dsebd_depth*")))
+
+
+@pytest.mark.skipif(not _live_has_market_data(), reason="live session capture has no depth segments yet (market not open)")
 def test_realdata_live_session_capture(tmp_path):
     r = Replayer(LIVE, str(tmp_path / "out"))
     n = r.load()
