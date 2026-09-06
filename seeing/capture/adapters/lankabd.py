@@ -100,16 +100,27 @@ def _tokened_get(sess: LankaBDSession, url: str, params: Optional[Dict[str, str]
 
 # ---------------------------------------------------------------------- BOOK
 def parse_depth_table(html: str) -> Tuple[List[Tuple[float, float]], List[str]]:
-    """The buy/sell HTML table → [(price, qty), ...] in source order."""
+    """The buy/sell HTML table → [(price, qty), ...] in source order.
+
+    Rows are two centred numeric cells (price, volume). A row with a different
+    number of numeric cells is NOT silently dropped: it is reported as a problem
+    (so a layout change during a live session shows up on replay, not as an
+    empty book) and, when it has ≥ 2 numeric cells, its first two are still
+    read as (price, qty)."""
     levels: List[Tuple[float, float]] = []
     problems: List[str] = []
     for row in ROW_RE.findall(html or ""):
         cells = [c.strip() for c in CELL_RE.findall(row)]
-        if len(cells) != 2:
+        if not cells:
             continue
-        if not NUM_RE.fullmatch(cells[0].replace(",", "")) or not NUM_RE.fullmatch(cells[1].replace(",", "")):
-            continue  # header rows ("Buy Price", "Buy Volume")
-        p, q = _num(cells[0]), _num(cells[1])
+        nums = [c for c in cells if NUM_RE.fullmatch(c.replace(",", ""))]
+        if len(nums) != len(cells):
+            continue                      # header rows ("Buy Price", "Buy Volume")
+        if len(nums) != 2:
+            problems.append(f"level row with {len(nums)} numeric cells (layout change?): {cells}")
+            if len(nums) < 2:
+                continue
+        p, q = _num(nums[0]), _num(nums[1])
         if p is None or q is None:
             problems.append(f"unparsed level {cells}")
             continue

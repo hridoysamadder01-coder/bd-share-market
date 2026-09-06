@@ -43,6 +43,14 @@ def test_depth_table_sorting_and_flag():
     assert f["src_order_preserved"] is False
 
 
+def test_depth_table_layout_change_is_reported_not_swallowed():
+    html = ('<table><tr><td><div>Buy Price</div></td><td><div>Buy Volume</div></td><td><div>Orders</div></td></tr>'
+            '<tr><td><div>10.20</div></td><td><div>1,000</div></td><td><div>7</div></td></tr></table>')
+    from seeing.capture.adapters.lankabd import parse_depth_table
+    levels, problems = parse_depth_table(html)
+    assert levels == [(10.2, 1000.0)] and problems and "3 numeric cells" in problems[0]
+
+
 def test_watch_parse():
     p = _adapters()["watch"].parse(fixture("lankabd_watch_12_2026-09-03.json"))
     assert not p.problems and len(p.frames) == 12
