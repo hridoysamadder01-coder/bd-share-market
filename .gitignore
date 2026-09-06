@@ -10,6 +10,10 @@ evidence/capture/*/STATUS.json
 evidence/capture/*/STATUS.json.tmp
 evidence/capture/*/runner.log
 .pytest_cache/
+results/tower/
+tower/ingest/ingest
+tower/ingest/*.test
+tests/tower/_ui_screenshot.png
 
 # public collector: raw payload dump and the working output tree (regenerate with
 # python3 -m collector.dse_public_collector); the run's metadata + small normalized

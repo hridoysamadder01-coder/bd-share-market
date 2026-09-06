@@ -1,0 +1,1169 @@
+"""tower.mechanics.queue_family + sweep_family — mechanisms 1, 2, 30, 31, 33 and 3, 4, 5, 14, 15, 20, 21, 34.
+
+test_machinery_* build deterministic MarketState scenarios (5-s cadence, tick 0.1) and feed them
+through a StateHistory exactly as the engine does (history holds the states *before* the current
+one): for every mechanism a scenario that drives the score ≥ active_threshold, a null scenario that
+keeps it < build_threshold, a check that the evidence is computed from the inputs (changes when the
+inputs change), and the lifecycle building → active → confirmed → resolved / failed through
+``Mechanism.update``.  test_realdata_* run the committed closed-market capture through the engine.
+"""
+from __future__ import annotations
+
+import math
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+import pytest
+
+from tower.mechanics import REGISTRY, all_mechanisms
+from tower.mechanics.base import Mechanism, StateHistory
+from tower.mechanics import queue_family as qf
+from tower.mechanics import sweep_family as sf
+from tower.state import MarketState
+
+T0 = datetime(2026, 9, 6, 4, 0, 0, tzinfo=timezone.utc)
+TICK = 0.1
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FIXTURE = os.path.join(ROOT, "tests", "fixtures", "capture_closed")
+
+BIDS = [(10.0, 1000.0), (9.9, 800.0), (9.8, 600.0), (9.7, 500.0), (9.6, 400.0)]
+ASKS = [(10.1, 1000.0), (10.2, 800.0), (10.3, 600.0), (10.4, 500.0), (10.5, 400.0)]
+
+QUEUE_NAMES = ["queue_pull_stack", "quote_refresh_churn", "layering_like", "hidden_replenishment", "order_splitting"]
+SWEEP_NAMES = ["liquidity_sweep", "failed_sweep", "exhaustion", "liquidity_vacuum", "vacuum_snapback",
+               "liquidity_run", "ignition", "liquidity_depletion"]
+BASELINE_KEYS = ("imb_l1", "imb_topk", "imb_weighted", "depth_ratio", "price_only_response", "volume_only_response")
+
+
+# ----------------------------------------------------------------------------- builders
+def _t(s: float) -> datetime:
+    return T0 + timedelta(seconds=s)
+
+
+def S(s: float, bids: Sequence[Tuple[float, float]], asks: Sequence[Tuple[float, float]], *,
+      tv: Optional[float] = None, iv: Optional[float] = None, itr: Optional[float] = None,
+      dirn: Optional[float] = None, intensity: Optional[float] = None, vel: Optional[float] = None,
+      acc: Optional[float] = None, tacc: Optional[float] = None, lp: Optional[Dict[str, Any]] = None,
+      clock: Optional[str] = None, queue: Optional[Dict[str, Any]] = None, tick: Optional[float] = TICK,
+      seq: int = 0) -> MarketState:
+    """A MarketState carrying what the book / tape engines write for a displayed book."""
+    ms = MarketState(symbol="SYN", t=_t(s), seq=seq, tick_size=tick)
+    ms.bids = [(float(p), float(q)) for p, q in bids]
+    ms.asks = [(float(p), float(q)) for p, q in asks]
+    if bids:
+        ms.best_bid, ms.bid_qty1 = ms.bids[0]
+    if asks:
+        ms.best_ask, ms.ask_qty1 = ms.asks[0]
+    if bids and asks:
+        ms.spread = round(ms.best_ask - ms.best_bid, 6)
+        ms.spread_ticks = round(ms.spread / TICK, 6)
+        ms.mid = (ms.best_ask + ms.best_bid) / 2.0
+    ms.empty_book = not (bids or asks)
+    ms.one_sided = bool(bids) != bool(asks)
+    ms.trade_volume = tv
+    ms.interval_volume = iv
+    ms.interval_trades = itr
+    ms.trade_flow_direction = dirn
+    ms.trade_intensity = intensity
+    ms.price_velocity = vel
+    ms.price_acceleration = acc
+    ms.trade_acceleration = tacc
+    ms.last_print = lp
+    if clock is not None:
+        ms.session_state["tape"] = {"tape_clock": clock}
+    if queue is not None:
+        ms.session_state["queue"] = queue
+    return ms
+
+
+def run(mech: Mechanism, states: Sequence[MarketState], use_update: bool = False):
+    """Feed states in order the way the engine does (history holds only the states before the
+    current one). Returns the list of readings (MechanismReading or MechanismState)."""
+    hist = StateHistory()
+    out = []
+    for ms in states:
+        r = mech.update(ms, hist) if use_update else mech.compute(ms, hist)
+        assert 0.0 <= r.score <= 1.0
+        assert not (isinstance(r.score, float) and math.isnan(r.score))
+        hist.push(ms)
+        out.append(r)
+    return out
+
+
+def last_score(mech: Mechanism, states: Sequence[MarketState]) -> float:
+    return run(mech, states)[-1].score
+
+
+def static(n: int = 40, step: float = 5.0, **kw) -> List[MarketState]:
+    return [S(step * i, BIDS, ASKS, **kw) for i in range(n)]
+
+
+def scale(levels, factor: float, only_first: bool = False):
+    if only_first:
+        return [(levels[0][0], levels[0][1] * factor)] + list(levels[1:])
+    return [(p, q * factor) for p, q in levels]
+
+
+def shift(levels, ticks: int):
+    return [(round(p + ticks * TICK, 6), q) for p, q in levels]
+
+
+def _check_common(r, expect_direction: Optional[int] = None):
+    assert set(BASELINE_KEYS) <= set(r.baseline)
+    assert "direction" in r.evidence
+    assert r.evidence["direction"] in (-1, 0, 1)
+    if expect_direction is not None:
+        assert r.evidence["direction"] == expect_direction
+
+
+# ----------------------------------------------------------------------------- registry
+def test_machinery_registry_has_all_13():
+    all_mechanisms()
+    for n in QUEUE_NAMES + SWEEP_NAMES:
+        assert n in REGISTRY, n
+    assert all(REGISTRY[n].family == "queue" for n in QUEUE_NAMES)
+    assert all(REGISTRY[n].family == "sweep" for n in SWEEP_NAMES)
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_null_static_book_stays_below_build(name):
+    """A static, fully displayed book with a flat tape never builds any of the 13 mechanisms."""
+    tv = 1000.0
+    states = static(60, tv=tv)
+    rs = run(REGISTRY[name](), states)
+    assert max(r.score for r in rs) < REGISTRY[name].build_threshold
+    _check_common(rs[-1])
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_empty_book_is_missing_not_zero(name):
+    """An empty book yields score 0 with the missing inputs named — never a silent zero."""
+    states = [S(5 * i, [], []) for i in range(12)]
+    rs = run(REGISTRY[name](), states)
+    assert rs[-1].score == 0.0
+    assert rs[-1].evidence.get("missing"), name
+
+
+# ============================================================================= #1 queue_pull_stack
+def _pull_scenario(fall_to: float = 200.0, with_trades: bool = False, side: str = "bid") -> List[MarketState]:
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(12)]              # 0..55 s static
+    steps = 6
+    for k in range(1, steps + 1):
+        q = 1000.0 - (1000.0 - fall_to) * k / steps
+        tv = 1000.0 + ((1000.0 - q) if with_trades else 0.0)
+        b = [(10.0, q)] + BIDS[1:] if side == "bid" else BIDS
+        a = [(10.1, q)] + ASKS[1:] if side == "ask" else ASKS
+        st.append(S(60 + 5 * k, b, a, tv=tv))
+    return st
+
+
+def test_machinery_queue_pull_stack_pull_without_trades_activates():
+    rs = run(qf.QueuePullStack(), _pull_scenario())
+    r = rs[-1]
+    assert r.score >= 0.6
+    assert r.evidence["kind"] == "pull" and r.evidence["side"] == "bid"
+    assert r.evidence["share"] == pytest.approx(0.8)
+    assert r.evidence["consistency"] == 1.0
+    _check_common(r, -1)
+    # ask-side pull implies the opposite direction
+    ra = run(qf.QueuePullStack(), _pull_scenario(side="ask"))[-1]
+    assert ra.score >= 0.6 and ra.evidence["direction"] == 1
+
+
+def test_machinery_queue_pull_stack_consumption_is_not_a_pull():
+    """The same fall fully accounted for by traded volume is consumption, not a pull."""
+    r = run(qf.QueuePullStack(), _pull_scenario(with_trades=True))[-1]
+    assert r.evidence["sides"]["bid"]["pull_qty"] == pytest.approx(0.0)
+    assert r.score < 0.35
+
+
+def test_machinery_queue_pull_stack_stack_activates_and_evidence_changes():
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(12)]
+    for k in range(1, 7):
+        st.append(S(60 + 5 * k, [(10.0, 1000.0 + 600.0 * k)] + BIDS[1:], ASKS, tv=1000.0))
+    r = run(qf.QueuePullStack(), st)[-1]
+    assert r.score >= 0.6 and r.evidence["kind"] == "stack" and r.evidence["direction"] == 1
+    # evidence responds to the input: a smaller fall → smaller share
+    r_small = run(qf.QueuePullStack(), _pull_scenario(fall_to=600.0))[-1]
+    r_big = run(qf.QueuePullStack(), _pull_scenario(fall_to=200.0))[-1]
+    assert r_small.evidence["share"] == pytest.approx(0.4) and r_big.evidence["share"] == pytest.approx(0.8)
+    assert r_small.score < r_big.score
+
+
+def test_machinery_queue_pull_stack_uses_engine_pull_counter():
+    """With no usable series the queue engine's tape-budgeted pull counter is the estimate."""
+    q = {"bid": {"pulled_qty_120s": 800.0, "touch_qty": 200.0, "added_qty_120s": 0.0}, "ask": {}}
+    st = [S(0, BIDS, ASKS, tv=1000.0), S(5, [(10.0, 200.0)] + BIDS[1:], ASKS, tv=1000.0, queue=q)]
+    r = run(qf.QueuePullStack(), st)[-1]
+    assert r.evidence["sides"]["bid"]["counter_pull_share"] == pytest.approx(0.8)
+    assert r.evidence["share"] == pytest.approx(0.8)
+    # the same counter without any tape is the budget-less engine calling every drop a pull: not usable
+    st = [S(0, BIDS, ASKS), S(5, [(10.0, 200.0)] + BIDS[1:], ASKS, queue=q)]
+    rn = run(qf.QueuePullStack(), st)[-1]
+    assert rn.score == 0.0 and rn.evidence["missing"] == ["trade_volume"]
+    assert rn.evidence["sides"]["bid"]["counter_pull_share"] == pytest.approx(0.8)
+
+
+def test_machinery_queue_pull_stack_counter_is_bounded_by_this_queues_fall():
+    """Seen on the live capture: the engine's 120-s pull counter sums pulls at every price of the
+    last two minutes, so it reported an 0.88 pull share for a touch queue that had not moved at all
+    (and a queue that grew).  The counter is an estimate of *this* run's pull only where this queue
+    fell, capped at the fall it showed."""
+    q = {"bid": {"pulled_qty_120s": 7000.0, "touch_qty": 1000.0, "added_qty_120s": 0.0}, "ask": {}}
+    flat = [S(5 * i, BIDS, ASKS, tv=1000.0, queue=q) for i in range(12)]           # no fall at all
+    r = run(qf.QueuePullStack(), flat)[-1]
+    assert r.evidence["sides"]["bid"]["counter_pull_share"] is None and r.score == 0.0
+    assert "missing" not in r.evidence                                              # measured: nothing pulled
+    grew = [S(5 * i, [(10.0, 1000.0 + 500.0 * i)] + BIDS[1:], ASKS, tv=1000.0, queue=q) for i in range(12)]
+    rg = run(qf.QueuePullStack(), grew)[-1]
+    assert rg.evidence["kind"] == "stack" and rg.evidence["sides"]["bid"]["counter_pull_share"] is None
+    # a 10 % fall of this queue caps the counter's share at 0.10 even if the counter says 0.875
+    fell = [S(5 * i, [(10.0, 1000.0 - (100.0 if i == 11 else 0.0))] + BIDS[1:], ASKS, tv=1000.0, queue=q)
+            for i in range(12)]
+    rf = run(qf.QueuePullStack(), fell)[-1]
+    assert rf.evidence["sides"]["bid"]["counter_pull_share"] == pytest.approx(0.10)
+    assert rf.evidence["share"] == pytest.approx(0.10) and rf.evidence["consistency"] == 1.0
+    assert rf.score < qf.QueuePullStack.build_threshold
+
+
+def test_machinery_queue_pull_stack_no_tape_pull_is_missing_but_stack_scores():
+    """A pull is "qty falling with no trades": without a tape in the run's span the fall cannot be
+    split into trades and pulls — score 0 with trade_volume missing and the fall still reported.
+    A stack needs no tape and scores as before; a fall seen while the tape is observed but flat is
+    a verified pull."""
+    st = [S((m.t - T0).total_seconds(), m.bids, m.asks) for m in _pull_scenario()]
+    rn = run(qf.QueuePullStack(), st)[-1]
+    assert rn.score == 0.0 and rn.evidence["missing"] == ["trade_volume"] and rn.evidence["direction"] == 0
+    assert rn.evidence["sides"]["bid"]["fall"] == pytest.approx(800.0)
+    assert rn.evidence["sides"]["bid"]["pull_share"] is None and rn.evidence["tape_observed"] is False
+    stack = [S(5 * i, BIDS, ASKS) for i in range(12)]
+    for k in range(1, 7):
+        stack.append(S(60 + 5 * k, [(10.0, 1000.0 + 600.0 * k)] + BIDS[1:], ASKS))
+    rs = run(qf.QueuePullStack(), stack)[-1]
+    assert rs.score >= 0.6 and rs.evidence["kind"] == "stack" and "missing" not in rs.evidence
+    # the tape observed earlier in the window and merely not re-stamped on the last frame still counts
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0 + 10.0 * i) for i in range(12)]
+    st.append(S(60, [(10.0, 200.0)] + BIDS[1:], ASKS))
+    rv = run(qf.QueuePullStack(), st)[-1]
+    assert "missing" not in rv.evidence and rv.evidence["tape_observed"] is True
+    assert rv.evidence["sides"]["bid"]["volume_in_span"] == pytest.approx(110.0)
+    assert rv.evidence["sides"]["bid"]["pull_qty"] == pytest.approx(690.0)
+
+
+# ============================================================================= #2 quote_refresh_churn
+def _churn_scenario(drift_ticks: int = 0, n: int = 14) -> List[MarketState]:
+    st = []
+    for i in range(n):
+        bq = 1000.0 if i % 2 == 0 else 1100.0
+        aq = 900.0 if i % 2 == 0 else 1000.0
+        d = drift_ticks if i == n - 1 else 0
+        st.append(S(5 * i, shift([(10.0, bq)] + BIDS[1:], d), [(10.1, aq)] + ASKS[1:], tv=1000.0))
+    return st
+
+
+def test_machinery_quote_refresh_churn_activates():
+    r = run(qf.QuoteRefreshChurn(), _churn_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["rate_per_min"] == pytest.approx(24.0, rel=0.01)   # 13 + 13 changes in 65 s
+    assert r.evidence["drift_ticks"] == 0.0
+    _check_common(r, 0)
+
+
+def test_machinery_quote_refresh_churn_drift_damps_and_evidence_changes():
+    r0 = run(qf.QuoteRefreshChurn(), _churn_scenario(0))[-1]
+    r3 = run(qf.QuoteRefreshChurn(), _churn_scenario(3))[-1]
+    assert r3.evidence["drift_ticks"] == pytest.approx(3.0)
+    assert r3.score < r0.score
+    assert r3.score == pytest.approx(r0.score / 4.0, rel=0.05)
+    # a slow book: two changes in a minute is the ramp floor
+    slow = [S(5 * i, [(10.0, 1000.0 + (i % 6 == 0) * 50)] + BIDS[1:], ASKS, tv=1000.0) for i in range(14)]
+    assert run(qf.QuoteRefreshChurn(), slow)[-1].score < 0.35
+
+
+def test_machinery_quote_refresh_churn_falls_back_to_counters():
+    q = {"bid": {"best_changes_per_min": 12.0, "net_drift_ticks": 0.0}, "ask": {"best_changes_per_min": 8.0,
+                                                                                "net_drift_ticks": 0.0}}
+    st = [S(0, BIDS, ASKS, queue=q)]
+    r = run(qf.QuoteRefreshChurn(), st)[-1]
+    assert r.evidence["estimate_source"] == "counters" and r.evidence["rate_per_min"] == 20.0
+    assert r.score >= 0.6
+    # the counters carry no net qty change: that term is not evaluated, never filled with a number
+    assert r.evidence["qty_net_share"] is None and r.evidence["unverified"] == ["qty_net_share"]
+    rs = run(qf.QuoteRefreshChurn(), _churn_scenario())[-1]
+    assert rs.evidence["qty_net_share"] is not None and "unverified" not in rs.evidence
+
+
+# ============================================================================= #30 layering_like
+def _layer_scenario(cycles: int = 4, side: str = "bid", layer_qty: float = 5000.0) -> List[MarketState]:
+    base_b, base_a = BIDS[:3], ASKS[:3]
+    st = [S(5 * i, base_b, base_a, tv=1000.0) for i in range(4)]
+    s = 20.0
+    for _ in range(cycles):
+        if side == "bid":
+            st.append(S(s, base_b + [(9.6, layer_qty)], base_a, tv=1000.0))
+        else:
+            st.append(S(s, base_b, base_a + [(10.5, layer_qty)], tv=1000.0))
+        st.append(S(s + 5, base_b, base_a, tv=1000.0))
+        s += 10
+    return st
+
+
+def test_machinery_layering_like_activates():
+    r = run(qf.LayeringLike(), _layer_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["side"] == "bid" and r.evidence["cycles"] == 4
+    assert r.evidence["cancel_away_share"] == pytest.approx(1.0)
+    assert r.evidence["cancel_away"] == pytest.approx(20000.0)
+    _check_common(r, -1)
+    ra = run(qf.LayeringLike(), _layer_scenario(side="ask"))[-1]
+    assert ra.score >= 0.6 and ra.evidence["direction"] == 1
+
+
+def test_machinery_layering_like_touch_activity_is_not_layering():
+    """Qty flickering at the touch (trades / pulls at the best) gives no away cycles."""
+    st = [S(5 * i, [(10.0, 1000.0 if i % 2 else 400.0)] + BIDS[1:3], ASKS[:3], tv=1000.0) for i in range(14)]
+    r = run(qf.LayeringLike(), st)[-1]
+    assert r.evidence["cycles"] == 0 and r.score < 0.35
+
+
+def test_machinery_layering_like_touch_stepping_scroll_is_not_layering():
+    """A fixed-depth display (5 levels) whose best steps up and back: the deepest level scrolls
+    out of / into the view each time. That is unobservable display truncation, not appear/cancel
+    cycles — the reading must stay inactive and account the qty as ``scrolled``."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(4)]
+    s = 20.0
+    for _ in range(4):
+        st.append(S(s, [(10.1, 300.0)] + BIDS[:4], ASKS, tv=1000.0))        # best steps up, 9.6 scrolls out
+        st.append(S(s + 5, BIDS, ASKS, tv=1000.0))                           # back: 9.6 scrolls in
+        s += 10
+    r = run(qf.LayeringLike(), st)[-1]
+    assert r.evidence["cycles"] == 0
+    assert r.evidence["sides"]["bid"]["scrolled"] == pytest.approx(8 * 400.0)
+    assert r.evidence["sides"]["bid"]["cancel_away"] == 0.0
+    assert r.score < qf.LayeringLike.build_threshold
+    # a genuine cancel of the deepest displayed level (count shrinks) is still a cancel
+    st2 = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(4)]
+    st2.append(S(20, BIDS[:4], ASKS, tv=1000.0))
+    r2 = run(qf.LayeringLike(), st2)[-1]
+    assert r2.evidence["sides"]["bid"]["cancel_away"] == pytest.approx(400.0)
+
+
+def test_machinery_layering_like_evidence_changes_with_cycles():
+    r2 = run(qf.LayeringLike(), _layer_scenario(cycles=2))[-1]
+    r4 = run(qf.LayeringLike(), _layer_scenario(cycles=4))[-1]
+    assert r2.evidence["cycles"] == 2 and r4.evidence["cycles"] == 4
+    assert r2.score < r4.score
+
+
+# ============================================================================= #31 hidden_replenishment
+def _refill_scenario(refills: int = 3, traded: bool = True, sizes: Optional[Sequence[float]] = None,
+                     side: str = "bid") -> List[MarketState]:
+    st = []
+    s = 0.0
+    tv = 1000.0
+    ref = 1000.0
+    sizes = list(sizes) if sizes else [1000.0] * refills
+    for k in range(refills):
+        st.append(S(s, [(10.0, ref)] + BIDS[1:] if side == "bid" else BIDS,
+                    [(10.1, ref)] + ASKS[1:] if side == "ask" else ASKS, tv=tv))
+        s += 5
+        low = 0.3 * ref
+        if traded:
+            tv += ref - low
+        st.append(S(s, [(10.0, low)] + BIDS[1:] if side == "bid" else BIDS,
+                    [(10.1, low)] + ASKS[1:] if side == "ask" else ASKS, tv=tv))
+        s += 5
+        ref = sizes[k]
+    st.append(S(s, [(10.0, ref)] + BIDS[1:] if side == "bid" else BIDS,
+                [(10.1, ref)] + ASKS[1:] if side == "ask" else ASKS, tv=tv))
+    return st
+
+
+def test_machinery_hidden_replenishment_activates():
+    r = run(qf.HiddenReplenishment(), _refill_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["cycles"] == 3 and r.evidence["side"] == "bid"
+    assert r.evidence["traded_frac"] == pytest.approx(1.0)
+    assert r.evidence["similarity"] == pytest.approx(1.0)
+    _check_common(r, 1)
+    ra = run(qf.HiddenReplenishment(), _refill_scenario(side="ask"))[-1]
+    assert ra.score >= 0.6 and ra.evidence["direction"] == -1
+
+
+def test_machinery_hidden_replenishment_pull_refills_and_missing_tape():
+    r = run(qf.HiddenReplenishment(), _refill_scenario(traded=False))[-1]
+    assert r.evidence["traded_frac"] == 0.0 and r.score < 0.35
+    # no tape at all: consumption cannot be verified → missing
+    st = [S(ms_.t and (ms_.t - T0).total_seconds(), ms_.bids, ms_.asks) for ms_ in _refill_scenario()]
+    rn = run(qf.HiddenReplenishment(), st)[-1]
+    assert rn.score == 0.0 and "trade_volume" in rn.evidence["missing"]
+
+
+def _refill_with_flow(direction: float) -> List[MarketState]:
+    """The bid refill scenario with the tape classified: every interval carries ``direction``."""
+    st = _refill_scenario(traded=True)
+    prev_tv = None
+    for i, m in enumerate(st):
+        if prev_tv is not None and m.trade_volume != prev_tv:
+            m.interval_volume = m.trade_volume - prev_tv
+            m.interval_trades = 1
+            m.trade_flow_direction = direction
+            m.session_state["tape"] = {"tape_clock": m.t.isoformat()}
+        prev_tv = m.trade_volume
+    return st
+
+
+def test_machinery_hidden_replenishment_volume_is_attributed_to_the_hit_side():
+    """Bid refills are trade-backed by volume that hit the bid (sells); the same volume classified
+    as buys (hitting the ask) does not back them. Without a classification the window volume bounds
+    them (``volume_attributed`` False)."""
+    sells = run(qf.HiddenReplenishment(), _refill_with_flow(-1.0))[-1]
+    buys = run(qf.HiddenReplenishment(), _refill_with_flow(1.0))[-1]
+    assert sells.evidence["volume_attributed"] is True and sells.evidence["traded_frac"] == pytest.approx(1.0)
+    assert sells.evidence["volume_hit_side"] == pytest.approx(2100.0)
+    assert buys.evidence["volume_hit_side"] == pytest.approx(0.0) and buys.evidence["traded_frac"] == 0.0
+    assert buys.score < qf.HiddenReplenishment.build_threshold < sells.score
+    half = run(qf.HiddenReplenishment(), _refill_with_flow(0.0))[-1]         # (buy − sell)/total = 0: half each
+    assert half.evidence["volume_hit_side"] == pytest.approx(1050.0) and half.evidence["traded_frac"] == pytest.approx(0.5)
+    plain = run(qf.HiddenReplenishment(), _refill_scenario())[-1]
+    assert plain.evidence["volume_attributed"] is False and plain.evidence["volume_hit_side"] == pytest.approx(2100.0)
+
+
+def test_machinery_hidden_replenishment_evidence_changes_with_size_similarity():
+    same = run(qf.HiddenReplenishment(), _refill_scenario(sizes=[1000.0, 1000.0, 1000.0]))[-1]
+    diff = run(qf.HiddenReplenishment(), _refill_scenario(sizes=[1000.0, 2000.0, 400.0]))[-1]
+    assert diff.evidence["similarity"] < same.evidence["similarity"]
+    assert diff.score < same.score
+
+
+# ============================================================================= #33 order_splitting
+def _prints_scenario(sizes: Sequence[float], gap_s: float = 10.0, direction: float = 1.0) -> List[MarketState]:
+    st = [S(0, BIDS, ASKS, tv=1000.0)]
+    tv = 1000.0
+    for i, q in enumerate(sizes):
+        t = gap_s * (i + 1)
+        tv += q
+        lp = {"t": _t(t).isoformat(), "price": 10.1, "qty": q, "trade_id": str(i), "direction": direction}
+        st.append(S(t, BIDS, ASKS, tv=tv, iv=q, itr=1, dirn=direction, lp=lp, clock=_t(t).isoformat()))
+        st.append(S(t + 2.5, BIDS, ASKS, tv=tv, iv=q, itr=1, dirn=direction, lp=lp, clock=_t(t).isoformat()))
+    return st
+
+
+def test_machinery_order_splitting_activates():
+    r = run(qf.OrderSplitting(), _prints_scenario([500.0] * 8))[-1]
+    assert r.score >= 0.6
+    assert r.evidence["prints"] == 8 and r.evidence["modal_repeats"] == 8
+    assert r.evidence["mode_share"] == 1.0 and r.evidence["cadence_cv"] == pytest.approx(0.0)
+    assert r.evidence["size_source"] == "prints"
+    _check_common(r, 1)
+    rs = run(qf.OrderSplitting(), _prints_scenario([500.0] * 8, direction=-1.0))[-1]
+    assert rs.evidence["direction"] == -1
+
+
+def test_machinery_order_splitting_stale_print_outside_window_is_not_a_print():
+    """``last_print`` is carried on every state until the next print: a print stamped long before
+    the window counts for nothing in it, and a print stamped inside the window counts once."""
+    old = {"t": _t(-1000).isoformat(), "price": 10.1, "qty": 500.0, "trade_id": "old", "direction": 1.0}
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0, lp=old) for i in range(10)]
+    r = run(qf.OrderSplitting(), st)[-1]
+    assert r.evidence["prints"] == 0
+    fresh = dict(old, t=_t(20).isoformat(), trade_id="new")
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0, lp=(fresh if i >= 4 else old)) for i in range(10)]
+    assert run(qf.OrderSplitting(), st)[-1].evidence["prints"] == 1
+
+
+def test_machinery_order_splitting_varied_sizes_stay_null():
+    r = run(qf.OrderSplitting(), _prints_scenario([100.0, 260.0, 410.0, 730.0, 1300.0, 90.0, 2200.0, 560.0]))[-1]
+    assert r.evidence["modal_repeats"] == 1 and r.score < 0.35
+    # a single modal print has no cadence: the regularity term is not evaluated, not filled in
+    assert r.evidence["regularity"] is None and r.evidence["unverified"] == ["regularity"]
+    assert r.score == pytest.approx(qf.ramp(1, 1.5, 5.5) * qf.ramp(1 / 8, 0.3, 0.8))
+    two = run(qf.OrderSplitting(), _prints_scenario([500.0, 500.0, 130.0, 970.0, 2100.0]))[-1]
+    assert two.evidence["modal_repeats"] == 2 and two.evidence["regularity"] is None
+    assert two.score < qf.OrderSplitting.build_threshold
+
+
+def test_machinery_order_splitting_evidence_changes_and_touch_fallback():
+    half = run(qf.OrderSplitting(), _prints_scenario([500.0] * 4 + [130.0, 970.0, 2100.0, 3300.0]))[-1]
+    full = run(qf.OrderSplitting(), _prints_scenario([500.0] * 8))[-1]
+    assert half.evidence["mode_share"] == pytest.approx(0.5) and half.score < full.score
+    # irregular cadence lowers the regularity component
+    reg = run(qf.OrderSplitting(), _prints_scenario([500.0] * 8, gap_s=10.0))[-1]
+    st = _prints_scenario([500.0] * 8, gap_s=10.0)
+    # squeeze prints unevenly: same sizes, irregular arrival times
+    irregular = [S((1.0 + 3.0 * (i % 3)) * i, m.bids, m.asks, tv=m.trade_volume, lp=m.last_print,
+                   iv=m.interval_volume, itr=m.interval_trades, dirn=m.trade_flow_direction)
+                 for i, m in enumerate(st)]
+    for i, m in enumerate(irregular):
+        if m.last_print:
+            m.last_print = dict(m.last_print, t=m.t.isoformat(), trade_id=str(i))
+    ri = run(qf.OrderSplitting(), irregular)[-1]
+    assert ri.evidence["regularity"] < reg.evidence["regularity"]
+    # touch-consumption fallback when no prints / single-trade intervals are carried
+    st2 = []
+    tv = 1000.0
+    for i in range(10):
+        q = 1000.0 if i % 2 == 0 else 700.0
+        if i % 2 == 1:
+            tv += 300.0
+        st2.append(S(5 * i, [(10.0, q)] + BIDS[1:], ASKS, tv=tv))
+    r2 = run(qf.OrderSplitting(), st2)[-1]
+    assert r2.evidence["size_source"] == "touch_consumption" and r2.evidence["modal_repeats"] == 5
+    assert r2.evidence["direction"] == -1
+
+
+# ============================================================================= #3 liquidity_sweep
+def _sweep_scenario(levels: int = 3, burst_vol: float = 2400.0) -> List[MarketState]:
+    st = []
+    tv = 1000.0
+    for i in range(13):
+        tv += 10.0
+        st.append(S(5 * i, BIDS, ASKS, tv=tv))
+    st.append(S(65, BIDS, ASKS[levels:], tv=tv + burst_vol))
+    return st
+
+
+def test_machinery_liquidity_sweep_activates():
+    r = run(sf.LiquiditySweep(), _sweep_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["side"] == "ask" and r.evidence["levels_consumed"] == 3
+    assert r.evidence["retreat_ticks"] == pytest.approx(3.0)
+    assert r.evidence["qty_consumed"] == pytest.approx(2400.0)
+    assert r.evidence["volume_ratio"] > 5
+    _check_common(r, 1)
+    # bid sweep mirrors the direction
+    st = _sweep_scenario()
+    st[-1] = S(65, BIDS[3:], ASKS, tv=st[-1].trade_volume)
+    rb = run(sf.LiquiditySweep(), st)[-1]
+    assert rb.evidence["side"] == "bid" and rb.evidence["direction"] == -1 and rb.score >= 0.6
+
+
+def test_machinery_liquidity_sweep_evidence_changes_and_no_tape():
+    r1 = run(sf.LiquiditySweep(), _sweep_scenario(levels=1))[-1]
+    r3 = run(sf.LiquiditySweep(), _sweep_scenario(levels=3))[-1]
+    assert r1.evidence["levels_consumed"] == 1 and r1.score < r3.score
+    # without a tape vanished levels cannot be told from pulled ones: the geometry is reported, the
+    # tape is named missing and the reading is score 0 (CONTRACTS: never a score on a substitute)
+    st = [S((m.t - T0).total_seconds(), m.bids, m.asks) for m in _sweep_scenario()]
+    rn = run(sf.LiquiditySweep(), st)[-1]
+    assert "trade_volume" in rn.evidence["missing"] and rn.evidence["volume_burst"] is None
+    assert rn.evidence["taken_share"] == pytest.approx(2400.0 / 3300.0)
+    assert rn.evidence["levels_consumed"] == 3 and rn.evidence["retreat_ticks"] == pytest.approx(3.0)
+    assert rn.score == 0.0 and rn.evidence["direction"] == 0
+    # a tape without a usable pre-burst baseline still scores, on the taken share
+    st = _sweep_scenario()
+    for m in st[:-1]:
+        m.trade_volume = None
+    st[-2].trade_volume = 1130.0
+    rb = run(sf.LiquiditySweep(), st)[-1]
+    assert "missing" not in rb.evidence and rb.evidence["volume_ratio"] is None
+    assert rb.evidence["volume_burst"] == pytest.approx(2400.0) and rb.score >= 0.6
+
+
+def test_machinery_liquidity_sweep_after_a_feed_hole_is_unobservable():
+    """The only state at or before now − 30 s is minutes old (a gap, the first frames after the
+    open): whatever changed in between is not a 30-s burst — the reading names the hole."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0 + 10.0 * i) for i in range(13)]        # 0..60 s
+    st.append(S(60 + 600, BIDS, ASKS[3:], tv=st[-1].trade_volume + 2400.0))     # next frame 10 min later
+    r = run(sf.LiquiditySweep(), st)[-1]
+    assert r.score == 0.0 and r.evidence["missing"] and r.evidence["pre_age_s"] == pytest.approx(600.0)
+    # a pre-burst state 45 s old (a slow depth poll) is still a burst reference
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0 + 10.0 * i) for i in range(13)]
+    st.append(S(60 + 45, BIDS, ASKS[3:], tv=st[-1].trade_volume + 2400.0))
+    r = run(sf.LiquiditySweep(), st)[-1]
+    assert "missing" not in r.evidence and r.score >= 0.6 and r.evidence["burst_s"] == pytest.approx(45.0)
+
+
+def test_machinery_liquidity_sweep_fully_swept_side_is_one_sided_book():
+    """The ask side swept through entirely leaves a one-sided book: every pre-burst level was
+    consumed and the best retreated beyond the deepest displayed level — not a missing reading."""
+    st = _sweep_scenario()
+    st[-1] = S(65, BIDS, [], tv=st[-1].trade_volume)
+    r = run(sf.LiquiditySweep(), st)[-1]
+    assert "missing" not in r.evidence
+    assert r.evidence["side"] == "ask" and r.evidence["side_emptied"] is True
+    assert r.evidence["levels_consumed"] == 5 and r.evidence["qty_consumed"] == pytest.approx(3300.0)
+    assert r.evidence["retreat_ticks"] == pytest.approx(5.0)
+    assert r.score >= 0.6 and r.evidence["direction"] == 1
+
+
+def test_machinery_liquidity_sweep_pulled_levels_with_observed_tape_are_damped():
+    """Levels vanishing while the observed tape shows no trade inside the burst were pulled, not
+    swept: the reading keeps a quarter of the score. Without a tape the same picture is unverified
+    (volume named missing) and scores on the taken share."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0 + 10.0 * min(i, 7)) for i in range(13)]   # tape flat from t = 35 s
+    st.append(S(65, BIDS, ASKS[3:], tv=st[-1].trade_volume))                        # three ask levels vanish
+    r = run(sf.LiquiditySweep(), st)[-1]
+    assert r.evidence["no_trades_in_burst"] is True and r.evidence["volume_burst"] == 0.0
+    assert r.evidence["levels_consumed"] == 3 and r.evidence["retreat_ticks"] == pytest.approx(3.0)
+    assert r.score < sf.LiquiditySweep.build_threshold
+    assert r.score == pytest.approx(0.25 * (0.4 + 0.3 * qf.ramp(r.evidence["mid_jump_ticks"], 0.5, 3.0)))
+    swept = run(sf.LiquiditySweep(), _sweep_scenario(burst_vol=2400.0))[-1]
+    assert swept.evidence["no_trades_in_burst"] is False and swept.score > 4 * r.score
+    # cumulative volume going backwards in the baseline (feed reset) is no baseline, not an infinite burst
+    back = _sweep_scenario()
+    for m in back[:6]:
+        m.trade_volume = 5000.0 - 10.0 * (back.index(m))
+    rb = run(sf.LiquiditySweep(), back)[-1]
+    assert rb.evidence["volume_ratio_inf"] is False
+
+
+# ============================================================================= #4 failed_sweep
+def _failed_sweep_scenario(return_book: bool = True) -> List[MarketState]:
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(7)]                 # 0..30 s
+    swept_b, swept_a = [(9.5, 500.0)], [(9.6, 300.0), (9.7, 300.0)]
+    for i in range(7, 11):                                                    # 35..50 s at the trough
+        st.append(S(5 * i, swept_b, swept_a, tv=3000.0))
+    for i in range(11, 16):                                                   # 55..75 s back
+        st.append(S(5 * i, BIDS if return_book else swept_b, ASKS if return_book else swept_a, tv=3000.0))
+    return st
+
+
+def test_machinery_failed_sweep_activates():
+    r = run(sf.FailedSweep(), _failed_sweep_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["side"] == "bid"
+    assert r.evidence["excursion_ticks"] == pytest.approx(5.0)
+    assert r.evidence["return_share"] == pytest.approx(1.0)
+    assert r.evidence["retreat_ticks_at_extreme"] == pytest.approx(5.0)
+    _check_common(r, 1)
+
+
+def test_machinery_failed_sweep_without_return_is_null_and_evidence_changes():
+    rs = run(sf.FailedSweep(), _failed_sweep_scenario(return_book=False))
+    assert rs[-1].evidence["return_share"] == 0.0 and rs[-1].score < 0.35
+    # a partial return scores between the two
+    st = _failed_sweep_scenario()
+    st[-1] = S(75, [(9.8, 500.0)] + BIDS[2:], [(9.9, 300.0)] + ASKS[1:], tv=3000.0)   # mid 9.85: 60 % back
+    rp = run(sf.FailedSweep(), st)[-1]
+    assert 0 < rp.evidence["return_share"] < 1
+    assert rs[-1].score < rp.score < run(sf.FailedSweep(), _failed_sweep_scenario())[-1].score
+    # an ask-side sweep (ask retreats 6 ticks → mid +3 ticks) that comes back is the mirror image
+    up = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(7)]
+    up += [S(5 * i, BIDS, [(10.7, 100.0)], tv=1000.0) for i in range(7, 11)]        # ask retreats, bid still
+    up += [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(11, 16)]
+    ru = run(sf.FailedSweep(), up)[-1]
+    assert ru.evidence["side"] == "ask" and ru.evidence["excursion_ticks"] == pytest.approx(3.0)
+    assert ru.score >= 0.6 and ru.evidence["direction"] == -1
+    # the mid moving without the swept side's best retreating (a quote drift) is gated out
+    drift = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(7)]
+    drift += [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(7, 11)]
+    for m in drift[7:11]:
+        m.mid = 9.55                                                                  # carried mid only
+    drift += [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(11, 16)]
+    rd = run(sf.FailedSweep(), drift)[-1]
+    assert rd.evidence["retreat_ticks_at_extreme"] == 0.0 and rd.score == 0.0
+
+
+def test_machinery_failed_sweep_duplicate_timestamp_at_extreme():
+    """Two states at the trough's timestamp: the retreat gate must read the state that carries the
+    extreme mid, not whichever state happens to be last at that timestamp."""
+    st = _failed_sweep_scenario()
+    st.insert(8, S(35, BIDS, ASKS, tv=3000.0))            # same t as the first trough state, pre book
+    r = run(sf.FailedSweep(), st)[-1]
+    assert r.evidence["retreat_ticks_at_extreme"] == pytest.approx(5.0)
+    assert r.score >= 0.6
+
+
+# ============================================================================= #5 exhaustion
+def _exhaustion_scenario(rebuild: bool = True) -> List[MarketState]:
+    st = []
+    for i in range(61):                                  # 0..300 s
+        s = 5 * i
+        if s < 240:
+            inten, vel, asks = 5.0, 0.0, ASKS
+        elif s <= 270:
+            inten, vel, asks = 30.0, 5.0, scale(ASKS, 0.2)
+        else:
+            k = (s - 270) / 30.0
+            inten, vel = 30.0, 5.0 * (1.0 - k)
+            asks = scale(ASKS, 0.2 + 0.8 * k) if rebuild else scale(ASKS, 0.2)
+        st.append(S(s, BIDS, asks, tv=1000.0 + s, intensity=inten, vel=vel))
+    return st
+
+
+def test_machinery_exhaustion_activates():
+    r = run(sf.Exhaustion(), _exhaustion_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["velocity_decay"] == pytest.approx(1.0)
+    assert r.evidence["against_side"] == "ask"
+    assert r.evidence["rebuild_share"] > 0.6
+    assert r.evidence["intensity_z"] is None or r.evidence["intensity_z"] > 2.5 or r.evidence["intensity_ratio"] > 3
+    _check_common(r, -1)
+
+
+def test_machinery_exhaustion_without_rebuild_is_weaker_and_flat_is_null():
+    full = run(sf.Exhaustion(), _exhaustion_scenario(rebuild=True))[-1]
+    none = run(sf.Exhaustion(), _exhaustion_scenario(rebuild=False))[-1]
+    assert none.evidence["rebuild_share"] == pytest.approx(0.0) and none.score == 0.0
+    assert full.score > none.score
+    flat = [S(5 * i, BIDS, ASKS, tv=1000.0, intensity=5.0, vel=0.0) for i in range(61)]
+    assert run(sf.Exhaustion(), flat)[-1].score < 0.35
+
+
+def test_machinery_exhaustion_no_intensity_baseline_is_missing():
+    """Every intensity point inside the last 60 s: the peak has nothing to be compared with — a
+    missing baseline, not a silent zero component."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0, intensity=30.0, vel=5.0 * (1 - i / 12)) for i in range(13)]
+    r = run(sf.Exhaustion(), st)[-1]
+    assert r.score == 0.0 and any("trade_intensity baseline" in m for m in r.evidence["missing"])
+    assert r.evidence["intensity_points"] == 13
+
+
+def test_machinery_exhaustion_duplicate_timestamp_peak_and_silent_baseline():
+    """A duplicate-timestamp state with a slightly smaller opposite velocity at the peak instant must
+    not flip the peak's sign (direction); a burst out of an all-zero intensity baseline is the
+    strongest intensity spike, not a missing / zero component."""
+    st = _exhaustion_scenario()
+    for m in st:
+        if (m.t - T0).total_seconds() < 240:
+            m.trade_intensity = 0.0
+    i_pk = next(i for i, m in enumerate(st) if m.price_velocity == 5.0)
+    twin = S((st[i_pk].t - T0).total_seconds(), st[i_pk].bids, st[i_pk].asks, tv=st[i_pk].trade_volume,
+             intensity=30.0, vel=-4.9)
+    st.insert(i_pk, twin)
+    r = run(sf.Exhaustion(), st)[-1]
+    assert r.evidence["velocity_peak"] == 5.0 and r.evidence["direction"] == -1
+    assert r.evidence["intensity_from_zero"] is True and r.evidence["components"]["intensity"] == 1.0
+    assert r.score >= 0.6
+
+
+# ============================================================================= #14 liquidity_vacuum
+def _vacuum_scenario(bid_factor: float = 0.05, ask_factor: float = 0.05, refill: bool = False) -> List[MarketState]:
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(41)]                # 0..200 s
+    for i in range(41, 49):                                                  # 205..240 s collapsed
+        st.append(S(5 * i, scale(BIDS, bid_factor), scale(ASKS, ask_factor), tv=1000.0))
+    if refill:
+        st.append(S(245, scale(BIDS, 0.6), scale(ASKS, 0.6), tv=1000.0))
+    return st
+
+
+def test_machinery_liquidity_vacuum_activates_both_sides():
+    r = run(sf.LiquidityVacuum(), _vacuum_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["collapse_max"] == pytest.approx(0.95) and r.evidence["collapse_min"] == pytest.approx(0.95)
+    assert r.evidence["replenish_share"] == 0.0
+    _check_common(r, 0)
+
+
+def test_machinery_liquidity_vacuum_one_sided_direction_and_refill_damps():
+    rb = run(sf.LiquidityVacuum(), _vacuum_scenario(bid_factor=0.05, ask_factor=1.0))[-1]
+    assert rb.evidence["direction"] == -1 and rb.evidence["side"] == "bid" and rb.score >= 0.6
+    ra = run(sf.LiquidityVacuum(), _vacuum_scenario(bid_factor=1.0, ask_factor=0.05))[-1]
+    assert ra.evidence["direction"] == 1
+    rr = run(sf.LiquidityVacuum(), _vacuum_scenario(refill=True))[-1]
+    assert rr.evidence["replenish_share"] > 0.5 and rr.score < rb.score
+    mild = run(sf.LiquidityVacuum(), _vacuum_scenario(bid_factor=0.7, ask_factor=0.7))[-1]
+    assert mild.evidence["collapse_max"] == pytest.approx(0.3) and mild.score < 0.35
+
+
+def test_machinery_liquidity_vacuum_carried_depth_added_counted_once():
+    """The book engine's depth_added is the last update's diff, carried on every state until the next
+    update: five tape-driven states repeating the same book must not multiply the replenishment."""
+    st = _vacuum_scenario(refill=True)
+    st[-1].depth_added_bid = 400.0
+    st[-1].depth_added_ask = 400.0
+    once = run(sf.LiquidityVacuum(), st)[-1]
+    carried = list(st)
+    for k in range(1, 6):
+        m = S(245 + k, st[-1].bids, st[-1].asks, tv=1000.0 + k)     # tape ticks, same displayed book
+        m.depth_added_bid = 400.0
+        m.depth_added_ask = 400.0
+        carried.append(m)
+    r = run(sf.LiquidityVacuum(), carried)[-1]
+    missing_depth = 3300.0 - 0.6 * 3300.0
+    assert once.evidence["replenish_share"] == pytest.approx(400.0 / missing_depth)
+    assert r.evidence["replenish_share"] == pytest.approx(400.0 / missing_depth)
+    assert r.evidence["sides"]["bid"]["added_60s"] == pytest.approx(400.0)
+
+
+# ============================================================================= #15 vacuum_snapback
+def _snapback_scenario(recover: bool = True, late: bool = False) -> List[MarketState]:
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(21)]                # 0..100 s
+    for i in range(21, 25):                                                  # 105..120 s vacuum + mid down
+        st.append(S(5 * i, [(9.5, 300.0)], [(9.6, 300.0)], tv=2000.0))
+    if recover:
+        n = 4 if not late else 40
+        for i in range(25, 25 + n):                                          # back
+            st.append(S(5 * i, BIDS, ASKS, tv=2000.0))
+    else:
+        for i in range(25, 29):
+            st.append(S(5 * i, [(9.5, 300.0)], [(9.6, 300.0)], tv=2000.0))
+    return st
+
+
+def test_machinery_vacuum_snapback_activates():
+    r = run(sf.VacuumSnapback(), _snapback_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["collapse"] > 0.85
+    assert r.evidence["revert_share"] == pytest.approx(1.0)
+    assert r.evidence["depth_return"] == pytest.approx(1.0)
+    assert r.evidence["time_factor"] == 1.0
+    _check_common(r, 1)
+
+
+def test_machinery_vacuum_snapback_null_without_recovery_and_late_recovery_fades():
+    rn = run(sf.VacuumSnapback(), _snapback_scenario(recover=False))[-1]
+    assert rn.score < 0.35
+    rl = run(sf.VacuumSnapback(), _snapback_scenario(late=True))[-1]
+    assert rl.evidence["time_factor"] == 0.0 and rl.score == 0.0
+    r = run(sf.VacuumSnapback(), _snapback_scenario())[-1]
+    assert rl.evidence["seconds_since_trough"] > r.evidence["seconds_since_trough"]
+
+
+def test_machinery_vacuum_snapback_sub_tick_wobble_then_rally_is_not_a_snapback():
+    """Seen on the live capture: a depth trough that moved the mid one tick, followed by a five-tick
+    rally — revert_share 5 (clipped to a full revert) but nothing to snap back from. The excursion
+    factor keeps it below building; a two-tick excursion keeps the full credit."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(21)]
+    st += [S(5 * i, shift(scale(BIDS, 0.1), -1), shift(scale(ASKS, 0.1), -1), tv=2000.0) for i in range(21, 25)]
+    st += [S(5 * i, shift(BIDS, 4), shift(ASKS, 4), tv=2000.0) for i in range(25, 29)]
+    r = run(sf.VacuumSnapback(), st)[-1]
+    assert r.evidence["excursion_ticks"] == pytest.approx(-1.0)
+    assert r.evidence["revert_share"] == pytest.approx(5.0)
+    assert r.evidence["excursion_factor"] == pytest.approx(1.0 / 3.0)
+    assert r.score < sf.VacuumSnapback.build_threshold
+    full = run(sf.VacuumSnapback(), _snapback_scenario())[-1]
+    assert full.evidence["excursion_factor"] == 1.0 and full.score >= 0.6
+
+
+# ============================================================================= #20 liquidity_run
+def _run_scenario(ticks: int = 6, flow_dir: float = 1.0, stall: bool = True) -> List[MarketState]:
+    st = []
+    tv = 1000.0
+    for k in range(ticks + 1):                                               # 0..60 s: one tick per 10 s
+        s = 10 * k
+        asks = shift(scale(ASKS, 0.1), k) if k < ticks else shift(ASKS, k)
+        bids = shift(BIDS, k)
+        tv += 100.0
+        st.append(S(s, bids, asks, tv=tv, iv=100.0, itr=1, dirn=flow_dir, clock=_t(s).isoformat()))
+        st.append(S(s + 5, bids, asks, tv=tv, iv=100.0, itr=1, dirn=flow_dir, clock=_t(s).isoformat()))
+    if stall:
+        for s in range(70, 105, 5):
+            st.append(S(s, shift(BIDS, ticks), shift(ASKS, ticks), tv=tv, iv=0.0, itr=0, dirn=None,
+                        clock=_t(s).isoformat()))
+    else:
+        for j, s in enumerate(range(70, 105, 5)):
+            st.append(S(s, shift(BIDS, ticks + j + 1), shift(ASKS, ticks + j + 1), tv=tv + 100 * (j + 1), iv=100.0,
+                        itr=1, dirn=flow_dir, clock=_t(s).isoformat()))
+    return st
+
+
+def test_machinery_liquidity_run_activates():
+    r = run(sf.LiquidityRun(), _run_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["run_ticks"] == pytest.approx(6.0)
+    assert r.evidence["run_direction"] == 1 and r.evidence["consumed_side"] == "ask"
+    assert r.evidence["flow_consistency"] == pytest.approx(1.0)
+    assert r.evidence["thin_share"] > 0.6
+    assert r.evidence["stall"] == pytest.approx(1.0)
+    _check_common(r, -1)
+
+
+def test_machinery_liquidity_run_no_stall_is_null_and_flow_changes_evidence():
+    rn = run(sf.LiquidityRun(), _run_scenario(stall=False))[-1]
+    assert rn.evidence["stall"] < 0.35 and rn.score < 0.35
+    against = run(sf.LiquidityRun(), _run_scenario(flow_dir=-1.0))[-1]
+    along = run(sf.LiquidityRun(), _run_scenario(flow_dir=1.0))[-1]
+    assert against.evidence["flow_along_run"] == 0.0 and along.evidence["flow_along_run"] == pytest.approx(1.0)
+    assert against.score < along.score
+    short = run(sf.LiquidityRun(), _run_scenario(ticks=1))[-1]
+    assert short.evidence["run_ticks"] == pytest.approx(1.0) and short.score < 0.35
+
+
+def test_machinery_liquidity_run_without_classified_tape_is_missing():
+    """The rule's "directional prints" are the classified tape rows of the run: with none the
+    geometry (run, thinness, stall) is reported and the reading is score 0 with the tape missing."""
+    st = [S((m.t - T0).total_seconds(), m.bids, m.asks) for m in _run_scenario()]
+    r = run(sf.LiquidityRun(), st)[-1]
+    assert r.score == 0.0 and r.evidence["missing"] == ["trade_flow_direction/interval_volume"]
+    assert r.evidence["run_ticks"] == pytest.approx(6.0) and r.evidence["stall"] == pytest.approx(1.0)
+    assert r.evidence["flow_consistency"] is None and r.evidence["direction"] == 0
+    # volume without a classification is the same: nothing says which way the prints went
+    st = _run_scenario()
+    for m in st:
+        m.trade_flow_direction = None
+    r2 = run(sf.LiquidityRun(), st)[-1]
+    assert r2.score == 0.0 and r2.evidence.get("missing")
+
+
+# ============================================================================= #21 ignition
+def _ignition_states(v: float, a: float, ta: float, widen: float = 2.0) -> List[MarketState]:
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0, intensity=10.0, vel=0.0, acc=0.0, tacc=0.0) for i in range(30)]
+    st.append(S(150, BIDS, shift(ASKS, int(widen)), tv=1200.0, intensity=10.0 + ta, vel=v, acc=a, tacc=ta))
+    return st
+
+
+def test_machinery_ignition_activates():
+    r = run(sf.Ignition(), _ignition_states(6.0, 4.0, 20.0))[-1]
+    assert r.score >= 0.6
+    assert r.evidence["velocity"] == 6.0 and r.evidence["acceleration"] == 4.0
+    assert r.evidence["spread_expansion"] == pytest.approx(2.0)
+    assert r.evidence["trade_acceleration_rel"] > 1.5
+    _check_common(r, 1)
+    rd = run(sf.Ignition(), _ignition_states(-6.0, -4.0, 20.0))[-1]
+    assert rd.evidence["direction"] == -1 and rd.score >= 0.6
+
+
+def test_machinery_ignition_null_and_evidence_changes():
+    assert run(sf.Ignition(), _ignition_states(0.0, 0.0, 0.0, widen=0))[-1].score < 0.35
+    decel = run(sf.Ignition(), _ignition_states(6.0, -4.0, 20.0))[-1]          # velocity fading: no ignition
+    assert decel.score == 0.0
+    narrow = run(sf.Ignition(), _ignition_states(6.0, 4.0, 20.0, widen=0))[-1]
+    wide = run(sf.Ignition(), _ignition_states(6.0, 4.0, 20.0, widen=2))[-1]
+    assert narrow.evidence["spread_expansion"] == pytest.approx(0.0) and narrow.score < wide.score
+    # fallback: no velocity fields → computed from the mid series
+    st = [S(5 * i, shift(BIDS, i // 2), shift(ASKS, i // 2), tv=1000.0 + 50 * i, intensity=5.0 + i) for i in range(30)]
+    r = run(sf.Ignition(), st)[-1]
+    assert r.evidence["velocity"] == pytest.approx(6.0, rel=0.2) and "missing" not in r.evidence
+
+
+# ============================================================================= #34 liquidity_depletion
+def _depletion_scenario(final: float = 0.2, price_move_ticks: int = 0, side: str = "both") -> List[MarketState]:
+    st = []
+    for i in range(25):                                                      # 0..120 s
+        k = i / 24.0
+        f = 1.0 - (1.0 - final) * k
+        b = scale(BIDS, f if side in ("both", "bid") else 1.0)
+        a = scale(ASKS, f if side in ("both", "ask") else 1.0)
+        d = price_move_ticks if i == 24 else 0
+        st.append(S(5 * i, shift(b, d), shift(a, d), tv=1000.0))
+    return st
+
+
+def test_machinery_liquidity_depletion_activates():
+    r = run(sf.LiquidityDepletion(), _depletion_scenario())[-1]
+    assert r.score >= 0.6
+    assert r.evidence["depletion"] == pytest.approx(0.8)
+    assert r.evidence["consistency"] == 1.0 and r.evidence["mid_move_ticks"] == 0.0
+    _check_common(r, 0)
+    rb = run(sf.LiquidityDepletion(), _depletion_scenario(side="bid"))[-1]
+    assert rb.evidence["direction"] == -1 and rb.score >= 0.6
+    ra = run(sf.LiquidityDepletion(), _depletion_scenario(side="ask"))[-1]
+    assert ra.evidence["direction"] == 1
+
+
+def test_machinery_liquidity_depletion_price_move_and_evidence():
+    moved = run(sf.LiquidityDepletion(), _depletion_scenario(price_move_ticks=3))[-1]
+    assert moved.evidence["price_factor"] == 0.0 and moved.score == 0.0
+    mild = run(sf.LiquidityDepletion(), _depletion_scenario(final=0.9))[-1]
+    assert mild.evidence["depletion"] == pytest.approx(0.1) and mild.score < 0.35
+    # the queue engine's own estimate is taken when larger
+    st = _depletion_scenario(final=0.9)
+    st[-1].liquidity_depletion = 0.75
+    r = run(sf.LiquidityDepletion(), st)[-1]
+    assert r.evidence["engine_depletion"] == 0.75 and r.evidence["depletion"] == 0.75
+
+
+def test_machinery_liquidity_depletion_touch_thinning_into_growing_depth_is_migration():
+    """Seen on the live capture (MALEKSPIN): the bid touch queue fell 73 % while the bid top-K depth
+    quadrupled — orders moved back from the touch, liquidity did not leave.  The touch estimate of
+    that side (and the engine's touch-depth estimate for the combined series) is discarded."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(24)]
+    st.append(S(120, [(10.0, 270.0), (9.9, 5000.0), (9.8, 5000.0), (9.7, 500.0), (9.6, 400.0)], ASKS, tv=1000.0))
+    st[-1].liquidity_depletion = 0.62
+    r = run(sf.LiquidityDepletion(), st)[-1]
+    assert r.evidence["touch_migrated"] == ["bid", "both"]
+    assert r.evidence["per_side_touch"]["bid"] is None and r.evidence["depletion_touch"] is None
+    assert r.evidence["per_side_topk"]["bid"] < -1.0 and r.evidence["engine_depletion"] == 0.62
+    assert r.evidence["depletion"] <= 0.0 and r.score == 0.0
+    # the same touch fall with the depth behind it untouched is a depletion
+    same = list(st[:-1]) + [S(120, [(10.0, 270.0)] + BIDS[1:], ASKS, tv=1000.0)]
+    rs = run(sf.LiquidityDepletion(), same)[-1]
+    assert rs.evidence["touch_migrated"] == [] and rs.evidence["depletion"] == pytest.approx(0.73)
+    assert rs.score >= 0.6
+
+
+def test_machinery_liquidity_depletion_scrolled_deep_level_is_not_depletion():
+    """A five-level display whose best improves by a tick with a small order scrolls the deepest
+    level out of view.  When that level held most of the top-K depth the naive top-K comparison
+    called it a 60 % depletion (POWERGRID on the live capture); the comparison over the price range
+    both displays cover sees the same depth."""
+    deep = [(10.0, 100.0), (9.9, 100.0), (9.8, 100.0), (9.7, 100.0), (9.6, 5000.0)]
+    st = [S(5 * i, deep, ASKS, tv=1000.0) for i in range(24)]
+    st.append(S(120, [(10.1, 20.0)] + deep[:4], ASKS, tv=1000.0))
+    r = run(sf.LiquidityDepletion(), st)[-1]
+    assert r.evidence["per_side_topk"]["bid"] == pytest.approx(-0.05)     # 400 then, 420 now over 9.7..10.1
+    assert r.evidence["depletion"] <= 0.0 and r.score == 0.0
+    # a genuine loss of the deepest level (count shrinks) still shows as depletion over the common range
+    st2 = list(st[:-1]) + [S(120, deep[:4], ASKS, tv=1000.0)]
+    r2 = run(sf.LiquidityDepletion(), st2)[-1]
+    assert r2.evidence["per_side_topk"]["bid"] == pytest.approx(0.0)      # common range 9.7..10.0: unchanged
+    st3 = list(st[:-1]) + [S(120, deep[:4] + [(9.6, 1000.0)], ASKS, tv=1000.0)]
+    r3 = run(sf.LiquidityDepletion(), st3)[-1]
+    assert r3.evidence["per_side_topk"]["bid"] == pytest.approx(4000.0 / 5400.0)
+
+
+def test_machinery_liquidity_depletion_one_sided_book_cannot_verify_price():
+    """A one-sided book has no mid: "without price move" cannot be evaluated — the depletion is
+    still measured and reported, the mid is named missing and the score is 0 (not a neutral half)."""
+    st = [S(5 * i, scale(BIDS, 1.0 - 0.8 * i / 24), [], tv=1000.0) for i in range(25)]
+    r = run(sf.LiquidityDepletion(), st)[-1]
+    assert r.score == 0.0 and r.evidence["missing"] == ["mid"] and r.evidence["price_factor"] is None
+    assert r.evidence["depletion"] == pytest.approx(0.8) and r.evidence["direction"] == 0
+    # no tick at all: the price factor cannot be expressed in ticks either
+    st = [S(5 * i, [(10.0, 1000.0 * (1.0 - 0.8 * i / 24))], [(10.1, 1000.0)], tv=1000.0, tick=None)
+          for i in range(25)]
+    rt = run(sf.LiquidityDepletion(), st)[-1]
+    assert rt.score == 0.0 and "tick_size" in rt.evidence["missing"]
+
+
+def test_machinery_liquidity_depletion_best_improvement_is_not_depletion():
+    """The best bid improving by one tick to a fresh small queue is a different queue, not the old one
+    depleted: the touch comparisons are void (price changed), top-K grew, the reading stays inactive.
+    The same queue thinning at an unchanged price is a depletion."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(24)]
+    st.append(S(120, [(10.1, 50.0)] + BIDS, ASKS, tv=1000.0))
+    r = run(sf.LiquidityDepletion(), st)[-1]
+    assert r.evidence["touch_price_changed"] == {"bid": True, "ask": False}
+    assert r.evidence["per_side_touch"]["bid"] is None and r.evidence["depletion_touch"] is None
+    assert r.evidence["per_side_touch"]["ask"] == pytest.approx(0.0)
+    assert r.evidence["depletion"] < 0.2 and r.score == 0.0          # top-K only (9.6 left the top 5)
+    same = list(st[:-1]) + [S(120, [(10.0, 50.0)] + BIDS[1:], ASKS, tv=1000.0)]
+    rs = run(sf.LiquidityDepletion(), same)[-1]
+    assert rs.evidence["per_side_touch"]["bid"] == pytest.approx(0.95) and rs.evidence["depletion"] == pytest.approx(0.95)
+    assert rs.evidence["direction"] == -1
+
+
+# ============================================================================= lifecycle
+def _lifecycle_states(mid_move_ticks: int) -> List[MarketState]:
+    """Static → bid pull (t 100..130) → hold (t 135..250) → window rolls past the fall (share → 0).
+    The asks move by ``mid_move_ticks`` at t = 200 so the realised mid move sets the outcome."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(20)]
+    for k in range(1, 7):
+        st.append(S(100 + 5 * k, [(10.0, 1000.0 - 800.0 * k / 6)] + BIDS[1:], ASKS, tv=1000.0))
+    for s in range(135, 300, 5):
+        asks = shift(ASKS, mid_move_ticks) if s >= 200 else ASKS
+        st.append(S(s, [(10.0, 200.0)] + BIDS[1:], asks, tv=1000.0))
+    return st
+
+
+@pytest.mark.parametrize("mid_move,terminal", [(-1, "resolved"), (1, "failed")])
+def test_machinery_lifecycle_building_active_confirmed_release(mid_move, terminal):
+    mech = qf.QueuePullStack()
+    rs = run(mech, _lifecycle_states(mid_move), use_update=True)
+    seq = [r.state for r in rs]
+    assert seq[0] == "inactive"
+    assert "building" in seq and "active" in seq and "confirmed" in seq
+    i_b, i_a, i_c = seq.index("building"), seq.index("active"), seq.index("confirmed")
+    assert i_b < i_a < i_c
+    # confirmed only after confirm_s of activity
+    assert (rs[i_c].start_time is not None)
+    assert rs[i_c].duration_s >= mech.confirm_s
+    assert (_t(0) + timedelta(seconds=0)).tzinfo is not None
+    assert terminal in seq
+    i_t = seq.index(terminal)
+    assert i_t > i_c
+    assert rs[i_t].score < mech.release_threshold
+    assert rs[i_c].evidence["direction"] == -1
+    assert rs[i_c].evidence["peak_score"] >= 0.6
+    assert "mid_change_since_start" in rs[i_c].evidence
+
+
+def test_machinery_lifecycle_direction_zero_resolves():
+    """A mechanism that implies no price direction resolves (never fails) on release."""
+    mech = qf.QuoteRefreshChurn()
+    st = _churn_scenario(n=30)                                   # 145 s of churn
+    st += [S(150 + 5 * i, BIDS, ASKS, tv=1000.0) for i in range(20)]
+    rs = run(mech, st, use_update=True)
+    seq = [r.state for r in rs]
+    assert "confirmed" in seq and "resolved" in seq and "failed" not in seq
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_update_never_raises_on_sparse_states(name):
+    """Partial states (one side, no tick, no tape, no history) never raise inside update()."""
+    mech = REGISTRY[name]()
+    hist = StateHistory()
+    states = [S(0, [], ASKS, tick=None), S(5, BIDS, [], tick=None), S(10, BIDS[:1], ASKS[:1]),
+              S(15, BIDS, ASKS, tv=500.0, iv=100.0, itr=1, dirn=0.3, intensity=2.0),
+              S(16, BIDS, ASKS, tv=500.0, lp={"t": None, "qty": 100.0, "price": 10.1}),
+              S(20, [], [], tick=None)]
+    for ms in states:
+        r = mech.update(ms, hist)
+        assert 0.0 <= r.score <= 1.0
+        assert isinstance(r.evidence, dict) and isinstance(r.baseline, dict)
+        hist.push(ms)
+
+
+# ============================================================================= causality / determinism
+def _activation_scenario(name: str) -> List[MarketState]:
+    return {
+        "queue_pull_stack": _pull_scenario(), "quote_refresh_churn": _churn_scenario(),
+        "layering_like": _layer_scenario(), "hidden_replenishment": _refill_scenario(),
+        "order_splitting": _prints_scenario([500.0] * 8), "liquidity_sweep": _sweep_scenario(),
+        "failed_sweep": _failed_sweep_scenario(), "exhaustion": _exhaustion_scenario(),
+        "liquidity_vacuum": _vacuum_scenario(), "vacuum_snapback": _snapback_scenario(),
+        "liquidity_run": _run_scenario(), "ignition": _ignition_states(6.0, 4.0, 20.0),
+        "liquidity_depletion": _depletion_scenario(),
+    }[name]
+
+
+def _dump(r) -> str:
+    import json
+    return json.dumps({"score": r.score, "evidence": r.evidence, "baseline": r.baseline}, sort_keys=True,
+                      default=str)
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_reading_is_causal(name):
+    """Future states sitting in the history ring (t > now) must not change the reading at t."""
+    st = _activation_scenario(name)
+    mid_idx = [len(st) - 1, len(st) // 2, max(1, len(st) - 4)]
+    for k in mid_idx:
+        hist_past = StateHistory()
+        for m in st[:k]:
+            hist_past.push(m)
+        hist_all = StateHistory()
+        for m in st:
+            hist_all.push(m)
+        a = REGISTRY[name]().compute(st[k], hist_past)
+        b = REGISTRY[name]().compute(st[k], hist_all)
+        assert _dump(a) == _dump(b), (name, k)
+
+
+@pytest.mark.parametrize("name", QUEUE_NAMES + SWEEP_NAMES)
+def test_machinery_reading_is_deterministic_and_active(name):
+    """Two fresh instances over the same scenario produce byte-identical readings, the activation
+    scenario reaches the active threshold, and the evidence is never a constant."""
+    st = _activation_scenario(name)
+    r1 = run(REGISTRY[name](), st)
+    r2 = run(REGISTRY[name](), st)
+    assert [_dump(a) for a in r1] == [_dump(b) for b in r2]
+    assert r1[-1].score >= REGISTRY[name].active_threshold
+    assert len({round(r.score, 6) for r in r1}) > 1
+
+
+# ============================================================================= real data
+def test_realdata_fixture_capture_through_engine():
+    """The closed-market fixture: every mechanism computes on every state without error; the closed
+    (empty / one-sided, static) books never build any of the 13 mechanisms and the readings name
+    their missing inputs; baselines are present."""
+    from tower.engine import Engine, EngineConfig
+    from tower.normalize import normalize_store
+    events, _ = normalize_store(FIXTURE)
+    assert events
+    eng = Engine(EngineConfig(strict=True))
+    n = 0
+    seen = set()
+    with_missing = 0
+    for ev in events:
+        ms = eng.process(ev)
+        if ms is None:
+            continue
+        n += 1
+        for name in QUEUE_NAMES + SWEEP_NAMES:
+            m = ms.mechanisms.get(name)
+            if m is None:
+                continue
+            seen.add(name)
+            assert 0.0 <= m.score <= 1.0
+            assert m.state in ("inactive", "building", "active", "confirmed", "failed", "resolved")
+            assert m.score < REGISTRY[name].build_threshold, (name, ms.symbol, ms.t, m.evidence)
+            if m.evidence.get("missing"):
+                with_missing += 1
+            assert set(BASELINE_KEYS) <= set(m.baseline) or m.evidence.get("missing")
+    assert n > 0 and seen == set(QUEUE_NAMES + SWEEP_NAMES)
+    assert with_missing > 0
+    assert not eng.metrics["errors"]
