@@ -139,13 +139,18 @@ class Runner:
         self._record("lankabd_watch", None, f_watch)
         if not self.symbols:
             parsed = self.lb["watch"].parse(f_watch.body) if f_watch.ok else None
-            if parsed and parsed.frames:
-                sel = select_universe(parsed.frames, n_top=a.n_top, n_mid=a.n_mid, seed=a.seed)
+            sel = select_universe(parsed.frames, n_top=a.n_top, n_mid=a.n_mid, seed=a.seed) \
+                if (parsed and parsed.frames) else {"symbols": []}
+            # At pre-open the watch's day fields are reset to zero for every instrument, so a
+            # value-ranked selection is empty; fall back to the last known ranking rather than
+            # polling nothing (observed 2026-09-06 03:50 UTC).
+            if len(sel["symbols"]) >= max(1, a.n_top // 2):
                 self.symbols = sel["symbols"]
                 self.store.write_meta("runner", {"universe": sel})
             else:
                 self.symbols = default_universe()
-                self.store.write_meta("runner", {"universe": {"symbols": self.symbols, "rule": "fallback list"}})
+                self.store.write_meta("runner", {"universe": {"symbols": self.symbols, "rule": "fallback list",
+                                                              "selection_attempt": sel}})
         else:
             self.store.write_meta("runner", {"universe": {"symbols": self.symbols, "rule": "--symbols"}})
         self.store.write_meta("runner", {"cid_map_size": len(cid_map),

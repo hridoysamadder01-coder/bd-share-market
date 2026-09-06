@@ -94,6 +94,17 @@ def test_cid_map():
     assert m["GP"] == 160 and m["BRACBANK"] == 15 and len(m) > 600
 
 
+def test_universe_selection_is_empty_on_preopen_zeroed_watch():
+    """At pre-open every day field is zero: a value-ranked selection must come back
+    empty (never a list of zero-value names) so the runner falls back to its last ranking."""
+    from seeing.capture.universe import select_universe
+    frames = _adapters()["watch"].parse(fixture("lankabd_watch_12_2026-09-03.json")).frames
+    for f in frames:
+        f["day_value_mn"] = 0.0
+        f["day_volume"] = 0.0
+    assert select_universe(frames, n_top=3, n_mid=2, seed=7)["symbols"] == []
+
+
 def test_universe_selection_is_deterministic():
     from seeing.capture.universe import select_universe
     frames = _adapters()["watch"].parse(fixture("lankabd_watch_12_2026-09-03.json")).frames
