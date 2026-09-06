@@ -1,0 +1,82 @@
+{
+ "n_frames": 4257,
+ "n_symbols": 14,
+ "frames_per_symbol": {
+  "BEXIMCO": 305,
+  "BRACBANK": 304,
+  "BXPHARMA": 304,
+  "GP": 304,
+  "IPDC": 304,
+  "LOVELLO": 304,
+  "MALEKSPIN": 304,
+  "ORIONPHARM": 303,
+  "POWERGRID": 304,
+  "PTL": 305,
+  "SAIHAMCOT": 304,
+  "SAIHAMTEX": 304,
+  "SHARPIND": 304,
+  "SQURPHARMA": 304
+ },
+ "frames_per_split": {
+  "dev": 1696,
+  "holdout": 1287,
+  "val": 1274
+ },
+ "t_range": [
+  "2026-09-06 03:55:51.758161+00:00",
+  "2026-09-06 08:20:00.253120+00:00"
+ ],
+ "median_frame_dt_s": 43.673742,
+ "composite_frames": 8,
+ "composite_episodes_total": 3,
+ "composite_episodes_holdout": 1,
+ "component_frames": {
+  "persistent_bid_pressure": 1845,
+  "ask_thinning": 974,
+  "bid_replenishment": 2324,
+  "multi_level_transition": 441,
+  "spread_stable": 1947,
+  "time_persistence": 294,
+  "price_response_ok": 2231
+ },
+ "score_histogram": {
+  "0": 185,
+  "1": 973,
+  "2": 1214,
+  "3": 1127,
+  "4": 570,
+  "5": 142,
+  "6": 38,
+  "7": 8
+ },
+ "baseline_frames": {
+  "b_imb_l1": 1793,
+  "b_imb_top5": 2244,
+  "b_imb_weighted": 2139,
+  "b_largest_wall_bid": 2525,
+  "b_one_frame_pressure": 418
+ },
+ "bad_book_frames": 499,
+ "stale_book_frames": 367,
+ "dup_payload_frames": 2405,
+ "frames_with_tape_rows": 2215,
+ "frames_with_two_book_sensors": 3793,
+ "book_agree_rate": 0.9651990508832059,
+ "state_frames": {
+  "BID_PRESSURE_BUILDING": 2031,
+  "BALANCED": 1168,
+  "ASK_PRESSURE_BUILDING": 340,
+  "NO_BOOK": 270,
+  "ONE_SIDED": 229,
+  "STALE": 208,
+  "BID_PRESSURE_CONFIRMED": 8,
+  "BID_PRESSURE_FAILED": 2,
+  "BID_PRESSURE_RESOLVED": 1
+ },
+ "valid_outcomes_h2": 3615,
+ "base_p_up_h2": 0.1706777316735823,
+ "valid_outcomes_h4": 3588,
+ "base_p_up_h4": 0.2427536231884058,
+ "valid_outcomes_h8": 3533,
+ "base_p_up_h8": 0.2949334842909708
+}
