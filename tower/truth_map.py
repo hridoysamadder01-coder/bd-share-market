@@ -1,0 +1,20 @@
+"""Truth classes of the MarketState field groups (attached to every state)."""
+STATE_TRUTH = {
+    "book levels, L1, spread, mid, microprice, imbalances, depth geometry": "OBSERVED levels → INFERRED arithmetic",
+    "orders per level": "OBSERVED only from FIX/ITCH/broker exports; NOT_OBSERVABLE from public depth",
+    "OFI, book velocity/acceleration, depth added/removed, migration, walls": "INFERRED (snapshot/level diffs)",
+    "trade count/volume/value (day)": "OBSERVED (cumulative totals)",
+    "interval trades/volume/vwap, intensity, acceleration": "INFERRED (Δ cumulative) or OBSERVED prints when a print feed exists",
+    "trade flow direction": "OBSERVED aggressor (FIX/ITCH/T&S) else INFERRED quote rule; exact in a locked book",
+    "price velocity/acceleration/impact/response": "INFERRED",
+    "liquidity response/depletion/replenishment/retreat/vacuum": "INFERRED",
+    "pressure direction/strength/persistence/reversal/divergence": "INFERRED",
+    "resilience state, recovery curve, speed, asymmetry": "INFERRED",
+    "circuit limits": "OBSERVED (circuit table) or INFERRED (bands, unverified) — rule_source says which",
+    "circuit dynamics (approach, lock, queue, streak)": "INFERRED from observed book/tape/limits",
+    "auction indicative/matched/imbalance": "OBSERVED only from an auction feed; else pre-open book PROXY (flagged)",
+    "cross / sector context": "INFERRED from other symbols' OBSERVED states",
+    "sources / agreement / disagreement / provenance": "OBSERVED (capture metadata)",
+    "mechanisms": "INFERRED (evidence windows; scores are computed, never constant)",
+    "transitions / layer states": "INFERRED (explicit rules in tower.timeline)",
+}
