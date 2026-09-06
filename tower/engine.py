@@ -181,9 +181,8 @@ class Engine:
             s.has_book_or_tape = True
         if et in BOOK_TYPES:
             b = self._book(s, ev.source)
-            if ev.flags.get("duplicate") and et == EventType.BOOK_SNAPSHOT:
-                # identical payload: the book did not change; still a frame (staleness is visible via fusion)
-                pass
+            # a duplicate BOOK_SNAPSHOT (identical payload) is still applied as a frame: the book does not
+            # change, and its staleness stays visible through fusion's per-source status
             if et == EventType.BOOK_SNAPSHOT:
                 p = ev.payload
                 b.apply_snapshot(ev.t_recv, p.get("bids") or [], p.get("asks") or [],

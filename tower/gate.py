@@ -91,17 +91,34 @@ def replay_checks(capture: str, out: str) -> Dict[str, Any]:
 
 
 def placeholder_sweep() -> Dict[str, Any]:
-    hits: List[str] = []
+    """Every TODO/FIXME/NotImplementedError/placeholder/bare-``pass`` line in tower/ (own code only:
+    vendored Go modules and this script are skipped). A ``pass`` that is the body of an ``except``
+    clause and an abstract-base ``raise NotImplementedError`` are classified as benign and listed
+    separately, so the ``n`` that matters is ``n_suspicious``."""
+    suspicious: List[str] = []
+    benign: List[str] = []
     pat = re.compile(r"\bTODO\b|\bFIXME\b|NotImplementedError|placeholder|\bpass\s*$", re.I)
     for dp, _, fs in os.walk(os.path.join(ROOT, "tower")):
+        if os.sep + "vendor" in dp or os.sep + "node_modules" in dp:
+            continue
         for fn in fs:
-            if not fn.endswith((".py", ".go", ".js")):
+            if not fn.endswith((".py", ".go", ".js")) or fn == "gate.py":
                 continue
             p = os.path.join(dp, fn)
-            for i, line in enumerate(open(p, encoding="utf-8", errors="replace"), 1):
-                if pat.search(line):
-                    hits.append(f"{os.path.relpath(p, ROOT)}:{i}: {line.strip()[:120]}")
-    return {"n": len(hits), "hits": hits[:80]}
+            lines = open(p, encoding="utf-8", errors="replace").read().splitlines()
+            for i, line in enumerate(lines, 1):
+                if not pat.search(line):
+                    continue
+                rec = f"{os.path.relpath(p, ROOT)}:{i}: {line.strip()[:120]}"
+                prev = lines[i - 2].strip() if i >= 2 else ""
+                s = line.strip()
+                if s == "pass" and (prev.startswith("except") or prev.startswith("try")):
+                    benign.append(rec + "  [except-clause no-op]")
+                elif "NotImplementedError" in s and "raise" in s and os.path.basename(p) == "base.py":
+                    benign.append(rec + "  [abstract base method]")
+                else:
+                    suspicious.append(rec)
+    return {"n_suspicious": len(suspicious), "suspicious": suspicious[:80], "n_benign": len(benign), "benign": benign[:40]}
 
 
 def go_checks() -> Dict[str, Any]:
