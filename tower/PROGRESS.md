@@ -1,5 +1,14 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
+06:10 UTC: FULL GATE on 7f0110a done (results/tower/gate/GATE.json): tests 496 passed / 3 failed (run 05:22–05:40 while verify
+agents edited files; names not captured — gate.py now records failed_tests; full suite rerun on head running, task b0f93scif);
+split 27 realdata / 423 machinery / 49 other; fixture determinism identical; capture replay 135,493 events → 7,004 states
+(14 symbols; 6,430 non-empty books, 6,369 two-sided; circuit limits + source freshness on all), 0 reconstruction failures,
+41/49 mechanisms vary (8 flat, conditions absent), placeholders 0 suspicious / 3 benign, go vet/test/build 0.
+Verifies done: book, tape_queue, normalize, circuit_auction, fusion, resilience (all PASS with fixes, cross-module notes
+applied in engine/live/normalize/state). Remaining: cross, 4 mech families, ingest_go, experiment, ui. Head 2ace9fd.
+Scout workflow wf_e45c0cfe-2c8 (richer-source discovery, no login) running for the user's "what data do you need" question.
+
 05:45 UTC: head 7f0110a (tower) = e57d491 cross-module fixes + merge of seeing 140e8cb (adapter fixes). Verify verdicts in:
 book (65 tests), tape_queue (434/3 → fixed), normalize (436/1 → fixed); in progress: fusion, circuit_auction; queued: resilience,
 cross, 4 mech families, ingest_go, experiment, ui (2-wide, slow). Gate pre-run (04:57, GATE.json in results/tower/gate_pre):

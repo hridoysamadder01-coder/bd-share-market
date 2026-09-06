@@ -31,12 +31,17 @@ def run(cmd: List[str], cwd: str = ROOT, timeout: int = 3600) -> Dict[str, Any]:
 
 
 def pytest_counts(extra: List[str]) -> Dict[str, Any]:
-    r = run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-rN", "tests"] + extra, timeout=5400)
-    m = re.search(r"(\d+) passed", r["tail"]); f = re.search(r"(\d+) failed", r["tail"]); s = re.search(r"(\d+) skipped", r["tail"])
-    e = re.search(r"(\d+) error", r["tail"])
+    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-rfEs", "tests"] + extra,
+                       cwd=ROOT, capture_output=True, text=True, timeout=5400)
+    out = p.stdout + p.stderr
+    tail = out[-4000:]
+    m = re.search(r"(\d+) passed", tail); f = re.search(r"(\d+) failed", tail); s = re.search(r"(\d+) skipped", tail)
+    e = re.search(r"(\d+) error", tail)
     return {"passed": int(m.group(1)) if m else None, "failed": int(f.group(1)) if f else 0,
-            "skipped": int(s.group(1)) if s else 0, "errors": int(e.group(1)) if e else 0, "rc": r["rc"],
-            "summary_line": r["tail"].strip().splitlines()[-1] if r["tail"].strip() else ""}
+            "skipped": int(s.group(1)) if s else 0, "errors": int(e.group(1)) if e else 0, "rc": p.returncode,
+            "failed_tests": re.findall(r"^(?:FAILED|ERROR) (\S+)", out, re.M),
+            "skipped_tests": re.findall(r"^SKIPPED \[\d+\] (\S+)", out, re.M),
+            "summary_line": tail.strip().splitlines()[-1] if tail.strip() else ""}
 
 
 def collect_split() -> Dict[str, int]:
