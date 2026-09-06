@@ -138,7 +138,7 @@ class MarketState:
     failed_response: Optional[bool] = None            # pressure without price follow-through
 
     # ---- liquidity response
-    liquidity_response: Optional[float] = None        # depth change after the last trade burst
+    liquidity_response: Optional[float] = None        # depth-share change since the last book shock (< 600 s old), written by resilience
     liquidity_depletion: Optional[float] = None       # share of touch depth consumed in the window
     liquidity_replenishment: Optional[float] = None   # share rebuilt after depletion
     liquidity_retreat: Optional[bool] = None
