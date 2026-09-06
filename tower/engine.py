@@ -252,7 +252,31 @@ class Engine:
         return self._build_state(s, ev, touched_book)
 
     # ------------------------------------------------------------------ state assembly
+    def _quote_only_state(self, s: _Sym, ev: Event) -> None:
+        """Light path for a symbol that has never shown a book or a tape (watch-only symbols: ~600 of
+        them on DSE). Their full state is never emitted, but the cross engine still needs their price
+        path, sector and day totals for market/sector context, so a minimal state carrying exactly
+        those fields is fed to it and nothing else (no fusion, circuit, resilience, mechanics, timeline).
+        This is what made a full-day replay ~10x cheaper: 289k of 306k built states were quote-only."""
+        s.seq += 1
+        ms = MarketState(symbol=ev.symbol, t=ev.t_recv, seq=s.seq, session_phase=ev.session_phase)
+        ms.tick_size = s.tick
+        ms.session_state["quote"] = dict(s.last_quote)
+        ms.session_state["quote_only"] = True
+        q = s.last_quote
+        if q.get("ltp") is not None:
+            ms.ltp = q["ltp"]
+            ms.provenance["ltp"] = "engine:last_quote"
+        ms.trade_count, ms.trade_volume, ms.trade_value = q.get("day_trades"), q.get("day_volume"), q.get("day_value_mn")
+        ms.truth = STATE_TRUTH
+        self.cross.on_state(ms)
+        self.metrics["states_out"] += 1
+        self.metrics["quote_only_states_suppressed"] = self.metrics.get("quote_only_states_suppressed", 0) + 1
+        return None
+
     def _build_state(self, s: _Sym, ev: Event, touched_book: bool) -> MarketState:
+        if not s.has_book_or_tape and not self.cfg.emit_quote_only_states:
+            return self._quote_only_state(s, ev)
         s.seq += 1
         ms = MarketState(symbol=ev.symbol, t=ev.t_recv, seq=s.seq, session_phase=ev.session_phase)
         ms.tick_size = s.tick
