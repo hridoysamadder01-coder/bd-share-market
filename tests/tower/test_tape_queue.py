@@ -245,6 +245,104 @@ def test_machinery_day_totals_fallback_and_feed_preference():
     assert tape.on_day_totals(_t(12), None, None, None, source="lankabd_depth") is None
 
 
+def test_machinery_unsized_rows_are_none_never_zero():
+    # a print without a quantity: counted as a trade, its size and every volume built on it unknown
+    tape = TapeState(tick=0.1)
+    book = _book([(10.0, 100)], [(10.1, 50)])
+    tape.on_trade(_t(0), 10.1, 100, book=book, source="fix_md")
+    tape.on_trade(_t(10), 10.1, None, book=book, source="fix_md")
+    ms = _ms(10)
+    tape.fill_state(ms, book)
+    assert ms.trade_count == 2 and ms.trade_volume == 100                         # sized prints only
+    assert ms.interval_volume is None and ms.interval_trades == 1.0
+    assert ms.volume_only_response is None and ms.signed_flow_window == 100.0     # unsized row cannot be signed
+    assert ms.trade_intensity == 6.0                                               # 1 trade in (0, 10] → 6/min
+    assert ms.session_state["tape"]["unsized_rows"] == 1
+    assert ms.last_print["qty"] is None
+    # a cumulative feed that does not carry the trade count: interval_trades / intensity are None, not 0
+    tape = TapeState(tick=0.1)
+    tape.on_cum_totals(_t(0), _t(0), None, 1000, 0.0100, 10.0, book=book, source="lankabd_tape")
+    tape.on_cum_totals(_t(60), _t(60), None, 1200, 0.01202, 10.1, book=book, source="lankabd_tape")
+    ms = _ms(60)
+    tape.fill_state(ms, book)
+    assert ms.trade_count is None and ms.trade_volume == 1200 and ms.interval_trades is None
+    assert ms.interval_volume == 200 and abs(ms.interval_vwap - 10.1) < 1e-6 and ms.trade_flow_direction == 1.0
+    assert ms.trade_intensity is None and ms.trade_acceleration is None
+    assert ms.volume_only_response == 200.0
+
+
+def test_machinery_cum_feed_without_value_uses_last_price_with_low_confidence():
+    tape = TapeState(tick=0.1)
+    book = _book([(10.0, 100)], [(10.1, 50)])
+    tape.on_cum_totals(_t(0), _t(0), 5, 1000, None, 10.0, book=book, source="lankabd_tape")
+    r = tape.on_cum_totals(_t(30), _t(30), 6, 1100, None, 10.1, book=book, source="lankabd_tape")
+    assert r["interval_vwap"] is None and r["direction"] == 1.0
+    ms = _ms(30)
+    tape.fill_state(ms, book)
+    st = ms.session_state["tape"]
+    assert ms.trade_value is None and st["direction_confidence"] == "low" and "value not carried" in st["direction_rule"]
+    assert ms.last_print["inferred_from_delta"] and abs(ms.last_print["price"] - 10.1) < 1e-9 and ms.last_print["qty"] == 100
+    # first row of the day: no interval, hence no direction (the day VWAP is not a print against a pre-trade quote)
+    tape2 = TapeState(tick=0.1)
+    r0 = tape2.on_cum_totals(_t(0), _t(0), 5, 1000, 0.0101, 10.1, book=book, source="lankabd_tape")
+    assert r0["first_row"] and r0["direction"] is None
+
+
+def test_machinery_repeat_row_bounds_the_next_interval():
+    tape = TapeState(tick=0.1)
+    early = _book([(10.0, 100)], [(10.1, 50)], t=_t(0))
+    tape.on_cum_totals(_t(0), _t(0), 5, 1000, 0.0101, 10.1, book=early, source="lankabd_tape")
+    assert tape.on_cum_totals(_t(60), _t(60), 5, 1000, 0.0101, 10.1, book=early, source="lankabd_tape") is None
+    late = _book([(10.2, 100)], [(10.3, 50)], t=_t(70))                             # touch moves after the repeat
+    tape.observe_quote(_t(70), late)
+    tape.on_cum_totals(_t(90), _t(90), 6, 1100, 0.01113, 10.3, book=late, source="lankabd_tape")   # +100 @ 10.3
+    ms = _ms(90)
+    tape.fill_state(ms, late)
+    st = ms.session_state["tape"]
+    assert st["last_dt_s"] == 30.0                                                 # (60, 90], not (0, 90]
+    # the pre-interval quote is the one before t=60 (early book): 10.3 ≥ early ask → +1, and the touch moved
+    assert ms.trade_flow_direction == 1.0 and st["direction_confidence"] == "low"
+    assert "touch moved" in st["direction_rule"]
+
+
+def test_machinery_flow_baseline_ignores_unclassified_rows_and_degenerate_means():
+    # no quote at all: rows are unclassified, the |flow| baseline never gets a silent zero
+    tape = TapeState(tick=0.1)
+    tape.on_mid(_t(0), 10.05)
+    for i in range(12):
+        tape.on_trade(_t(20 * i), 10.1, 100, source="fix_md")
+    tape.on_mid(_t(240), 10.05)
+    ms = _ms(240)
+    tape.fill_state(ms)
+    assert ms.signed_flow_window is None and ms.failed_response is None
+    assert ms.session_state["tape"]["abs_flow_baseline"] is None
+    # a history of mid-spread prints (direction 0 → |flow| baseline mean 0) is a degenerate baseline:
+    # the first one-sided burst is "unknown", not a failure (2 × 0 would make any flow large)
+    tape = TapeState(tick=0.1)
+    book = _book([(10.0, 1000)], [(10.1, 1000)])
+    tape.on_mid(_t(0), 10.05)
+    for i in range(12):
+        tape.on_trade(_t(10 * i), 10.05, 10, book=book, source="fix_md")
+    tape.on_trade(_t(130), 10.1, 1000, book=book, source="fix_md")
+    tape.on_mid(_t(130), 10.05)
+    ms = _ms(130)
+    tape.fill_state(ms, book)
+    assert ms.signed_flow_window == 1000.0 and ms.session_state["tape"]["abs_flow_baseline"] == 0.0
+    assert ms.price_only_response == 0.0 and ms.failed_response is None
+
+
+def test_machinery_last_print_follows_the_preferred_feed():
+    tape = TapeState(tick=0.1)
+    book = _book([(10.0, 100)], [(10.1, 50)])
+    tape.on_trade(_t(0), 10.1, 300, trade_id="T1", book=book, source="fix_md")
+    tape.on_day_totals(_t(1), 10, 1000.0, 0.0101, source="lankabd_depth", book=book)
+    tape.on_day_totals(_t(2), 11, 1200.0, 0.01212, source="lankabd_depth", book=book)   # snap feed: one trade Δ
+    ms = _ms(2)
+    tape.fill_state(ms, book)
+    assert ms.tape_source == "fix_md" and ms.last_print["trade_id"] == "T1" and not ms.last_print["inferred_from_delta"]
+    assert ms.trade_count == 1 and ms.session_state["tape"]["totals_are_day_totals"] is False
+
+
 def test_machinery_ltp_fallback_from_tape_price():
     tape = TapeState(tick=0.1)
     tape.on_cum_totals(_t(0), _t(0), 1, 10, 0.0001, 10.0, source="lankabd_tape")
@@ -442,18 +540,71 @@ def test_machinery_refresh_churn_and_queue_position():
     assert q2.queue_position("bid", 10.0) == {"qty_ahead": 100.0, "orders_ahead": 3, "levels_ahead": 1}
 
 
-def test_machinery_queue_accepts_marketstate_and_detects_new_intervals_by_tape_age():
+def _tape_state(s, rows, first=False, **kw):
+    ms = _ms(s, **kw)
+    ms.session_state["tape"] = {"feed": "lankabd_tape", "kind": "cum", "rows": rows, "last_first_row": first}
+    return ms
+
+
+def test_machinery_queue_accepts_marketstate_and_identifies_intervals_by_tape_row():
     q = QueueState()
     q.on_book(_ms(0, bids=[(10.0, 500)], asks=[(10.1, 400)]), None)
     q.on_book(_ms(5, bids=[(10.0, 200)], asks=[(10.1, 400)]), None)                         # drop 300
-    q.on_book(_ms(10, bids=[(10.0, 200)], asks=[(10.1, 400)], interval_volume=100.0, interval_trades=1.0,
-                  interval_vwap=10.0, tape_age_s=1.0), None)
-    q.on_book(_ms(20, bids=[(10.0, 200)], asks=[(10.1, 400)], interval_volume=100.0, interval_trades=1.0,
-                  interval_vwap=10.0, tape_age_s=11.0), None)                                # same interval, older
+    lv = dict(bids=[(10.0, 200)], asks=[(10.1, 400)], interval_volume=100.0, interval_trades=1.0, interval_vwap=10.0)
+    q.on_book(_tape_state(10, rows=3, tape_age_s=1.0, **lv), None)
+    q.on_book(_tape_state(20, rows=3, tape_age_s=11.0, **lv), None)                         # same row, older
     assert q.sides["bid"].traded_qty == 100 and q.volume_arrivals == 1
-    q.on_book(_ms(30, bids=[(10.0, 200)], asks=[(10.1, 400)], interval_volume=100.0, interval_trades=1.0,
-                  interval_vwap=10.0, tape_age_s=0.5), None)                                 # identical, fresher
+    # a REPEAT tape row resets the tape age but adds no interval: the same volume must not be budgeted again
+    q.on_book(_tape_state(25, rows=3, tape_age_s=0.0, **lv), None)
+    assert q.sides["bid"].traded_qty == 100 and q.volume_arrivals == 1
+    # the next tape row with an identical interval (1 × 100 @ 10.0 again) IS a new interval
+    q.on_book(_tape_state(30, rows=4, tape_age_s=0.5, **lv), None)
     assert q.sides["bid"].traded_qty == 200 and q.volume_arrivals == 2
+    # a first-of-day cumulative row is a day total, not an interval: never budgeted
+    q2 = QueueState()
+    q2.on_book(_tape_state(0, rows=1, first=True, bids=[(10.0, 500)], asks=[(10.1, 400)],
+                           interval_volume=250000.0, interval_trades=900.0, interval_vwap=10.0), None)
+    q2.on_book(_tape_state(5, rows=1, first=True, bids=[(10.0, 200)], asks=[(10.1, 400)],
+                           interval_volume=250000.0, interval_trades=900.0, interval_vwap=10.0), None)
+    assert q2.volume_arrivals == 0 and q2.sides["bid"].traded_qty == 0
+    assert sum(d["remaining"] for d in q2.sides["bid"].pending) == 300
+    # datetime path: an explicit interval key separates consecutive intervals of identical volume;
+    # without a key they collapse (documented limitation of that path)
+    q3 = QueueState()
+    q3.on_book(_t(0), _dict_book([(10.0, 500)], [(10.1, 400)]))
+    q3.on_book(_t(1), _dict_book([(10.0, 500)], [(10.1, 400)]), interval_volume=100.0, interval_key=7)
+    q3.on_book(_t(2), _dict_book([(10.0, 500)], [(10.1, 400)]), interval_volume=100.0, interval_key=7)
+    q3.on_book(_t(3), _dict_book([(10.0, 500)], [(10.1, 400)]), interval_volume=100.0, interval_key=8)
+    assert q3.volume_arrivals == 2 and q3.volume_budgeted == 200.0
+    q4 = QueueState()
+    q4.on_book(_t(1), _dict_book([(10.0, 500)], [(10.1, 400)]), interval_volume=100.0)
+    q4.on_book(_t(3), _dict_book([(10.0, 500)], [(10.1, 400)]), interval_volume=100.0)
+    assert q4.volume_arrivals == 1
+
+
+def test_machinery_queue_duplicate_timestamps_and_appear_change():
+    """Two drops on the same side at the same instant (duplicate timestamps) and a volume arrival:
+    no crash, oldest-first allocation stays deterministic, and traded ≤ volume."""
+    q = QueueState()
+    q.on_book(_t(0), _dict_book([(10.0, 500), (9.9, 300)], [(10.1, 400)]))
+    q.on_book(_t(5), _dict_book([(10.0, 300), (9.9, 300)], [(10.1, 400)]))       # bid drop 200 @ t=5
+    q.on_book(_t(5), _dict_book([(10.0, 100), (9.9, 300)], [(10.1, 400)]))       # bid drop 200 @ t=5 again
+    q.on_book(_t(5), _dict_book([(10.0, 100), (9.9, 300)], [(10.1, 250)]))       # ask drop 150 @ t=5
+    assert len(q.sides["bid"].pending) == 2 and len(q.sides["ask"].pending) == 1
+    q.on_book(_t(6), _dict_book([(10.0, 100), (9.9, 300)], [(10.1, 250)]), interval_volume=300, interval_key="r1")
+    bid, ask = q.sides["bid"], q.sides["ask"]
+    assert bid.traded_qty == 300 and ask.traded_qty == 0                          # bid drops first (same t), oldest-first
+    assert sum(d["remaining"] for d in bid.pending) == 100 and sum(d["remaining"] for d in ask.pending) == 150
+    assert bid.traded_qty + ask.traded_qty <= q.volume_budgeted
+    # a side that appears after being empty is a best-quote change, like a vanish
+    q2 = QueueState()
+    q2.on_book(_t(0), _dict_book([(10.0, 100)], []))
+    q2.on_book(_t(1), _dict_book([(10.0, 100)], [(10.1, 50)]))                    # ask appears
+    q2.on_book(_t(2), _dict_book([(10.0, 100)], []))                              # ask vanishes
+    assert len(q2.sides["ask"].changes) == 2
+    ms = _ms(2)
+    q2.fill_state(ms)
+    assert ms.session_state["queue"]["ask"]["best_changes_per_min"] == 60.0     # 2 changes over the 2-s history
 
 
 # ============================================================================ real data
@@ -517,10 +668,13 @@ def test_realdata_fixture_lankabd_tape_cum_totals(symbol):
     # rate sanity: 120-s intensity never exceeds the day's trades per minute × a burst factor of 100
     n_min = (rows.t_source.max() - rows.t_source.min()).total_seconds() / 60.0
     assert max(s.trade_intensity or 0 for s in states) <= 100 * last.trade_count / max(n_min, 1.0)
-    # tape lags the receipt clock by days in this closed-market capture and that is reported, not hidden
-    assert last.tape_age_s == 0.0 or last.tape_age_s >= 0
-    assert (last.t - t_exch).total_seconds() > 0 and last.session_state["tape"]["rows"] == sum(
-        1 for s in states if s is not None) - last.session_state["tape"]["repeat_rows"]
+    # tape lags the receipt clock by days in this closed-market capture and that is reported, not hidden:
+    # tape_age_s is the receipt lag (the frame IS the last tape receipt → 0), exchange_lag_s the stamp lag
+    assert last.tape_age_s == 0.0
+    lag = last.session_state["tape"]["exchange_lag_s"]
+    assert abs(lag - (t_recv - t_exch).total_seconds()) < 1e-6 and lag > 3600.0
+    assert last.session_state["tape"]["totals_are_day_totals"] is True
+    assert last.session_state["tape"]["rows"] == len(states) - last.session_state["tape"]["repeat_rows"]
 
 
 def test_realdata_fixture_tape_is_deterministic_and_windows_use_exchange_clock():

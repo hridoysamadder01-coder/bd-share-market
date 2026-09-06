@@ -1,6 +1,14 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
-04:18 UTC: ALL 14 implement stages done (experiment 11 tests, ui files present); verify stages still running.
+04:33 UTC: live tailer verified against the growing capture in --tail-only mode (45 s: 43 records → 1333 events → 29 states,
+12 symbols, 0 reconstruction failures, lag 3.5 s); live.py now honours --max-seconds inside catch-up and reports
+unprocessed_backlog/deadline_hit/catchup_records in RUN.json; tests/tower/test_live_tail.py added (4 tests). engine.py forwards
+level=ev.level to apply_update (book verify cross-module note). Live-capture e2e test bounded to 03:55–04:15 UTC window.
+experiments/build_tower_artifact.sh written. tower/gate.py written (not yet run). Verify stages: book PASS with fixes (65 tests);
+others still running (they run the full tests/tower suite, slow under contention). NEXT: gate run → commit → push → PR #4 body →
+artifact zip + phone page republish → receipt.
+
+04:23 UTC: ALL 14 implement stages done incl. ui (9 tests); background run of circuit/ui/experiment tests = 69 passed. UI server verified on live store (screenshot ok, all endpoints). Go: vet/test/build ok. Verify stages running. Started: experiment on live store (results/tower/live_probe2/experiment), live tailer smoke (results/tower/live_tail).
 Live replay of today's capture works (results/tower/live_probe2, 14 symbols, 0 failures). Static phone page published:
 https://claude.ai/code/artifact/68dd957a-597e-4e43-928e-c78c3326652c (republish by re-running
 `python3 -m tower.ui.export_static --store results/tower/<store> --out <scratchpad>/dse_tower_live.html --points 140` and

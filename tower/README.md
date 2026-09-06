@@ -15,8 +15,13 @@ cd tower/ingest && go build -o ingest . && ./ingest -config config.example.json 
 python3 -m tower.replay --capture evidence/capture/DATE --out results/tower/DATE [--speed 0|1|10] [--step] \
         [--symbols A,B] [--from ISO] [--to ISO]
 
-# live: tail the growing capture into the same engine
-python3 -m tower.live --capture evidence/capture/DATE --out results/tower/live
+# live: tail the growing capture into the same engine (catch-up of the day's records first, then new lines;
+# --tail-only skips the catch-up; --max-seconds is a hard deadline, honoured inside the catch-up too)
+python3 -m tower.live --capture evidence/capture/DATE --out results/tower/live [--poll 2] [--tail-only] [--max-seconds N]
+
+# one-file static page of a state store (phone/shareable) and the completion gate
+python3 -m tower.ui.export_static --store results/tower/DATE --out tower_DATE.html --points 140
+python3 -m tower.gate --capture evidence/capture/DATE --out results/tower/gate
 
 # Observation Tower UI (reads a replay or live state store)
 python3 -m tower.ui.server --store results/tower/DATE --port 8765

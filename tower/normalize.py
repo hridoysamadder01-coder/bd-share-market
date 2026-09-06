@@ -33,10 +33,17 @@ re-parsed here — and adds what the engines need on top of parsed frames:
                     never repaired).
 
 * tape de-duplication: cumulative rows repeated across pulls are emitted once
-  (first receipt wins) and the emitted event's ``payload["pulls_seen"]`` counts
-  how many pulls carried it (in a batch run: over the whole store; in a
-  streaming run: so far). A pull that adds no new rows emits a STATUS event
-  (``status="no_new_rows"``) so the source's liveness stays observable;
+  (first receipt wins; repeats are counted in ``QAStats.tape_rows_deduped``).
+  An emitted event is never modified by a later pull — its
+  ``payload["pull"]`` (rows in the pull / new / repeated) is what that receipt
+  knew. A pull that adds no new rows — including an empty ``data: []`` answer
+  before the day's first trade — emits a STATUS event (``status="no_new_rows"``)
+  so the source's liveness stays observable; any other source answering with
+  an empty list and no parse problem emits STATUS ``no_items``;
+* parse problems reported by an adapter travel with every event of that record
+  (``flags["parse_problem"]``, ``payload["parse_problems"]``); a depth page
+  whose bid or ask table is *missing* (not empty) is not a book observation:
+  STATUS ``book_unparsed`` is emitted instead and counted as a parse failure;
 * GAP records → GAP events; heartbeat silence longer than
   ``heartbeat_silence_s`` (30 s) → a synthetic GAP event stamped at the
   heartbeat that made the silence observable; the first DATA event of a
@@ -84,14 +91,46 @@ _FRAME_TO_CANONICAL = {
 }
 
 
-def _observed(frame: Dict[str, Any], always: Sequence[str] = ()) -> Tuple[str, ...]:
+def _observed(frame: Dict[str, Any], always: Sequence[str] = (), exclude: Sequence[str] = ()) -> Tuple[str, ...]:
     """Canonical fields this frame actually carries (value not None); lists count
-    as observed even when empty — an empty book is an observation."""
+    as observed even when empty — an empty book is an observation. ``exclude``
+    names frame fields the adapter flagged as *not populated* (``zero_fields``):
+    a 0.0 price sentinel is not an observation of that price."""
     out: List[str] = list(always)
     for k, canon in _FRAME_TO_CANONICAL.items():
-        if k in frame and frame[k] is not None and canon not in out:
+        if k in frame and frame[k] is not None and k not in exclude and canon not in out:
             out.append(canon)
     return tuple(out)
+
+
+def _price_or_none(v: Any) -> Optional[float]:
+    """A traded price is strictly positive; 0 / negative is the page's
+    'not populated' sentinel (NOT_OBSERVABLE) → ``None``. The raw value stays
+    in the payload untouched."""
+    x = _f(v)
+    return x if x is not None and x > 0 else None
+
+
+def _book_sides_present(source: str, fr: Dict[str, Any]) -> Tuple[bool, bool]:
+    """Whether the bid / ask table was actually present on the page.
+
+    An adapter returns ``[]`` both for an empty table (a real observation:
+    nobody is resting) and for a *missing* table (an error page, a layout
+    change — the side is unknown). The two are told apart structurally from
+    what the adapter left in the frame, never from problem strings:
+
+    * ``lankabd_depth``: ``raw_keys`` lists the JSON keys; the tables are the
+      ``buyPriceTable`` / ``sellPriceTable`` keys.
+    * ``dsebd_depth``: ``<side>_src_order_preserved`` is only set when the
+      ``>Buy<`` / ``>Sell<`` table was found (``stats_raw`` marks an adapter frame).
+
+    Frames without those markers (hand-built frames) are taken as present."""
+    if source == "lankabd_depth" and isinstance(fr.get("raw_keys"), list):
+        keys = set(fr["raw_keys"])
+        return "buyPriceTable" in keys, "sellPriceTable" in keys
+    if source == "dsebd_depth" and "stats_raw" in fr:
+        return "bid_levels_src_order_preserved" in fr, "ask_levels_src_order_preserved" in fr
+    return True, True
 
 
 def _f(v: Any) -> Optional[float]:
@@ -183,46 +222,70 @@ def _breadth(frames: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
 
 def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv: datetime, seq: int,
                        body_sha256: Optional[str] = None, key: Optional[str] = None,
-                       http: Optional[Dict[str, Any]] = None) -> List[Event]:
+                       http: Optional[Dict[str, Any]] = None,
+                       problems: Optional[Sequence[str]] = None) -> List[Event]:
     """Pure mapping of one record's parsed frames to Events (no QA state).
 
     ``seq_local`` is left at 0 here and assigned by :class:`Normalizer`. Rules
     per source are documented inline; every value comes from the frame, and a
-    missing value stays ``None``."""
+    missing value stays ``None``. ``problems`` are the adapter's parse problems
+    for this record: every event of the record then carries
+    ``flags["parse_problem"]`` and ``payload["parse_problems"]`` so a partial
+    parse is never mistaken for a clean observation."""
     t_recv = utc(t_recv)
     phase = session_phase(t_recv)
     raw_ref = (source, int(seq), body_sha256 or "")
     out: List[Event] = []
     params = (http or {}).get("params") or {}
+    problems = [str(p) for p in (problems or [])]
 
     def mk(et: EventType, **kw: Any) -> Event:
         ev = Event(source=source, event_type=et, t_recv=t_recv, seq_local=0, session_phase=phase, raw_ref=raw_ref, **kw)
         if ev.t_exch is not None:
             ev.freshness_s = (ev.t_recv - ev.t_exch).total_seconds()
+        if problems:
+            ev.flags["parse_problem"] = True
+            ev.payload["parse_problems"] = list(problems)
         return ev
 
     if source in BOOK_SOURCES:
         # one full book image per record: bids best-first, asks best-first, plus the day fields the page shows
         for fr in frames:
+            zero = list(fr.get("zero_fields") or [])
+            bid_ok, ask_ok = _book_sides_present(source, fr)
+            sym = (fr.get("symbol") or key or "").upper() or None
+            day = {"ltp": _f(fr.get("ltp")), "open": _f(fr.get("open")), "high": _f(fr.get("high")),
+                   "low": _f(fr.get("low")), "close_published": _f(fr.get("close_published")),
+                   "yclose": _f(fr.get("yclose")), "day_trades": _f(fr.get("day_trades")),
+                   "day_volume": _f(fr.get("day_volume")), "day_value_mn": _f(fr.get("day_value_mn")),
+                   "zero_fields": zero}
+            if not (bid_ok and ask_ok):
+                # the page did not show the book (error page / layout change): an empty side
+                # here is UNKNOWN, not "nobody resting" — never emitted as a book image
+                missing = [s for s, ok in (("bid", bid_ok), ("ask", ask_ok)) if not ok]
+                out.append(mk(EventType.STATUS, symbol=sym, status="book_unparsed",
+                              payload={**day, "sides_missing": missing, "kind": "book_unparsed"},
+                              flags={"parse_problem": True}, observed_fields=("t_recv",)))
+                continue
+            pres = fr.get("src_order_preserved")
+            if pres is None and ("bid_levels_src_order_preserved" in fr or "ask_levels_src_order_preserved" in fr):
+                pres = bool(fr.get("bid_levels_src_order_preserved", True)) and \
+                    bool(fr.get("ask_levels_src_order_preserved", True))
             payload = {
                 "bids": _levels(fr.get("bid_levels")), "asks": _levels(fr.get("ask_levels")),
                 "n_bid_levels": fr.get("n_bid_levels"), "n_ask_levels": fr.get("n_ask_levels"),
-                "src_order_preserved": fr.get("src_order_preserved",
-                                              fr.get("bid_levels_src_order_preserved")),
-                "ltp": _f(fr.get("ltp")), "open": _f(fr.get("open")), "high": _f(fr.get("high")),
-                "low": _f(fr.get("low")), "close_published": _f(fr.get("close_published")),
-                "yclose": _f(fr.get("yclose")), "day_trades": _f(fr.get("day_trades")),
-                "day_volume": _f(fr.get("day_volume")), "day_value_mn": _f(fr.get("day_value_mn")),
-                "zero_fields": list(fr.get("zero_fields") or []),
+                "src_order_preserved": pres, **day,
                 "orders_per_level": None,      # NOT_OBSERVABLE on both depth pages
             }
             if fr.get("buy_pct") is not None or fr.get("total_buy_volume") is not None:
                 payload.update({"buy_pct": _f(fr.get("buy_pct")), "sell_pct": _f(fr.get("sell_pct")),
                                 "total_buy_volume": _f(fr.get("total_buy_volume")),
                                 "total_sell_volume": _f(fr.get("total_sell_volume"))})
-            sym = (fr.get("symbol") or key or "").upper() or None
-            out.append(mk(EventType.BOOK_SNAPSHOT, symbol=sym, is_snapshot=True, price=payload["ltp"],
-                          payload=payload, observed_fields=_observed(fr, ("t_recv", "bid_levels", "ask_levels"))))
+            # Event.price is the observed last price: a zero-flagged ltp is the page's
+            # "not populated" sentinel and stays out of it (payload keeps the raw 0.0)
+            price = None if "ltp" in zero else _price_or_none(fr.get("ltp"))
+            out.append(mk(EventType.BOOK_SNAPSHOT, symbol=sym, is_snapshot=True, price=price, payload=payload,
+                          observed_fields=_observed(fr, ("t_recv", "bid_levels", "ask_levels"), exclude=zero)))
         return out
 
     if source == "lankabd_tape":
@@ -230,15 +293,18 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
         cid = params.get("cid") if isinstance(params, dict) else None
         for fr in frames:
             t_ms = fr.get("t_source_ms")
-            t_exch = epoch_ms_to_utc(float(t_ms)) if t_ms is not None else None
+            t_exch = epoch_ms_to_utc(_f(t_ms)) if _f(t_ms) is not None else None
+            fl: Dict[str, bool] = {}
+            if t_exch is None:
+                fl["bad_stamp"] = True                      # row kept, but it cannot be placed on the exchange clock
             payload = {"cum_trades": _f(fr.get("cum_trades")), "cum_volume": _f(fr.get("cum_volume")),
                        "cum_value_mn": _f(fr.get("cum_value_mn")), "price": _f(fr.get("price")),
-                       "price2": _f(fr.get("price2")), "t_source_ms": t_ms, "row_index": fr.get("row_index"),
-                       "pulls_seen": 1}
+                       "price2": _f(fr.get("price2")), "t_source_ms": t_ms, "row_index": fr.get("row_index")}
             sym = (fr.get("symbol") or key or "").upper() or None
-            out.append(mk(EventType.CUM_TOTALS, symbol=sym, t_exch=t_exch, price=payload["price"],
-                          instrument_id=str(cid) if cid is not None else None, payload=payload,
-                          observed_fields=_observed(fr, ("t_recv", "t_source"))))
+            always = ("t_recv", "t_source") if t_exch is not None else ("t_recv",)
+            out.append(mk(EventType.CUM_TOTALS, symbol=sym, t_exch=t_exch, price=_price_or_none(fr.get("price")),
+                          instrument_id=str(cid) if cid is not None else None, payload=payload, flags=fl,
+                          observed_fields=_observed(fr, always)))
         return out
 
     if source in QUOTE_SOURCES:
@@ -248,7 +314,7 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
             payload = {k: v for k, v in fr.items() if k != "symbol"}
             inst = fr.get("instrument_number")
             always = ("t_recv", "t_source") if t_exch is not None else ("t_recv",)
-            out.append(mk(EventType.QUOTE, symbol=sym, t_exch=t_exch, price=_f(fr.get("ltp")),
+            out.append(mk(EventType.QUOTE, symbol=sym, t_exch=t_exch, price=_price_or_none(fr.get("ltp")),
                           instrument_id=str(inst) if inst is not None else None, payload=payload,
                           observed_fields=_observed(fr, always)))
         if source == "lankabd_watch" and frames:
@@ -310,6 +376,20 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
     return out
 
 
+def record_time(rec: Dict[str, Any]) -> datetime:
+    """The receipt instant of a raw-store record: for DATA the moment the last
+    byte arrived (``http.t_last_byte_utc``), else the store's write stamp.
+    One rule for both feeding order and ``Event.t_recv`` — sorting on one clock
+    and stamping on another would let a record be processed after a record it
+    was received before."""
+    if rec.get("kind") == "DATA":
+        http = rec.get("http") or {}
+        t = http.get("t_last_byte_utc") if isinstance(http, dict) else None
+        if t:
+            return utc(t)
+    return utc(rec["t_recv_utc"])
+
+
 # ---------------------------------------------------------------------------- the normalizer
 class Normalizer:
     """Stateful, causal record → event converter. Feed raw-store records in the
@@ -337,11 +417,11 @@ class Normalizer:
         self._last_recv: Dict[Tuple[str, Optional[str]], datetime] = {}     # (source, key) → t_recv
         self._intervals: Dict[Tuple[str, Optional[str]], List[float]] = {}
         self._last_exch: Dict[Tuple[str, Optional[str]], datetime] = {}     # (source, symbol) → t_exch
-        self._last_feed_seq: Dict[str, int] = {}
+        self._last_feed_seq: Dict[Tuple[str, Optional[str]], int] = {}      # (source, key) → last src_seq
         self._pending_recovery: Dict[Tuple[str, Optional[str]], bool] = {}
-        self._data_epoch: Dict[Tuple[str, Optional[str]], str] = {}       # (source, key) → epoch of last DATA
-        self._tape_rows: Dict[Tuple[str, Any, Any, Any, Any], Event] = {}    # dedupe key → emitted event
-        self._tape_stamps: Dict[Tuple[str, Any], Tuple[Any, Any, Any]] = {}  # (symbol, stamp) → values
+        self._epochs_seen: Dict[Tuple[str, Optional[str]], set] = {}      # (source, key) → capture epochs seen
+        self._tape_rows: set = set()                                         # (symbol, stamp, trades, vol, val, px) emitted
+        self._tape_stamps: Dict[Tuple[str, Any], Tuple[Any, Any, Any, Any]] = {}  # (symbol, stamp) → values
         self._last_heartbeat: Optional[datetime] = None
 
     # ------------------------------------------------------------------ helpers
@@ -388,6 +468,9 @@ class Normalizer:
         return stale
 
     def _seq_hole(self, source: str, rec: Dict[str, Any], t: datetime, key: Optional[str]) -> Tuple[Optional[int], bool]:
+        """Feed-sequence continuity per (source, key): a connection-level feed
+        writes ``key=None`` (one sequence per source); a keyed poll carries the
+        key's own sequence, so two keys never see each other's holes."""
         raw = rec.get("src_seq")
         if raw is None:
             return None, False
@@ -395,8 +478,8 @@ class Normalizer:
             s = int(raw)
         except (TypeError, ValueError):
             return None, False
-        prev = self._last_feed_seq.get(source)
-        self._last_feed_seq[source] = s
+        prev = self._last_feed_seq.get((source, key))
+        self._last_feed_seq[(source, key)] = s
         if prev is not None and s > prev + 1:
             self.stats.src(source).gaps += 1
             self._emit(Event(source=source, event_type=EventType.GAP, t_recv=t, seq_local=0, symbol=key,
@@ -483,7 +566,7 @@ class Normalizer:
         source = rec["source"]
         key = rec.get("key")
         http = rec.get("http") or {}
-        t = utc(http.get("t_last_byte_utc") or rec["t_recv_utc"])
+        t = record_time(rec)
         if not self._in_window(t):
             return
         if source in PER_SYMBOL_KEY_SOURCES and key and not self._want_symbol(key.upper()):
@@ -513,33 +596,45 @@ class Normalizer:
             return
         for pr in parsed.problems:
             self.stats.problem(f"{source} seq {rec.get('seq')} {key or ''}: {pr}")
-        if not parsed.frames:
+        if not parsed.frames and parsed.problems:
+            # the adapter could not read the body at all (it says so): a parse failure
             c.parse_failures += 1
             return
+        # no frames and no problems = the source answered with an empty list (a tape pull
+        # before the day's first trade, a block board with no prints): a real observation
+        # of "nothing", carried as a STATUS event so liveness and cadence stay visible
         frames = parsed.frames
-        if self.symbols is not None and source not in PER_SYMBOL_KEY_SOURCES:
+        if frames and self.symbols is not None and source not in PER_SYMBOL_KEY_SOURCES:
             frames = [fr for fr in frames if self._want_symbol((fr.get("symbol") or "").upper() or None)]
             if not frames:
                 return
-        events = events_from_frames(source, frames, t_recv=t, seq=int(rec.get("seq", 0)), body_sha256=sha,
-                                    key=key, http=http)
+        seq = int(rec.get("seq", 0))
+        events = events_from_frames(source, frames, t_recv=t, seq=seq, body_sha256=sha, key=key, http=http,
+                                    problems=parsed.problems)
+        # a book page without its tables is not a book observation: counted as a parse failure
+        c.parse_failures += sum(1 for ev in events if ev.status == "book_unparsed")
         # record-level QA (shared by every event of the record)
         stale = self._stale(source, key, t)
         seq_feed, hole = self._seq_hole(source, rec, t, key)
         # recovery: first DATA of this (source, key) after a GAP record, or the first one
-        # written by a new capture epoch (process restart) — judged against the epoch of
-        # this key's previous DATA record, never against META order
+        # written by a capture epoch never seen for this key before (process restart) —
+        # judged per key, never from META order; two capturers interleaving records of
+        # two epochs mark one recovery, not one per alternation
         recovery = self._pending_recovery.pop((source, key), False)
         epoch = rec.get("epoch")
-        prev_epoch = self._data_epoch.get((source, key))
-        if epoch and prev_epoch is not None and prev_epoch != epoch:
-            recovery = True
         if epoch:
-            self._data_epoch[(source, key)] = epoch
+            seen = self._epochs_seen.setdefault((source, key), set())
+            if seen and epoch not in seen:
+                recovery = True
+            seen.add(epoch)
         if source == "lankabd_tape":
-            self._emit_tape(source, key, events, sha, t, stale, seq_feed, hole, recovery, len(frames),
-                            int(rec.get("seq", 0)))
+            self._emit_tape(source, key, events, sha, t, stale, seq_feed, hole, recovery, len(frames), seq)
             return
+        if not events:
+            events = [Event(source=source, event_type=EventType.STATUS, t_recv=t, seq_local=0,
+                            symbol=(key.upper() if (key and source in PER_SYMBOL_KEY_SOURCES) else None),
+                            session_phase=session_phase(t), status="no_items", raw_ref=(source, seq, sha or ""),
+                            payload={"n_frames": 0, "kind": "empty_response"}, observed_fields=("t_recv",))]
         for ev in events:
             ev.seq_feed = seq_feed
             ev.is_recovery = recovery
@@ -576,43 +671,48 @@ class Normalizer:
     def _emit_tape(self, source: str, key: Optional[str], events: List[Event], sha: Optional[str], t: datetime,
                    stale: bool, seq_feed: Optional[int], hole: bool, recovery: bool, n_rows: int,
                    seq: int = 0) -> None:
-        """Cumulative rows: first receipt wins; later pulls only bump ``pulls_seen``.
-        A stamp seen again with different values is a correction (kept, flagged)."""
+        """Cumulative rows: first receipt wins; a row already emitted is dropped
+        from later pulls (counted in ``tape_rows_deduped``). Nothing already
+        emitted is ever touched again — an event stamped at its first receipt
+        must not carry what later pulls revealed. Each new event carries the
+        pull's own accounting (``payload["pull"]``: rows in the pull, how many
+        were new, how many repeats of already-emitted rows), all known at that
+        receipt. A stamp seen again with different values is a correction
+        (kept, flagged)."""
         c = self.stats.src(source)
         sym = (key or "").upper() or None
         body_dup = sha is not None and self._last_body.get((source, sym)) == sha
         if sha is not None:
             self._last_body[(source, sym)] = sha
-        new = 0
-        first_new = True
+        fresh: List[Event] = []
         for ev in events:
             p = ev.payload
-            dk = (ev.symbol, p.get("t_source_ms"), p.get("cum_trades"), p.get("cum_volume"), p.get("cum_value_mn"))
-            seen = self._tape_rows.get(dk)
-            if seen is not None:
-                seen.payload["pulls_seen"] = seen.payload.get("pulls_seen", 1) + 1
+            vals = (p.get("cum_trades"), p.get("cum_volume"), p.get("cum_value_mn"), p.get("price"))
+            dk = (ev.symbol, p.get("t_source_ms")) + vals
+            if dk in self._tape_rows:
                 c.tape_rows_deduped += 1
                 continue
             sk = (ev.symbol, p.get("t_source_ms"))
-            vals = (p.get("cum_trades"), p.get("cum_volume"), p.get("cum_value_mn"))
             if sk in self._tape_stamps and self._tape_stamps[sk] != vals:
                 ev.flags["correction"] = True
                 c.corrections += 1
             self._tape_stamps[sk] = vals
-            self._tape_rows[dk] = ev
+            self._tape_rows.add(dk)
+            fresh.append(ev)
+        pull = {"rows_in_pull": n_rows, "new_rows": len(fresh), "repeated_rows": n_rows - len(fresh)}
+        for i, ev in enumerate(fresh):
+            ev.payload["pull"] = dict(pull)
             ev.seq_feed = seq_feed
-            ev.is_recovery = recovery and first_new
-            first_new = False
+            ev.is_recovery = recovery and i == 0
             self._qa_flags(ev, None, stale, hole, multi=False)
             self._emit(ev)
-            new += 1
-        if new == 0:
+        if not fresh:
             if body_dup:
                 c.duplicates += 1
             self._emit(Event(source=source, event_type=EventType.STATUS, t_recv=t, seq_local=0, symbol=sym,
                              session_phase=session_phase(t), status="no_new_rows", seq_feed=seq_feed,
                              is_recovery=recovery, raw_ref=(source, seq, sha or ""),
-                             payload={"rows_in_pull": n_rows, "new_rows": 0},
+                             payload=dict(pull),
                              flags={k: True for k, v in (("duplicate", body_dup), ("stale", stale), ("gap", hole)) if v},
                              observed_fields=("t_recv",)))
             if stale:
@@ -645,7 +745,7 @@ def normalize_store(root: str, symbols: Optional[Iterable[str]] = None, t_from: 
                 n.stats.problem(f"unparseable line in {os.path.basename(path)}")
                 continue
             try:
-                t = utc(rec["t_recv_utc"])
+                t = record_time(rec)
             except (KeyError, ValueError, TypeError) as e:
                 n.stats.problem(f"{os.path.basename(path)}: record without a usable t_recv_utc ({e!r})")
                 continue

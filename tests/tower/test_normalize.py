@@ -105,16 +105,169 @@ def test_machinery_tape_dedupe_across_pulls_first_receipt_wins(tmp_path):
     ct = by_type(ev, EventType.CUM_TOTALS)
     assert len(ct) == 4
     assert [e.payload["cum_trades"] for e in ct] == [1, 3, 4, 9]
-    assert [e.payload["pulls_seen"] for e in ct] == [3, 3, 3, 2]
+    # per-pull accounting is what THAT receipt knew: the first pull had 3 new rows, the second 1 new of 4
+    assert [e.payload["pull"] for e in ct[:3]] == [{"rows_in_pull": 3, "new_rows": 3, "repeated_rows": 0}] * 3
+    assert ct[3].payload["pull"] == {"rows_in_pull": 4, "new_rows": 1, "repeated_rows": 3}
+    assert "pulls_seen" not in ct[0].payload                 # nothing on a past event counts future pulls
     assert [e.t_recv for e in ct[:3]] == [T0] * 3 and ct[3].t_recv == T0 + timedelta(seconds=30)   # first receipt wins
     assert ct[0].t_exch == datetime(2026, 9, 3, 4, 15, tzinfo=timezone.utc)      # epoch ms → UTC
     assert ct[0].freshness_s == (T0 - ct[0].t_exch).total_seconds()
     assert ct[0].price == 244.1 and ct[0].observed_fields == ("t_recv", "t_source", "day_trades", "day_volume", "day_value", "ltp")
     status = [e for e in ev if e.source == "lankabd_tape" and e.event_type is EventType.STATUS]
     assert len(status) == 1 and status[0].status == "no_new_rows" and status[0].flags == {"duplicate": True}
-    assert status[0].payload == {"rows_in_pull": 4, "new_rows": 0}
+    assert status[0].payload == {"rows_in_pull": 4, "new_rows": 0, "repeated_rows": 4}
     c = s.src("lankabd_tape")
     assert c.tape_rows_deduped == 3 + 4 and c.duplicates == 1 and c.records == 3 and c.events == 5
+    # streaming: an event emitted at pull 1 is byte-identical after pulls 2 and 3 have been fed (causal)
+    n = Normalizer()
+    recs = [r for r in _records(root)]
+    n.on_record(recs[0], True)
+    before = [e.to_dict() for e in n.events]
+    for r in recs[1:]:
+        n.on_record(r, True)
+    assert [e.to_dict() for e in n.events[:len(before)]] == before
+
+
+def _records(root):
+    """All records of a raw store in receipt order (as normalize_store feeds them)."""
+    from seeing.capture.raw_store import iter_segment
+    from seeing.replay import _segment_paths
+    from tower.normalize import record_time
+    recs = [r for p in _segment_paths(root) for r, ok in iter_segment(p) if ok]
+    recs.sort(key=lambda r: (record_time(r), str(r.get("source")), int(r.get("seq", 0))))
+    return recs
+
+
+def test_machinery_tape_empty_pull_and_price_only_correction(tmp_path):
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "lankabd_tape", "GP", b'{"length":0,"data":[]}', 0)          # before the day's first trade
+    wd(st, "lankabd_tape", "GP", tape_body([(1788408900000, 244.1, 1, 100, 0.0244)]), 30)
+    wd(st, "lankabd_tape", "GP", tape_body([(1788408900000, 244.3, 1, 100, 0.0244)]), 60)   # same totals, other price
+    wd(st, "lankabd_tape", "GP", tape_body([[1788408960000, 244.3, 2, 200, 0.05, 244.3, "x"], ["bad", 1, 2, 3, 4]]), 90)
+    wd(st, "lankabd_block", None, b"[]", 5)                                # no block prints yet
+    st.close()
+    ev, s = normalize_store(root)
+    tape = [e for e in ev if e.source == "lankabd_tape"]
+    # the seeing tape adapter raises on a non-numeric stamp: that record is a counted, explained failure
+    assert s.totals()["parse_failures"] == 1 and any("parser raised" in p for p in s.problems)
+    assert tape[0].event_type is EventType.STATUS and tape[0].status == "no_new_rows"
+    assert tape[0].payload == {"rows_in_pull": 0, "new_rows": 0, "repeated_rows": 0} and tape[0].symbol == "GP"
+    ct = by_type(ev, EventType.CUM_TOTALS)
+    assert [(e.price, bool(e.flags.get("correction"))) for e in ct] == [(244.1, False), (244.3, True)]
+    assert s.src("lankabd_tape").corrections == 1 and s.src("lankabd_tape").tape_rows_deduped == 0
+    # a frame whose stamp cannot be read is kept, unplaced on the exchange clock, and flagged
+    from tower.normalize import events_from_frames
+    bad = events_from_frames("lankabd_tape", [{"symbol": "GP", "t_source_ms": "bad", "price": 1.0, "cum_trades": 2}],
+                             t_recv=T0, seq=9)
+    assert len(bad) == 1 and bad[0].t_exch is None and bad[0].freshness_s is None and bad[0].flags == {"bad_stamp": True}
+    assert "t_source" not in bad[0].observed_fields and bad[0].payload["t_source_ms"] == "bad"
+    blk = [e for e in ev if e.source == "lankabd_block"]
+    assert len(blk) == 1 and blk[0].event_type is EventType.STATUS and blk[0].status == "no_items" and blk[0].symbol is None
+    assert s.src("lankabd_block").events == 1 and s.src("lankabd_block").records == 1
+
+
+def test_machinery_book_page_without_tables_is_not_a_book(tmp_path):
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "dsebd_depth", "GP", b"<div><table><tr><td>No data found</td></tr></table></div>", 0)
+    only_sell = json.dumps({"symbol": "GP", "sellPriceTable": _table([(244.2, 50)]), "lastTradePrice": 244.1}).encode()
+    wd(st, "lankabd_depth", "GP", only_sell, 1)                                     # buy table key absent
+    layout = json.dumps({"symbol": "GP", "buyPriceTable": "<table><tr><td><div>244.0</div></td><td><div>100</div></td>"
+                         "<td><div>7</div></td></tr></table>", "sellPriceTable": _table([]), "lastTradePrice": 244.1}).encode()
+    wd(st, "lankabd_depth", "GP", layout, 2)                                        # 3-cell level row: a problem, book still read
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [], []), 3)                      # genuinely empty book
+    st.close()
+    ev, s = normalize_store(root)
+    assert not [e for e in ev if e.event_type is EventType.BOOK_SNAPSHOT and e.source == "dsebd_depth"]
+    un = [e for e in ev if e.status == "book_unparsed"]
+    assert [(e.source, e.symbol, e.payload["sides_missing"]) for e in un] == [("dsebd_depth", "GP", ["bid", "ask"]),
+                                                                            ("lankabd_depth", "GP", ["bid"])]
+    assert all(e.flags.get("parse_problem") for e in un) and un[0].payload["parse_problems"]
+    assert s.src("dsebd_depth").parse_failures == 1 and s.src("lankabd_depth").parse_failures == 1
+    bs = [e for e in ev if e.event_type is EventType.BOOK_SNAPSHOT]
+    assert [e.raw_ref[1] for e in bs] == [2, 3]                     # lankabd_depth raw seq 1 was the unparsed page
+    assert bs[0].payload["bids"] == [(244.0, 100.0)] and bs[0].flags.get("parse_problem") is True
+    assert any("layout change" in p for p in bs[0].payload["parse_problems"])
+    assert bs[1].payload["bids"] == [] and bs[1].payload["asks"] == [] and bs[1].flags == {}
+    assert "bid_levels" in bs[1].observed_fields                    # an empty table IS an observation
+
+
+def test_machinery_zero_price_sentinel_is_not_a_price(tmp_path):
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [(244.0, 100)], [], ltp=0.0), 0)
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [(244.0, 100)], [], ltp=244.1), 5)
+    wd(st, "lankabd_watch", None, watch_body("2026-09-06 10:15:00", [("GP", "2026-09-06 10:14:58", 0.0, 244.0),
+                                                                    ("BRACBANK", "2026-09-06 10:14:50", 62.0, 62.5)]), 1)
+    st.close()
+    ev, _ = normalize_store(root)
+    bs = by_type(ev, EventType.BOOK_SNAPSHOT)
+    assert bs[0].price is None and bs[0].payload["ltp"] == 0.0 and "ltp" in bs[0].payload["zero_fields"]
+    assert "ltp" not in bs[0].observed_fields and "open" in bs[0].observed_fields
+    assert bs[1].price == 244.1 and "ltp" in bs[1].observed_fields
+    q = {e.symbol: e for e in by_type(ev, EventType.QUOTE)}
+    assert q["GP"].price is None and q["GP"].payload["ltp"] == 0.0 and q["BRACBANK"].price == 62.0
+
+
+def test_machinery_seq_holes_are_per_key_and_epochs_interleaved(tmp_path):
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [(244.0, 100)], []), 0, src_seq=1)
+    wd(st, "lankabd_depth", "BRACBANK", depth_body("BRACBANK", [(62.0, 10)], []), 1, src_seq=1)
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [(244.0, 101)], []), 2, src_seq=2)
+    wd(st, "lankabd_depth", "BRACBANK", depth_body("BRACBANK", [(62.0, 11)], []), 3, src_seq=2)
+    wd(st, "lankabd_depth", "BRACBANK", depth_body("BRACBANK", [(62.0, 12)], []), 4, src_seq=4)   # BRACBANK's own hole
+    st.close()
+    ev, s = normalize_store(root)
+    gaps = by_type(ev, EventType.GAP)
+    assert [(g.symbol, g.payload["expected"], g.payload["got"]) for g in gaps] == [("BRACBANK", 3, 4)]
+    assert not any(e.flags.get("gap") for e in ev if e.symbol == "GP")
+    # two capturers running at once (epochs A and B interleaved in receipt order): the first record
+    # of the second epoch is a recovery, the alternation afterwards is not
+    root2 = str(tmp_path / "cap2")
+    a = RawStore(root2, capturer_id="a")
+    b = RawStore(root2, capturer_id="b")
+    for i, t in enumerate([0, 10, 20, 30, 40, 50]):
+        wd(a if i % 2 == 0 else b, "lankabd_depth", "GP", depth_body("GP", [(244.0, 100 + i)], []), t)
+    a.close(); b.close()
+    ev2, _ = normalize_store(root2)
+    bs = by_type(ev2, EventType.BOOK_SNAPSHOT)
+    assert [e.payload["bids"][0][1] for e in bs] == [100, 101, 102, 103, 104, 105]
+    assert [e.is_recovery for e in bs] == [False, True, False, False, False, False]
+
+
+def test_machinery_receipt_order_is_the_last_byte_clock(tmp_path):
+    """A slow write after a fast response: record A's last byte arrived before record B's,
+    although A was written to the store after B. A must be processed (and stamped) first."""
+    root = str(tmp_path / "cap")
+    st = RawStore(root, capturer_id="t")
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [(244.0, 100)], []), 10, http_extra={"t_last_byte_utc": ts(9)})   # B
+    wd(st, "lankabd_depth", "GP", depth_body("GP", [(244.0, 100)], []), 11, http_extra={"t_last_byte_utc": ts(8)})   # A
+    st.close()
+    ev, s = normalize_store(root)
+    bs = by_type(ev, EventType.BOOK_SNAPSHOT)
+    assert [e.t_recv for e in bs] == [T0 + timedelta(seconds=8), T0 + timedelta(seconds=9)]
+    assert [e.raw_ref[1] for e in bs] == [2, 1] and [e.seq_local for e in bs] == [0, 1]
+    assert [bool(e.flags.get("duplicate")) for e in bs] == [False, True]        # dup judged in receipt order
+
+
+def test_machinery_events_from_frames_pure_mapping():
+    from tower.normalize import events_from_frames
+    fr = {"symbol": "GP", "bid_levels": [(244.0, 100.0)], "ask_levels": [], "ltp": 244.1, "stats_raw": {},
+          "bid_levels_src_order_preserved": True, "ask_levels_src_order_preserved": False,
+          "n_bid_levels": 1, "n_ask_levels": 0}
+    ev = events_from_frames("dsebd_depth", [fr], t_recv=T0, seq=3, body_sha256="x" * 64)
+    assert len(ev) == 1 and ev[0].payload["src_order_preserved"] is False        # either side reordered → False
+    assert ev[0].seq_local == 0 and ev[0].flags == {} and ev[0].raw_ref == ("dsebd_depth", 3, "x" * 64)
+    fr2 = dict(fr, ask_levels_src_order_preserved=True)
+    assert events_from_frames("dsebd_depth", [fr2], t_recv=T0, seq=3)[0].payload["src_order_preserved"] is True
+    # a hand-built frame without adapter markers is taken as a full page
+    bare = {"symbol": "GP", "bid_levels": [], "ask_levels": []}
+    assert events_from_frames("lankabd_depth", [bare], t_recv=T0, seq=1)[0].event_type is EventType.BOOK_SNAPSHOT
+    # problems travel with every event of the record
+    ev3 = events_from_frames("lankabd_depth", [bare], t_recv=T0, seq=1, problems=["row 3 odd"])
+    assert ev3[0].flags == {"parse_problem": True} and ev3[0].payload["parse_problems"] == ["row 3 odd"]
 
 
 def test_machinery_tape_correction_and_out_of_order(tmp_path):
@@ -375,11 +528,22 @@ LIVE = "/home/user/bd-share-market/evidence/capture/2026-09-06"
 def test_realdata_live_capture_if_present():
     if not os.path.isdir(os.path.join(LIVE, "segments")):
         pytest.skip("live capture not present")
-    ev, s = normalize_store(LIVE)
-    assert len(ev) > 0 and s.totals()["parse_failures"] == 0
+    from tower.normalize import normalize_records
+    # the live store grows while this runs: snapshot its records once, so the determinism
+    # check below compares two replays of the SAME input (normalize_store feeds this order)
+    recs = _records(LIVE)
+    ev, s = normalize_records(recs)
+    assert len(ev) > 0
+    # every parse failure is an explained one: a depth page without its tables (emitted as a
+    # STATUS book_unparsed, never as an empty book); no undecodable / tampered / crashing record
+    unparsed = [e for e in ev if e.status == "book_unparsed"]
+    assert s.totals()["parse_failures"] == len(unparsed)
+    assert not [p for p in s.problems if "undecodable" in p or "sha256 mismatch" in p or "parser raised" in p]
+    # an empty tape answer (no trades yet) is a no_new_rows observation, not a failure
+    assert all(e.payload["rows_in_pull"] >= 0 for e in ev if e.status == "no_new_rows")
     keys = [e.sort_key() for e in ev]
     assert keys == sorted(keys)
-    ev2, _ = normalize_store(LIVE)
+    ev2, _ = normalize_records(recs)
     assert [e.to_dict() for e in ev] == [e.to_dict() for e in ev2]
     hb = [e for e in ev if e.source == "heartbeat" and e.event_type is EventType.STATUS]
     assert hb and all("ages_s" in e.payload for e in hb)
@@ -429,7 +593,9 @@ def test_realdata_normalize_fixture():
         assert len(imgs["lankabd_depth"]) == 1 and imgs["lankabd_depth"] == imgs["dsebd_depth"], sym
     # tape: exchange-stamped, monotone per symbol, de-duplicated across the two pulls
     ct = by_type(ev, EventType.CUM_TOTALS)
-    assert len(ct) == 535 and all(e.payload["pulls_seen"] == 2 for e in ct)
+    assert len(ct) == 535 and all(e.payload["pull"]["repeated_rows"] == 0 for e in ct)   # all first-pull rows
+    nnr = [e for e in ev if e.status == "no_new_rows"]
+    assert sum(e.payload["rows_in_pull"] for e in nnr) == 535 and all(e.payload["new_rows"] == 0 for e in nnr)
     assert s.src("lankabd_tape").tape_rows_deduped == 535
     for sym in {e.symbol for e in ct}:
         rows = sorted((e for e in ct if e.symbol == sym), key=lambda e: e.t_exch)

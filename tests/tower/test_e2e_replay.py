@@ -159,7 +159,8 @@ def _live_has_market_data() -> bool:
 
 @pytest.mark.skipif(not _live_has_market_data(), reason="live session capture has no depth segments yet (market not open)")
 def test_realdata_live_session_capture(tmp_path):
-    r = Replayer(LIVE, str(tmp_path / "out"))
+    # bounded to the first 20 minutes of the session so the test stays O(minutes) while the capture grows all day
+    r = Replayer(LIVE, str(tmp_path / "out"), t_from="2026-09-06T03:55:00+00:00", t_to="2026-09-06T04:15:00+00:00")
     n = r.load()
     assert n > 0
     r.run()

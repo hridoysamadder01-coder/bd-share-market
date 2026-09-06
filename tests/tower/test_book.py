@@ -298,6 +298,163 @@ def test_machinery_fill_state_writes_every_field():
     ms.to_dict()                                   # wire format must serialise (datetimes in walls are dropped)
 
 
+# ---------------------------------------------------------------- contract shape / input discipline
+def test_machinery_contract_positional_orders_and_keyword_precedence():
+    # CONTRACTS: apply_snapshot(t, bids, asks, orders=None) — the 4th positional is ``orders``
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 50)], ([3], [7]))
+    g = b.geometry()
+    assert g["bid_orders"] == [3] and g["ask_orders"] == [7]
+    b2 = EvolvingBook(tick=0.1)
+    b2.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 50)], {"bid": [4], "ask": None})
+    assert b2.geometry()["bid_orders"] == [4] and b2.geometry()["ask_orders"] == [None]
+    # explicit keyword lists win over the combined argument
+    b3 = EvolvingBook(tick=0.1)
+    b3.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 50)], ([3], [7]), bid_orders=[9])
+    assert b3.geometry()["bid_orders"] == [9] and b3.geometry()["ask_orders"] == [7]
+
+
+def test_machinery_side_codes_and_unknown_side_rejected():
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 50)])
+    b.apply_update(_t(1), "0", 9.9, 10, action="NEW")          # FIX MDEntryType 0 = bid
+    b.apply_update(_t(2), "1", 10.2, 10, action="NEW")         # FIX MDEntryType 1 = offer
+    b.apply_update(_t(3), "BUY", 9.8, 10, action="NEW")
+    b.apply_update(_t(4), "Sell", 10.3, 10, action="NEW")
+    assert b.bids() == [(10.0, 100.0), (9.9, 10.0), (9.8, 10.0)]
+    assert b.asks() == [(10.1, 50.0), (10.2, 10.0), (10.3, 10.0)]
+    # Event.side may be None — that must never silently become an ask update
+    for bad in (None, "", "none", "x"):
+        with pytest.raises(ValueError):
+            b.apply_update(_t(5), bad, 9.7, 10, action="NEW")
+    assert b.n_updates == 5 and b.asks()[-1] == (10.3, 10.0)     # nothing applied by the rejected calls
+    # non-finite price / qty on an update is an error, not a level
+    with pytest.raises(ValueError):
+        b.apply_update(_t(6), "bid", float("nan"), 10)
+    with pytest.raises(ValueError):
+        b.apply_update(_t(6), "bid", 9.7, float("inf"))
+    # an unrecognised action (FIX adapter emits "UNKNOWN") is governed by the qty rule
+    b.apply_update(_t(7), "bid", 9.7, 5, action="UNKNOWN")
+    assert (9.7, 5.0) in b.bids()
+    b.apply_update(_t(8), "bid", 9.7, 0, action="UNKNOWN")
+    assert (9.7, 5.0) not in b.bids()
+
+
+def test_machinery_snapshot_drops_non_finite_rows_and_sums_duplicates():
+    b = EvolvingBook(tick=0.1)
+    nan, inf = float("nan"), float("inf")
+    b.apply_snapshot(_t(0), [(nan, 100), (10.0, 60), (10.0, 40), (9.9, nan), (9.8, inf), (9.7, -5), (9.6, 0)],
+                     [(None, 5), (10.1, 50)])
+    assert b.bids() == [(10.0, 100.0)] and b.asks() == [(10.1, 50.0)]
+    assert b.geometry()["bid"]["hollow"] == 0
+
+
+def test_machinery_order_count_not_carried_forward_across_qty_change():
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100, 3)], [(10.1, 50, 2)])
+    assert b.geometry()["bid_orders"] == [3]
+    # a later image with a new size and no order count: the count of the old size is not observed any more
+    b.apply_snapshot(_t(1), [(10.0, 500)], [(10.1, 50)])
+    assert b.geometry()["bid_orders"] == [None] and b.geometry()["ask_orders"] == [2]   # ask unchanged → kept
+    b.apply_update(_t(2), "ask", 10.1, 80)                       # incremental change w/o count → None
+    assert b.geometry()["ask_orders"] == [None]
+    b.apply_update(_t(3), "ask", 10.1, 90, order_count=6)
+    assert b.geometry()["ask_orders"] == [6]
+    # an order-count-only change is a change of the displayed book: unchanged_run resets
+    b.apply_snapshot(_t(4), [(10.0, 500)], [(10.1, 90, 6)])
+    assert b.unchanged_run == 1
+    b.apply_update(_t(5), "ask", 10.1, None, order_count=7, action="CHANGE")
+    assert b.unchanged_run == 0 and b.last_events == [] and b.added["ask"] == 0.0
+
+
+def test_machinery_wall_distance_migration_measured_against_touch_then():
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100), (9.7, 300)], [(10.1, 10)])
+    # the wall stays at 9.7 but the touch walks up two ticks: price migration 0, distance migration +2
+    b.apply_snapshot(_t(70), [(10.2, 100), (9.7, 300)], [(10.3, 10)])
+    w = b.geometry()["bid"]["wall"]
+    assert w["price"] == 9.7 and w["migrated_ticks"] == 0.0 and w["migrated_dist_ticks"] == 2.0
+    # the wall moves down one tick while the touch stays: both −1 in price, +1 in distance
+    b.apply_snapshot(_t(140), [(10.2, 100), (9.6, 300)], [(10.3, 10)])
+    w = b.geometry()["bid"]["wall"]
+    assert w["migrated_ticks"] == -1.0 and w["migrated_dist_ticks"] == 1.0
+    # ask side: wall at 10.5 while the ask touch steps down one tick → distance +1, price 0
+    a = EvolvingBook(tick=0.1)
+    a.apply_snapshot(_t(0), [(10.0, 10)], [(10.2, 50), (10.5, 900)])
+    a.apply_snapshot(_t(61), [(10.0, 10)], [(10.1, 50), (10.5, 900)])
+    w = a.geometry()["ask"]["wall"]
+    assert w["migrated_ticks"] == 0.0 and w["migrated_dist_ticks"] == 1.0
+
+
+def test_machinery_long_window_trackers_retain_lookback():
+    # a window longer than the default 600 s tracker retention must still find its W-old points
+    W = 1200.0
+    b = EvolvingBook(tick=0.1, window_s=W)
+    b.apply_snapshot(_t(0), [(10.0, 100), (9.7, 300)], [(10.1, 10)])
+    for i in range(1, 40):                                   # 39 observations spread over 1170 s
+        b.apply_snapshot(_t(30 * i), [(10.0, 100), (9.7, 300)], [(10.1, 10)])
+    b.apply_snapshot(_t(1230), [(10.0, 100), (9.5, 300)], [(10.1, 10)])
+    g = b.geometry()
+    assert g["bid"]["wall"]["migrated_ticks"] == -2.0 and g["bid"]["wall"]["migrated_dist_ticks"] == 2.0
+    assert abs(g["bid"]["migration"] - (5 * 300 / 400 - 3 * 300 / 400)) < 1e-9
+    assert b.acceleration is not None
+
+
+def test_machinery_acceleration_uses_actual_elapsed_time():
+    b = EvolvingBook(tick=0.1)
+    b.apply_snapshot(_t(0), [(10.0, 100)], [(10.1, 100)])
+    b.apply_snapshot(_t(10), [(10.0, 160)], [(10.1, 100)])        # v = 60/10 = 6
+    assert b.velocity == 6.0 and b.acceleration is None
+    # a sparse feed: the next observation is 190 s later; the reference velocity is the one at t=10
+    b.apply_snapshot(_t(200), [(10.0, 190)], [(10.1, 100)])       # v = 30/60 = 0.5
+    assert b.velocity == 0.5
+    assert abs(b.acceleration - (0.5 - 6.0) / 190) < 1e-12        # Δv over the true 190 s, not a nominal 60 s
+
+
+def test_machinery_first_observation_via_update_and_duplicate_timestamps():
+    b = EvolvingBook(tick=0.1)
+    # first observation arrives as an incremental update: no predecessor → nothing diffed
+    ev = b.apply_update(_t(0), "bid", 10.0, 100, action="NEW")
+    assert ev == [] and b.ofi is None and b.added == {"bid": None, "ask": None} and b.velocity is None
+    assert b.geometry()["one_sided"] and b.geometry()["imb_l1"] == 1.0
+    # same-timestamp second observation: a diff exists but no time has elapsed → velocity unobservable
+    ev = b.apply_update(_t(0), "ask", 10.2, 50, action="NEW")
+    assert [e["kind"] for e in ev] == ["ADD"] and b.added["ask"] == 50 and b.ofi is None
+    assert b.velocity is None and b.acceleration is None
+    b.apply_update(_t(0), "bid", 10.0, 80)
+    assert b.ofi == 80 - 100 and b.removed["bid"] == 20 and b.velocity is None
+    # time advances: all three same-instant |Δqty| (50 + 20) count in the window
+    b.apply_update(_t(5), "bid", 10.0, 80)
+    assert b.last_events == [] and b.unchanged_run == 1
+    assert b.velocity == 70 / 5
+    # a deep negative delta is REDUCE with a negative dq, not an ADD of |dq|
+    b.apply_update(_t(6), "ask", 10.2, 5)
+    e = b.last_events[0]
+    assert e["kind"] == "REDUCE" and e["dq"] == -45.0 and b.removed["ask"] == 45.0 and b.added["ask"] == 0.0
+    assert b.ofi == -5 + 50                                     # Pa same: −qa_n + qa_{n−1}
+
+
+def test_machinery_fill_state_is_deterministic_and_causal():
+    def build(reverse):
+        b = EvolvingBook(tick=0.1)
+        bids = [(10.0, 100), (9.9, 100), (9.7, 300), (9.6, 20)]
+        asks = [(10.1, 300), (10.2, 100), (10.4, 100)]
+        frames = [(bids, asks), (bids[:3] + [(9.6, 25)], asks), (bids[:3] + [(9.6, 25)], asks[1:])]
+        for s, (bb, aa) in zip((0, 30, 61), frames):
+            if reverse:                                          # feed order must not matter
+                bb, aa = list(reversed(bb)), list(reversed(aa))
+            b.apply_snapshot(_t(s), bb, aa)
+        ms = MarketState(symbol="X", t=_t(61))
+        b.fill_state(ms)
+        # ask wall: 10.1@300 at t=0; at t=61 a 100/100 tie between 10.2 and 10.4 → nearest the touch (10.2)
+        assert ms.wall_ask["price"] == 10.2 and ms.wall_ask["migrated_ticks"] == 1.0     # 10.1 → 10.2 over 61 s
+        assert ms.wall_ask["migrated_dist_ticks"] == 0.0                                # at the touch both times
+        # bid unchanged (+100 −100), ask touch rose 10.1 → 10.2: +qa_prev = +300
+        assert ms.depth_added_bid == 0.0 and ms.depth_removed_ask == 300.0 and ms.ofi == 300
+        return ms.state_hash()
+    assert build(False) == build(True)
+
+
 # ---------------------------------------------------------------- real data
 def test_realdata_fixture_depth_snapshots():
     tables = replay(FIXTURE)

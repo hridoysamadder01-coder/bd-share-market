@@ -197,7 +197,7 @@ class Engine:
                                          source=ev.source, book=b)
             else:
                 b.apply_update(ev.t_recv, ev.side, ev.price, ev.qty, order_count=ev.order_count,
-                               action=(ev.payload or {}).get("action"))
+                               action=(ev.payload or {}).get("action"), level=ev.level)
             touched_book = True
         elif et == EventType.TRADE:
             primary = self.fuser.primary_book_source(ev.symbol, ev.t_recv)

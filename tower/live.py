@@ -27,9 +27,15 @@ from .store import StateStore
 
 
 class Tailer:
-    def __init__(self, capture: str) -> None:
+    def __init__(self, capture: str, from_end: bool = False) -> None:
         self.capture = capture
         self.offsets: Dict[str, int] = {}
+        if from_end:                                       # tail-only: skip everything already on disk
+            for path in glob.glob(os.path.join(self.capture, "segments", "*.jsonl")):
+                try:
+                    self.offsets[path] = os.path.getsize(path)
+                except OSError:
+                    continue
 
     def poll(self) -> List[dict]:
         """Return newly completed raw records (as dicts) across all segments, in file order."""
@@ -61,19 +67,33 @@ class Tailer:
 
 
 def run(capture: str, out: str, poll_s: float = 2.0, reorder_s: float = 3.0, symbols: Optional[List[str]] = None,
-        once: bool = False, max_seconds: Optional[float] = None) -> Dict[str, int]:
+        once: bool = False, max_seconds: Optional[float] = None, tail_only: bool = False) -> Dict[str, int]:
+    """Tail ``capture`` into ``out``.
+
+    The first poll is a *catch-up*: everything already on disk is processed (the day's
+    state — cumulative tape, circuit references, day history — needs it), then the loop
+    polls for new lines. ``max_seconds`` is a hard wall-clock deadline that is honoured
+    inside the catch-up as well: whatever is left unprocessed is reported as
+    ``unprocessed_backlog`` in RUN.json rather than silently drained past the deadline.
+    ``tail_only`` starts from the current end of every segment instead (no catch-up).
+    """
     engine = Engine(EngineConfig(live=True))
     store = StateStore(out)
     # the same causal Normalizer replay uses; events accumulate in norm.events and are drained incrementally
     norm = Normalizer(symbols=[s.upper() for s in symbols] if symbols else None)
     drained = 0
-    tailer = Tailer(capture)
+    tailer = Tailer(capture, from_end=tail_only)
     pending: List[Event] = []
     t0 = time.time()
+    deadline = (t0 + max_seconds) if max_seconds is not None else None
     n_rec = n_ev = n_state = 0
+    catchup_records = None
+    timed_out = False
     while True:
         recs = tailer.poll()
         n_rec += len(recs)
+        if catchup_records is None:
+            catchup_records = len(recs)
         # feed in receipt order across sources (as normalize_store does for a whole store)
         recs.sort(key=lambda r: (str(r.get("t_recv_utc", "")), str(r.get("source")), int(r.get("seq", 0))))
         for rec in recs:
@@ -87,7 +107,11 @@ def run(capture: str, out: str, poll_s: float = 2.0, reorder_s: float = 3.0, sym
             release = [e for e in pending if (newest - e.t_recv).total_seconds() >= reorder_s] if not once else pending
             pending = pending[len(release):]
             engine.metrics["backlog"] = len(pending)
-            for ev in release:
+            for i, ev in enumerate(release):
+                if deadline is not None and time.time() >= deadline:
+                    pending = release[i:] + pending          # keep order; reported below, not drained
+                    timed_out = True
+                    break
                 n_ev += 1
                 ms = engine.process(ev)
                 if ms is not None:
@@ -95,20 +119,27 @@ def run(capture: str, out: str, poll_s: float = 2.0, reorder_s: float = 3.0, sym
                     n_state += 1
             store.flush()
             store.write_metrics(engine.metrics_snapshot())
-        if once or (max_seconds is not None and time.time() - t0 >= max_seconds):
+        if once or timed_out or (deadline is not None and time.time() >= deadline):
             break
         time.sleep(poll_s)
-    # drain on exit
-    for ev in pending:
-        ms = engine.process(ev)
-        if ms is not None:
-            store.append(ms)
-            n_state += 1
+    # drain on a clean stop (``--once``); a deadline stop leaves the backlog reported, not processed
+    if not timed_out:
+        for ev in pending:
+            n_ev += 1
+            ms = engine.process(ev)
+            if ms is not None:
+                store.append(ms)
+                n_state += 1
+        pending = []
+    engine.metrics["backlog"] = len(pending)
     store.write_metrics(engine.metrics_snapshot())
     store.write_run({"capture": os.path.abspath(capture), "mode": "live", "records": n_rec, "events": n_ev,
+                     "states": n_state, "catchup_records": catchup_records or 0, "tail_only": tail_only,
+                     "deadline_hit": timed_out, "unprocessed_backlog": len(pending),
+                     "elapsed_s": round(time.time() - t0, 3),
                      "engine_metrics": engine.metrics_snapshot(), "qa": norm.stats.to_dict()})
     store.close()
-    return {"records": n_rec, "events": n_ev, "states": n_state}
+    return {"records": n_rec, "events": n_ev, "states": n_state, "unprocessed_backlog": len(pending)}
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -119,10 +150,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--reorder", type=float, default=3.0)
     ap.add_argument("--symbols", default="")
     ap.add_argument("--once", action="store_true", help="process what exists now and exit")
-    ap.add_argument("--max-seconds", type=float, default=None)
+    ap.add_argument("--max-seconds", type=float, default=None, help="hard wall-clock deadline (also inside catch-up)")
+    ap.add_argument("--tail-only", action="store_true",
+                    help="start from the current end of every segment (no catch-up of the day's earlier records)")
     a = ap.parse_args(argv)
     syms = [s for s in a.symbols.split(",") if s.strip()] or None
-    r = run(a.capture, a.out, a.poll, a.reorder, syms, once=a.once, max_seconds=a.max_seconds)
+    r = run(a.capture, a.out, a.poll, a.reorder, syms, once=a.once, max_seconds=a.max_seconds, tail_only=a.tail_only)
     print(json.dumps(r))
     return 0
 

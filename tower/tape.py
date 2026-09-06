@@ -13,12 +13,17 @@ Two kinds of tape source exist for DSE symbols:
       interval_vwap = d_value / d_volume.
 
   The first row of a symbol's day has no predecessor: its "interval" is the
-  cumulative value itself (``first_row`` flag; it carries no rate information
-  and is excluded from the rolling windows).  A negative Δ is a source-side
-  reset / correction: the row is **kept** with ``monotone_break=True`` and
-  excluded from the windows (never repaired).  A row whose totals did not
-  change advances the tape clock (the source affirms "no trade through this
-  stamp") but produces no interval.
+  cumulative value itself (``first_row`` flag; it carries no rate information,
+  no direction, and is excluded from the rolling windows).  A negative Δ is a
+  source-side reset / correction: the row is **kept** with
+  ``monotone_break=True`` and excluded from the windows (never repaired).  A
+  row whose totals did not change advances the tape clock (the source affirms
+  "no trade through this stamp") but produces no interval — the next interval
+  starts at that stamp.  A quantity the source does not carry (trade count,
+  volume, value) is None on the row and makes every window built on it None
+  (``unsized_rows`` counts them); it is never a silent zero.  When the value is
+  not carried the row's last price stands in for the interval VWAP in the
+  direction rule, at low confidence.
 
 Feeds are kept separately and the state is filled from the best available one
 (prints > exchange-stamped cumulative > snapshot day totals, ties broken by
@@ -138,7 +143,10 @@ def classify_direction(price: Optional[float], bid: Optional[float], ask: Option
     if bid is not None and price <= bid + _EPS:
         return -1.0, "quote rule: at/below bid", "medium"
     if bid is not None and ask is not None and ask > bid:
-        return 2.0 * (price - bid) / (ask - bid) - 1.0, "quote rule: inside spread", "medium"
+        d = 2.0 * (price - bid) / (ask - bid) - 1.0
+        if abs(d) < _EPS:
+            d = 0.0                                   # exactly mid: no float residue
+        return d, "quote rule: inside spread", "medium"
     return None, "quote rule: one-sided book, price away from the displayed side", "none"
 
 
@@ -173,8 +181,8 @@ class _QuoteTrack:
 class _Row:
     t: datetime                      # tape clock (exchange stamp when carried)
     t_recv: datetime
-    n: float                         # trades in the interval / 1 for a print
-    vol: float
+    n: Optional[float]               # trades in the interval / 1 for a print; None when the source did not carry it
+    vol: Optional[float]             # traded quantity; None when not carried (never a silent zero)
     val: Optional[float]             # traded value (price units, not millions)
     vwap: Optional[float]
     price: Optional[float]           # last traded price of the row
@@ -205,9 +213,11 @@ class _Feed:
     n_rows: int = 0
     repeat_rows: int = 0
     monotone_breaks: int = 0
+    unsized_rows: int = 0                           # rows whose trades or quantity the source did not carry
     intensity: Optional[float] = None
     intensity_series: RollingSeries = field(default_factory=lambda: RollingSeries(window_s=KEEP_S, min_keep=0))
     abs_flow_series: RollingSeries = field(default_factory=lambda: RollingSeries(window_s=BASELINE_W_S, min_keep=0))
+    last_print: Optional[Dict[str, Any]] = None
 
     @property
     def rank(self) -> Tuple[int, int, str]:
@@ -226,11 +236,16 @@ class _Feed:
         self.n_rows += 1
         if row.monotone_break:
             self.monotone_breaks += 1
+        if row.n is None or row.vol is None:
+            self.unsized_rows += 1
         self.advance(row.t)
         self._update_intensity()
 
     def _update_intensity(self) -> None:
-        """Σ trades in (max(now−W, t_first), now] over min(W, now − t_first) minutes."""
+        """Σ trades in (max(now−W, t_first), now] over min(W, now − t_first) minutes.
+
+        None while the feed has a single instant, or while a row inside the window
+        does not carry its trade count (an unknown term makes the sum unknown)."""
         if self.now is None or self.t_first is None:
             self.intensity = None
             return
@@ -240,7 +255,11 @@ class _Feed:
             self.intensity = None
             return
         lo = self.now - timedelta(seconds=span)
-        n = sum(r.n for r in self.rows if r.in_windows and lo < r.t <= self.now)
+        rows = [r for r in self.rows if r.in_windows and lo < r.t <= self.now]
+        if any(r.n is None for r in rows):
+            self.intensity = None
+            return
+        n = sum(r.n for r in rows)
         self.intensity = n / (span / 60.0)
         self.intensity_series.push(self.now, self.intensity)
 
@@ -257,19 +276,37 @@ class _Feed:
         return [r for r in self.rows if r.in_windows and lo < r.t <= self.now]
 
     def signed_flow(self, seconds: float) -> Optional[float]:
-        rows = [r for r in self.window_rows(seconds) if r.direction is not None and r.vol > 0]
+        """Σ direction × volume over the classified, sized rows of the window (None when there are none)."""
+        rows = [r for r in self.window_rows(seconds) if r.direction is not None and r.vol is not None and r.vol > 0]
         return float(sum(r.direction * r.vol for r in rows)) if rows else None
 
     def volume(self, seconds: float) -> Optional[float]:
+        """Σ volume over the window; None when empty or when a row's quantity was not carried."""
         rows = self.window_rows(seconds)
-        return float(sum(r.vol for r in rows)) if rows else None
+        if not rows or any(r.vol is None for r in rows):
+            return None
+        return float(sum(r.vol for r in rows))
 
     def classified_share(self, seconds: float) -> Optional[float]:
-        rows = self.window_rows(seconds)
+        rows = [r for r in self.window_rows(seconds) if r.vol is not None]
         tot = sum(r.vol for r in rows)
         if tot <= 0:
             return None
         return sum(r.vol for r in rows if r.direction is not None) / tot
+
+    def abs_flow_baseline(self) -> Optional[float]:
+        """Trailing mean of |signed flow| over 30 min, excluding the latest point; None below 5 points."""
+        pts = self.abs_flow_series.points(BASELINE_W_S)
+        base = [p.v for p in pts[:-1]]
+        if len(base) < BASELINE_MIN_POINTS:
+            return None
+        return sum(base) / len(base)
+
+    def record_flow(self, t: datetime) -> None:
+        """Baseline sample of |signed flow|: only when a signed flow exists (never a silent zero)."""
+        sf = self.signed_flow(FLOW_W_S)
+        if sf is not None:
+            self.abs_flow_series.push(t, abs(sf))
 
     def last_row(self) -> Optional[_Row]:
         return self.rows[-1] if self.rows else None
@@ -286,7 +323,12 @@ class TapeState:
         self._quotes = _QuoteTrack()
         self._mid = RollingSeries(window_s=KEEP_S, min_keep=0)
         self._vel = RollingSeries(window_s=KEEP_S, min_keep=0)
-        self.last_print: Optional[Dict[str, Any]] = None
+
+    @property
+    def last_print(self) -> Optional[Dict[str, Any]]:
+        """Last print of the preferred feed (a real print, or one inferred from a one-trade Δ)."""
+        feed = self.preferred_feed()
+        return feed.last_print if feed is not None else None
 
     # ------------------------------------------------------------ feeds / quotes
     def _feed(self, kind: str, source: str) -> _Feed:
@@ -331,22 +373,23 @@ class TapeState:
         q, _ = self._quote_for(None, t_row, book)
         bid, ask, bq, aq = q if q is not None else (None, None, None, None)
         d, rule, conf = classify_direction(price, bid, ask, bq, aq, aggressor)
-        vol = float(qty) if qty is not None else 0.0
-        val = (float(price) * vol) if (price is not None and qty is not None) else None
-        prev = feed.last_row()
+        vol = float(qty) if qty is not None else None          # size not carried → None, never 0
+        val = (float(price) * vol) if (price is not None and vol is not None) else None
+        t_prev = feed.now                                       # tape clock before this print
         row = _Row(t=t_row, t_recv=t, n=1.0, vol=vol, val=val, vwap=(float(price) if price is not None else None),
                    price=(float(price) if price is not None else None), direction=d, dir_rule=rule, dir_conf=conf,
-                   dt_s=((t_row - prev.t).total_seconds() if prev else None), trade_id=trade_id)
+                   dt_s=((t_row - t_prev).total_seconds() if t_prev is not None else None), trade_id=trade_id)
         feed.add(row)
         feed.last_recv = t
         feed.cum_trades = (feed.cum_trades or 0.0) + 1.0
-        feed.cum_volume = (feed.cum_volume or 0.0) + vol
+        if vol is not None:
+            feed.cum_volume = (feed.cum_volume or 0.0) + vol
         if val is not None:
             feed.cum_value = (feed.cum_value or 0.0) + val
-        feed.abs_flow_series.push(row.t, abs(feed.signed_flow(FLOW_W_S) or 0.0))
-        self.last_print = {"t": t_row.isoformat(), "price": row.price, "qty": vol, "trade_id": trade_id,
+        feed.record_flow(row.t)
+        feed.last_print = {"t": t_row.isoformat(), "price": row.price, "qty": vol, "trade_id": trade_id,
                            "aggressor": aggressor, "direction": d, "direction_rule": rule, "inferred_from_delta": False}
-        return self.last_print
+        return feed.last_print
 
     # ------------------------------------------------------------ cumulative
     def on_cum_totals(self, t_exch: datetime, t_recv: datetime, cum_trades: Optional[float],
@@ -372,8 +415,9 @@ class TapeState:
             d_n = None if (ct is None or feed.cum_trades is None) else ct - feed.cum_trades
             d_v = None if (cv is None or feed.cum_volume is None) else cv - feed.cum_volume
             d_val = None if (cval is None or feed.cum_value is None) else cval - feed.cum_value
-        prev = feed.last_row()
-        t_prev = prev.t if prev else feed.now
+        # the interval starts at the tape clock — the last stamp of this feed, a repeat row included
+        # (a repeat affirms "no trade through this stamp", so it bounds the interval)
+        t_prev = feed.now
         # remember the totals (also when nothing changed) and the receipt time
         if ct is not None:
             feed.cum_trades = ct
@@ -389,22 +433,38 @@ class TapeState:
             return None
         mono = any(x is not None and x < 0 for x in (d_n, d_v, d_val))
         vwap = (d_val / d_v) if (d_val is not None and d_v is not None and d_v > 0) else None
+        traded = d_v is not None and d_v > 0
         q, moved = self._quote_for(t_prev if not first else None, t_exch, book)
         bid, ask, bq, aq = q if q is not None else (None, None, None, None)
         d, rule, conf = (None, "no traded volume in interval", "none")
-        if vwap is not None and not mono:
+        if first:
+            # the cumulative row has no interval: nothing to set against a pre-interval quote
+            d, rule, conf = None, "first row of the day: no interval to classify", "none"
+        elif mono:
+            d, rule, conf = None, "monotone break: interval not classified", "none"
+        elif vwap is not None:
             d, rule, conf = classify_direction(vwap, bid, ask, bq, aq, None)
             if moved and conf == "medium":
                 conf, rule = "low", rule + " (touch moved inside interval)"
-        row = _Row(t=t_exch, t_recv=t_recv, n=float(d_n or 0.0), vol=float(d_v or 0.0), val=d_val, vwap=vwap,
+        elif traded and price is not None:
+            # value not carried: the row's last price stands in for the VWAP (weaker evidence)
+            d, rule, conf = classify_direction(float(price), bid, ask, bq, aq, None)
+            if d is not None:
+                conf, rule = "low", rule + " (last price, value not carried)"
+        elif traded:
+            d, rule, conf = None, "no traded price / value in interval", "none"
+        elif d_v is None:
+            d, rule, conf = None, "volume not carried", "none"
+        row = _Row(t=t_exch, t_recv=t_recv, n=d_n, vol=d_v, val=d_val, vwap=vwap,
                    price=(float(price) if price is not None else None), direction=d, dir_rule=rule, dir_conf=conf,
                    first_row=first, monotone_break=mono,
                    dt_s=((t_exch - t_prev).total_seconds() if t_prev is not None else None))
         feed.add(row)
-        feed.abs_flow_series.push(row.t, abs(feed.signed_flow(FLOW_W_S) or 0.0))
-        if not first and not mono and row.n == 1.0 and row.vol > 0 and vwap is not None:
+        feed.record_flow(row.t)
+        px = vwap if vwap is not None else (float(price) if (price is not None and traded) else None)
+        if not first and not mono and row.n == 1.0 and traded and px is not None:
             # a one-trade interval is one print: its size and price are known exactly (INFERRED from Δ)
-            self.last_print = {"t": t_exch.isoformat(), "price": vwap, "qty": row.vol, "trade_id": None,
+            feed.last_print = {"t": t_exch.isoformat(), "price": px, "qty": row.vol, "trade_id": None,
                                "aggressor": None, "direction": d, "direction_rule": rule, "inferred_from_delta": True}
         return {"interval_trades": row.n, "interval_volume": row.vol, "interval_vwap": vwap, "direction": d,
                 "first_row": first, "monotone_break": mono}
@@ -464,13 +524,11 @@ class TapeState:
     def failed_response(self, feed: Optional[_Feed], sfw: Optional[float], por: Optional[float]) -> Optional[bool]:
         if feed is None or sfw is None or por is None:
             return None
-        pts = feed.abs_flow_series.points(BASELINE_W_S)
-        base = [p.v for p in pts[:-1]]
-        if len(base) < BASELINE_MIN_POINTS:
-            return None
-        mean = sum(base) / len(base)
-        vol = feed.volume(FLOW_W_S) or 0.0
-        large = abs(sfw) >= FAILED_FLOW_RATIO * mean and vol > 0 and abs(sfw) >= FAILED_ONE_SIDED_SHARE * vol
+        mean = feed.abs_flow_baseline()
+        vol = feed.volume(FLOW_W_S)
+        if mean is None or mean <= _EPS or vol is None or vol <= 0:
+            return None                      # degenerate baseline / unsized window: unknown, never "normal"
+        large = abs(sfw) >= FAILED_FLOW_RATIO * mean and abs(sfw) >= FAILED_ONE_SIDED_SHARE * vol
         return bool(large and abs(por) <= FAILED_PRICE_TICKS)
 
     # ------------------------------------------------------------------- state
@@ -504,7 +562,7 @@ class TapeState:
         ms.trade_acceleration = feed.acceleration()
         ms.signed_flow_window = feed.signed_flow(FLOW_W_S)
         ms.volume_only_response = feed.volume(RESPONSE_W_S)
-        ms.last_print = self.last_print
+        ms.last_print = feed.last_print
         ms.tape_source = feed.source
         ms.tape_age_s = ((ms.t - feed.last_recv).total_seconds() if feed.last_recv is not None else None)
         ms.price_impact = self.price_impact(feed)
@@ -514,7 +572,13 @@ class TapeState:
         ms.session_state["tape"] = {
             "feed": feed.source, "kind": feed.kind, "feeds": sorted(f"{k}:{s}" for k, s in self._feeds),
             "tape_clock": feed.now.isoformat() if feed.now else None,
+            # receipt clock − tape clock: how far behind the exchange stamps the frame runs (days in a
+            # closed-market replay of an old tape, seconds live); 0 for receipt-stamped prints
+            "exchange_lag_s": ((feed.last_recv - feed.now).total_seconds()
+                               if (feed.last_recv is not None and feed.now is not None) else None),
+            "totals_are_day_totals": feed.kind != "prints",     # prints count from the first print seen
             "rows": feed.n_rows, "repeat_rows": feed.repeat_rows, "monotone_breaks": feed.monotone_breaks,
+            "unsized_rows": feed.unsized_rows,
             "last_first_row": bool(row.first_row) if row else None,
             "last_monotone_break": bool(row.monotone_break) if row else None,
             "last_dt_s": row.dt_s if row else None,
@@ -523,6 +587,5 @@ class TapeState:
             "direction_confidence": row.dir_conf if row else None,
             "classified_flow_share_300s": feed.classified_share(FLOW_W_S),
             "volume_300s": feed.volume(FLOW_W_S),
-            "abs_flow_baseline": (lambda pts: (sum(p.v for p in pts[:-1]) / (len(pts) - 1)) if len(pts) > 1 else None)(
-                feed.abs_flow_series.points(BASELINE_W_S)),
+            "abs_flow_baseline": feed.abs_flow_baseline(),
         }

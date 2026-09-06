@@ -166,7 +166,6 @@ class QueueState:
         self.volume_arrivals = 0
         self.volume_budgeted = 0.0
         self._last_iv_key: Any = None
-        self._last_tape_age: Optional[float] = None
         self.touch_depth: RollingSeries = RollingSeries(window_s=KEEP_S, min_keep=0)
         self.vacuum_since: Optional[datetime] = None
         self._low_since: Optional[datetime] = None
@@ -182,9 +181,10 @@ class QueueState:
         self.volume_arrivals += 1
         self.volume_budgeted += float(iv)
         remaining = float(iv)
-        # oldest pending drops first, bounded by the volume
-        pend = sorted([(d["t"], sd, d) for sd in ("bid", "ask") for d in self.sides[sd].pending], key=lambda x: x[0])
-        for _, sd, d in pend:
+        # oldest pending drops first (ties: bid before ask, then arrival order), bounded by the volume
+        pend = sorted([(d["t"], rank, i, sd, d) for rank, sd in enumerate(("bid", "ask"))
+                       for i, d in enumerate(self.sides[sd].pending)], key=lambda x: (x[0], x[1], x[2]))
+        for _, _, _, sd, d in pend:
             if remaining <= 0:
                 break
             take = min(remaining, d["remaining"])
@@ -264,21 +264,33 @@ class QueueState:
             side.episode = None
 
     # ------------------------------------------------------------------- update
-    def on_book(self, t: Any, book: Any, interval_volume: Optional[float] = None) -> Dict[str, Any]:
-        """Apply one book observation (see module docstring). Returns the per-side change summary."""
-        iv_key: Any = None
+    def on_book(self, t: Any, book: Any, interval_volume: Optional[float] = None,
+                interval_key: Any = None) -> Dict[str, Any]:
+        """Apply one book observation (see module docstring). Returns the per-side change summary.
+
+        The tape interval is identified by ``interval_key`` (e.g. the tape row number): the same
+        interval is presented on every frame between two tape rows and must be budgeted once.
+        With a ``MarketState`` the key is taken from its ``session_state["tape"]`` (feed + row
+        number, written by ``TapeState.fill_state``), and a first-of-day cumulative row is not
+        budgeted (it is a day total, not an interval).  Without either, consecutive intervals
+        of identical volume collapse into one — the caller should pass a key.
+        """
+        iv_key: Any = interval_key
         if isinstance(t, MarketState):
             ms = t
             t = ms.t
             if book is None:
                 book = ms                                      # the state's displayed levels are the book
             interval_volume = ms.interval_volume if interval_volume is None else interval_volume
-            age = ms.tape_age_s
-            reset = age is not None and self._last_tape_age is not None and age < self._last_tape_age
-            self._last_tape_age = age
-            iv_key = (ms.interval_volume, ms.interval_trades, ms.interval_vwap, self.volume_arrivals + 1 if reset else 0)
-        else:
-            iv_key = interval_volume
+            tp = ms.session_state.get("tape") if isinstance(ms.session_state, dict) else None
+            if iv_key is None and isinstance(tp, dict) and tp.get("rows") is not None:
+                iv_key = ("row", tp.get("feed"), tp.get("kind"), tp.get("rows"))
+                if tp.get("last_first_row"):
+                    interval_volume = None                     # cumulative day total, not an interval
+            elif iv_key is None:
+                iv_key = ("iv", ms.interval_volume, ms.interval_trades, ms.interval_vwap)
+        elif iv_key is None:
+            iv_key = ("iv", interval_volume)
         if self.t_first is None:
             self.t_first = t
         self.t = t if self.t is None else max(self.t, t)
@@ -330,7 +342,7 @@ class QueueState:
                         side.retreats += 1
                         self._drop(t, sd, p0, q0)
                         dropped = True
-            if old and (p0, q0) != (p1, q1):
+            if side.touch and (p0, q0) != (p1, q1):            # any change of the best after a prior observation
                 side.changes.append(t)
             self._episode_update(t, sd, p0, q0, p1, q1, dropped)
             # per-level diff for added / removed

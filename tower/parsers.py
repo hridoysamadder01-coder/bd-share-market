@@ -62,6 +62,7 @@ from seeing.clock import DHAKA, session_phase
 from .events import Event, EventType, utc
 
 PRICE_SCALE = 10000
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 _HDR = struct.Struct(">H")
 _FMT: Dict[str, struct.Struct] = {
     "A": struct.Struct(">cQQcI8sI"),
@@ -278,19 +279,26 @@ def itch_to_events(frames: Sequence[Dict[str, Any]], source: str = "itch", t_rec
     out: List[Event] = []
     seq = 0
 
+    last_te: Optional[datetime] = None
+
     def stamp(ns: Optional[int]) -> Optional[datetime]:
+        # integer arithmetic: ns/1e9 as a float loses the microsecond at epoch scale
         if ns is None:
             return None
         if base is not None:
-            return base + timedelta(microseconds=ns / 1000.0)
-        return datetime.fromtimestamp(ns / 1e9, tz=timezone.utc)
+            return base + timedelta(microseconds=int(ns) // 1000)
+        return _EPOCH + timedelta(microseconds=int(ns) // 1000)
 
     def mk(et: EventType, tr: datetime, te: Optional[datetime], observed_recv: bool, **kw: Any) -> Event:
-        nonlocal seq
+        nonlocal seq, last_te
         ev = Event(source=source, event_type=et, t_recv=tr, seq_local=seq, venue=venue, t_exch=te,
                    session_phase=session_phase(tr), **kw)
         if observed_recv and te is not None:
             ev.freshness_s = (tr - te).total_seconds()
+        if te is not None:
+            if last_te is not None and te < last_te:
+                ev.flags["out_of_order"] = True        # the feed's own clock went backwards
+            last_te = te
         seq += 1
         return ev
 
@@ -401,6 +409,7 @@ def fix_to_events(messages: Sequence[Union[str, bytes]], source: str = "fix_md",
     out: List[Event] = []
     seq = 0
     prev_feed: Optional[int] = None
+    prev_te: Optional[datetime] = None
     for i, raw in enumerate(messages):
         s = raw.decode("latin-1") if isinstance(raw, bytes) else raw
         msg = fix_md.parse_fix(s)
@@ -415,6 +424,10 @@ def fix_to_events(messages: Sequence[Union[str, bytes]], source: str = "fix_md",
             flags["gap"] = True
         if seq_feed is not None:
             prev_feed = seq_feed
+        if te is not None:
+            if prev_te is not None and te < prev_te:
+                flags["out_of_order"] = True           # SendingTime went backwards
+            prev_te = te
         phase = session_phase(tr)
 
         def mk(et: EventType, **kw: Any) -> Event:
@@ -464,10 +477,13 @@ def fix_to_events(messages: Sequence[Union[str, bytes]], source: str = "fix_md",
                     side_levels = lv["bid_levels"] if e["side"] == "bid" else lv["ask_levels"]
                     prices = [p for p, _ in side_levels]
                     rank = prices.index(e["price"]) + 1 if e["price"] in prices else None
-                    qty = 0.0 if e["kind"] == "DELETE" else float(e["qty"] or 0.0)
+                    # DELETE means the level is gone (qty 0 by definition); a NEW/CHANGE without
+                    # MDEntrySize did not deliver a quantity — None, never a silent 0
+                    qty = 0.0 if e["kind"] == "DELETE" else (float(e["qty"]) if e.get("qty") is not None else None)
                     out.append(mk(EventType.BOOK_UPDATE, symbol=e["symbol"], side=e["side"], price=e["price"], qty=qty,
                                   order_count=e.get("orders"), level=rank,
-                                  payload={"action": e["kind"], "orders": e.get("orders")},
+                                  payload={"action": e["kind"], "orders": e.get("orders"),
+                                           "size_missing": e["kind"] != "DELETE" and e.get("qty") is None},
                                   observed_fields=("t_source", "level_quantity_delta") +
                                   ((("bid_orders_per_level",) if e["side"] == "bid" else ("ask_orders_per_level",))
                                    if e.get("orders") is not None else ())))

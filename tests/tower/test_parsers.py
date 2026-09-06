@@ -109,6 +109,17 @@ def test_machinery_itch_unknown_refs_over_execution_and_same_price_replace():
     assert (bu[3].qty, bu[3].order_count, bu[3].payload["action"], bu[3].payload["delta_qty"]) == (15.0, 1, "CHANGE", 5)
 
 
+def test_machinery_itch_stamp_precision_and_backwards_clock():
+    msgs = [{"type": "A", "t_ns": T_NS + 1_000, "order_ref": 1, "side": "B", "shares": 1, "stock": "GP", "price": 1.0},
+            {"type": "A", "t_ns": T_NS + 999, "order_ref": 2, "side": "B", "shares": 1, "stock": "GP", "price": 1.0},
+            {"type": "A", "t_ns": T_NS + 2_000, "order_ref": 3, "side": "B", "shares": 1, "stock": "GP", "price": 1.0}]
+    ev = itch_to_events(itch_frames(itch_encode(msgs)), t_recv=T0)
+    # microsecond-exact at epoch scale (a float ns/1e9 would round this); sub-µs truncates
+    assert [e.t_exch - T0 for e in ev] == [timedelta(microseconds=1), timedelta(0), timedelta(microseconds=2)]
+    assert [bool(e.flags.get("out_of_order")) for e in ev] == [False, True, False]     # 999 ns < 1000 ns
+    assert [e.seq_local for e in ev] == [0, 1, 2]
+
+
 def test_machinery_itch_clock_conventions():
     msgs = [{"type": "A", "t_ns": 15 * 60 * 1_000_000_000, "order_ref": 1, "side": "B", "shares": 1, "stock": "GP", "price": 1.0}]
     fr = itch_frames(itch_encode(msgs))
@@ -164,6 +175,22 @@ def test_machinery_fix_snapshot_with_orders_and_incremental():
     assert len(st) == 1 and st[0].status == "fix_0" and st[0].seq_feed == 4
     assert snap[1].flags.get("checksum_invalid") is True and snap[1].flags.get("gap") is None   # seq 1 again: no hole
     assert [e.seq_local for e in ev] == list(range(len(ev)))
+
+
+def test_machinery_fix_missing_size_is_none_and_sending_time_regression():
+    w = _fix("W", [("55", "GP"), ("268", "1"), ("269", "0"), ("270", "244.0"), ("271", "100")], 1)
+    x = _fix("X", [("268", "2"),
+                   ("279", "1"), ("269", "0"), ("55", "GP"), ("270", "244.0"),                     # CHANGE, no 271
+                   ("279", "2"), ("269", "0"), ("55", "GP"), ("270", "244.0")], 2)                # DELETE, no 271
+    older = x.replace("34=2", "34=3")
+    import re
+    older = re.sub(r"52=\d{8}-\d\d:\d\d:\d\d(\.\d+)?", "52=20200101-00:00:00.000", older)   # SendingTime went back
+    ev = fix_to_events([w, x, older], t_recv=datetime(2026, 9, 6, 4, 20, tzinfo=timezone.utc))
+    bu = by_type(ev, EventType.BOOK_UPDATE)
+    assert (bu[0].payload["action"], bu[0].qty, bu[0].payload["size_missing"]) == ("CHANGE", None, True)
+    assert (bu[1].payload["action"], bu[1].qty, bu[1].payload["size_missing"]) == ("DELETE", 0.0, False)
+    assert all(e.flags.get("out_of_order") for e in bu[2:]) and not bu[0].flags.get("out_of_order")
+    assert all(e.flags.get("checksum_invalid") for e in bu[2:])       # the edited message no longer checksums
 
 
 def test_machinery_fix_without_orders_and_no_receipt_clock():
