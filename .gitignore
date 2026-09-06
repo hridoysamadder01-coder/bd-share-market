@@ -15,15 +15,9 @@ tower/ingest/ingest
 tower/ingest/*.test
 tests/tower/_ui_screenshot.png
 
-# public collector: raw payload dump and the working output tree (regenerate with
-# python3 -m collector.dse_public_collector); the run's metadata + small normalized
-# tables are committed under evidence/public/<date>/ instead
-data/raw/dse/
-data/raw/dse_company/
-data/raw/dse_extras/
-data/raw/dse_history/
-data/raw/dsebd_depth/
-data/raw/lankabd_*/
-data/normalized/
-data/metadata/
-data/public/
+# public collector: the whole runtime output tree (raw payloads, normalized tables,
+# metadata) lives under runtime/ and is regenerated with
+# python3 -m collector.dse_public_collector; the run's metadata + small normalized
+# tables are committed under evidence/public/<date>/ instead. Keeping it out of data/
+# matters: data/ holds tracked source (ingest_dse_eod.py, make_synthetic.py).
+runtime/

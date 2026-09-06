@@ -6,25 +6,33 @@ paywalled or CAPTCHA-protected is touched, and no field is invented.
 
 ```bash
 # everything, every symbol (depth from both public sensors, cumulative tape, company
-# fundamentals, and the official day-end archive from 2015 to today)
-python3 -m collector.dse_public_collector --out data --all-depth --all-tape --company \
-        --history-start 2015-01-01
+# fundamentals, the exchange's own day-end pages and the official archive)
+python3 -m collector.dse_public_collector --all-depth --all-tape --company --extras \
+        --history-start 2024-01-01
 
 # market-wide surfaces only (fast: universe, watch, grid, circuit, market stats, block board)
-python3 -m collector.dse_public_collector --out data
+python3 -m collector.dse_public_collector
 
 # a 5-symbol smoke run
 python3 -m collector.dse_public_collector --out /tmp/smoke --all-depth --all-tape --company --max-symbols 5
+
+# recompute the COMBINED metadata of an output tree from the files on disk (offline)
+python3 -m collector.dse_public_collector --out runtime/public_data --rebuild-metadata
 ```
 
 Flags: `--min-gap` seconds between requests (default 0.4, one serialized polite client),
-`--timeout`, `--max-symbols` (debug), `--history-end`.
+`--timeout`, `--max-symbols` (debug), `--history-end`, `--rebuild-metadata`.
+
+Output goes to `runtime/public_data` by default. That path is git-ignored and holds nothing but
+regenerated data; the collector refuses an output directory that is the repository root, a parent
+of it, the home directory, a system path, or any directory holding files tracked by git (`data/`
+holds tracked source, which is exactly the mistake this guard prevents).
 
 ## Output
 
 ```
-data/raw/<source>/<utc>_<name>.<ext>[.gz]   byte-exact response bodies (gzip above 64 KB, round-trip verified)
-data/normalized/
+runtime/public_data/raw/<source>/<utc>_<name>.<ext>[.gz]   byte-exact bodies (gzip above 64 KB, round-trip verified)
+runtime/public_data/normalized/
   symbols.csv                  the union universe: which surface each symbol appears on, company id,
                                sector/tick/limits from the circuit table
   market_watch.parquet         all-symbol L1 with per-instrument exchange timestamps (LankaBD)
@@ -44,11 +52,21 @@ data/normalized/
   company_pe_history.parquet   every dated P/E column, labelled by basis
   company_shareholding.parquet sponsor / govt / institute / foreign / public %, per as-on date
   historical_prices.parquet    official day-end archive: date, symbol, OHLC, LTP, YCP, trades, value, volume
-data/metadata/
-  sources.json, observability.json, schema.json, field_coverage.json,
-  validation.json, failures.json, manifest.json, duplicate_raw_payloads.json,
-  depth_crosscheck.csv, sample_records.json, sessions.json
+runtime/public_data/metadata/
+  validation.json          the COMBINED view, recomputed from the files on disk on every pass
+  passes/<pass_id>.json    one record per pass (its own counts, argv, request stats)
+  manifest.json            every request, append-merged across passes, each row stamped with its pass_id
+  failures.json            every failure, append-merged across passes
+  duplicate_raw_payloads.json  sha256 → raw paths, unioned across passes
+  raw_index.json           every stored payload with size and sha256
+  field_coverage.json, schema.json, sample_records.json   derived from the normalized files
+  sources.json, observability.json, depth_crosscheck.csv, sessions.json
 ```
+
+Multi-pass runs aggregate: a later pass that collects only part of the surface leaves the tables
+it did not touch untouched and its metadata is merged into, not written over, the earlier passes'.
+`validation.json` counts rows by reading the normalized files, so it always describes the whole
+output tree rather than the last pass.
 
 Every normalized row carries `source`, `endpoint`, `symbol`, `exchange`, the exchange
 timestamp when the source has one, `receipt_utc`, `raw_path`, `raw_sha256`, `http_status`
@@ -63,7 +81,7 @@ prints, trade side, number of orders per level, order ids, queue position, intra
 add/cancel netting, and any exchange timestamp on the book itself (depth pages carry none;
 the receipt time is recorded instead).
 
-`data/metadata/observability.json` states this per field for the run that produced it.
+`runtime/public_data/metadata/observability.json` states this per field for the run that produced it.
 
 ## Notes
 
