@@ -359,6 +359,39 @@
    "bytes": 225767,
    "epoch": "28052b83d33d473cac130d0ba8a252b2",
    "closed_utc": "2026-09-06T05:01:29.652429+00:00"
+  },
+  {
+   "source": "lankabd_circuit",
+   "path": "segments/lankabd_circuit__ccr-vm__28052b83__20260906T04__00000003.jsonl",
+   "records": 3,
+   "first_seq": 3,
+   "last_seq": 5,
+   "sha256": "f440c93b77b93e8bdfb9c5328702f956c97082de68a17f270798544c7812ab7d",
+   "bytes": 1549172,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:55:47.196839+00:00"
+  },
+  {
+   "source": "dsebd_latest",
+   "path": "segments/dsebd_latest__ccr-vm__28052b83__20260906T04__00000003.jsonl",
+   "records": 3,
+   "first_seq": 3,
+   "last_seq": 5,
+   "sha256": "8251d7c8f0dd084705b797713f20738ce253c585377943089398b2cd94765535",
+   "bytes": 717608,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:55:48.855931+00:00"
+  },
+  {
+   "source": "dsebd_hts",
+   "path": "segments/dsebd_hts__ccr-vm__28052b83__20260906T04__00000003.jsonl",
+   "records": 3,
+   "first_seq": 3,
+   "last_seq": 5,
+   "sha256": "443943abccc11e8fcb0537c17e75459d8e0654ddcbaec0e9fb937ff778115fe7",
+   "bytes": 359512,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T05:55:49.923419+00:00"
   }
  ],
  "previous_epochs": [
