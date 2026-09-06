@@ -35,6 +35,19 @@ def test_fix_roundtrip_checksum_and_groups():
     assert fix_md.parse_fix(raw.replace("\x01", "|"))["valid_checksum"]
 
 
+def test_fix_missing_size_is_none_never_zero():
+    snap = fix_md.parse_fix(_fix("W", [("55", "GP"), ("268", "2"), ("269", "0"), ("270", "244.0"),
+                                       ("269", "1"), ("270", "244.2"), ("271", "50")]))
+    fr = fix_md.md_snapshot_frames(snap)
+    assert fr["bid_levels"] == [(244.0, None)] and fr["ask_levels"] == [(244.2, 50.0)] and fr["size_missing"] == 1
+    book = fix_md.FIXBook()
+    book.apply_snapshot(fr)
+    inc = fix_md.parse_fix(_fix("X", [("268", "1"), ("279", "0"), ("269", "1"), ("55", "GP"), ("270", "244.3")]))
+    book.apply_incremental(inc)
+    lv = book.levels("GP")
+    assert (244.3, None) in lv["ask_levels"] and (244.0, None) in lv["bid_levels"]
+
+
 def test_fix_incremental_book_and_truth():
     snap = fix_md.parse_fix(_fix("W", [("55", "GP"), ("268", "2"), ("269", "0"), ("270", "244.0"), ("271", "100"),
                                        ("269", "1"), ("270", "244.2"), ("271", "50")]))

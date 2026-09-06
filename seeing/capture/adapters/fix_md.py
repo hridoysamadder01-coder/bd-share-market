@@ -150,14 +150,17 @@ def md_snapshot_frames(msg: Dict[str, Any]) -> Dict[str, Any]:
     bid_orders: List[Optional[int]] = []
     ask_orders: List[Optional[int]] = []
     trades: List[Dict[str, Any]] = []
+    size_missing = 0
     for e in entries:
         typ = e.get("269")
         px, sz = _f(e.get("270")), _f(e.get("271"))
         n_ord = int(e["346"]) if e.get("346", "").isdigit() else None
+        if typ in ("0", "1") and px is not None and sz is None:
+            size_missing += 1                                  # MDEntrySize absent: size unknown, never 0
         if typ == "0" and px is not None:
-            bids.append((px, sz or 0.0)); bid_orders.append(n_ord)
+            bids.append((px, sz)); bid_orders.append(n_ord)
         elif typ == "1" and px is not None:
-            asks.append((px, sz or 0.0)); ask_orders.append(n_ord)
+            asks.append((px, sz)); ask_orders.append(n_ord)
         elif typ == "2" and px is not None:
             trades.append({"price": px, "qty": sz, "time": e.get("273"), "date": e.get("272"),
                            "aggressor": e.get("2446") or e.get("54"), "trade_id": e.get("1003")})
@@ -168,7 +171,8 @@ def md_snapshot_frames(msg: Dict[str, Any]) -> Dict[str, Any]:
             "bid_levels": [l for l, _ in order_b], "ask_levels": [l for l, _ in order_a],
             "bid_orders_per_level": [o for _, o in order_b] if has_orders else None,
             "ask_orders_per_level": [o for _, o in order_a] if has_orders else None,
-            "trade_prints": trades, "n_entries": len(entries), "valid": msg["valid_checksum"] and msg["valid_length"]}
+            "trade_prints": trades, "n_entries": len(entries), "size_missing": size_missing,
+            "valid": msg["valid_checksum"] and msg["valid_length"]}
 
 
 class FIXBook:
@@ -205,7 +209,7 @@ class FIXBook:
             if action == "DELETE":
                 book.pop(px, None)
             else:
-                book[px] = (sz or 0.0, n_ord)
+                book[px] = (sz, n_ord)                        # size None when 271 is absent: unknown, never 0
             events.append({"symbol": sym, "kind": action, "side": side, "price": px, "qty": sz, "orders": n_ord})
         return events
 

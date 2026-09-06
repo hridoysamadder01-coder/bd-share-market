@@ -74,6 +74,19 @@ def test_tape_parse_cumulative_rows():
     assert p.truth["interval_trades"] is Truth.INFERRED and p.truth["trade_prints"] is Truth.NOT_OBSERVABLE
 
 
+def test_tape_parse_bad_stamp_flags_one_row_not_the_pull():
+    import json
+    a = _adapters()["tape"]
+    rows = [[1788676800000, 10.0, 1, 100, 0.001, 10.0], ["n/a", 10.1, 2, 200, 0.002, 10.1],
+            [1788676900000, 10.2, 3, 300, 0.003, 10.2]]
+    p = a.parse(json.dumps({"length": 3, "data": rows}).encode(), "SYN")
+    assert len(p.frames) == 3                                  # the pull is kept
+    bad = [f for f in p.frames if f["t_source_utc"] is None]
+    assert len(bad) == 1 and bad[0]["t_source_ms"] == "n/a" and bad[0]["cum_trades"] == 2
+    assert any("bad stamp" in x for x in p.problems)
+    assert [f["t_source_utc"] is None for f in p.frames] == [False, False, True]   # stamped rows first, in order
+
+
 def test_market_and_block_parse():
     m = _adapters()["market"].parse(fixture("lankabd_market_2026-09-03.json")).frames[0]
     assert m["market_trades"] == 197767 and m["t_source_utc"] == "2026-09-03T08:10:00+00:00"
