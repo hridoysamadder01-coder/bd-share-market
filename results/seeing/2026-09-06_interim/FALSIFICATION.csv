@@ -1,0 +1,37 @@
+test,variant,split,h,n_frames,n_signal,episodes,lift_vs_base,incremental_vs_best_baseline,passed,note
+real,holdout,holdout,4,392,0,0,,,,best simple baseline = b_imb_l1
+baseline_comparison,composite - b_imb_l1,holdout,4,392,0,0,,,False,no valid bootstrap resamples
+baseline,b_imb_l1,holdout,4,392,116,32,0.2086206896551724,,,
+baseline,b_imb_top5,holdout,4,392,149,25,0.14966442953020137,,,
+baseline,b_imb_weighted,holdout,4,392,150,22,0.14,,,
+baseline,b_largest_wall_bid,holdout,4,392,197,23,0.07055837563451778,,,
+baseline,b_one_frame_pressure,holdout,4,392,33,36,0.06363636363636366,,,
+graded_score,score_ge_3,holdout,4,392,127,32,0.10157480314960632,-0.10704588650556607,,
+graded_score,score_ge_4,holdout,4,392,60,26,0.10000000000000003,-0.10862068965517235,,
+graded_score,score_ge_5,holdout,4,392,20,9,0.2,-0.008620689655172376,,
+graded_score,score_ge_6,holdout,4,392,3,4,0.033333333333333326,-0.17528735632183906,,
+graded_score,score_ge_7,holdout,4,392,0,0,,,,
+timestamp_permutation,circular shift within symbol,holdout,4,392,0,0,,,False,no signal frames
+side_flip,mirror_composite → P(down),holdout,4,392,0,0,,,,"down-lift of the side-flipped composite (must be > 0 for a real, symmetric mechanism)"
+anchor_shift,placebo_shift_-h,holdout,4,392,0,0,,,False,placebo must show |lift| < ½ real lift
+anchor_shift,leak_control_shift_+h,holdout,4,392,0,0,,,,future-shifted signal: expected to inflate (test sensitivity)
+removal,stale_removed,holdout,4,378,0,0,,,False,kept 378/392 frames
+removal,duplicate_removed,holdout,4,167,0,0,,,False,kept 167/392 frames
+removal,crossed_locked_removed,holdout,4,383,0,0,,,False,kept 383/392 frames
+removal,largest_wall_removed,holdout,4,392,0,0,,,False,composite recomputed with the largest visible level removed from the imbalance inputs
+leave_one_symbol_out,without BEXIMCO,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without BRACBANK,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without BXPHARMA,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without GP,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without IPDC,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without LOVELLO,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without MALEKSPIN,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without ORIONPHARM,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without POWERGRID,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without PTL,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without SAIHAMCOT,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without SAIHAMTEX,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without SHARPIND,holdout,4,364,0,0,,,False,
+leave_one_symbol_out,without SQURPHARMA,holdout,4,364,0,0,,,False,
+liquidity_split,top,holdout,4,196,0,0,,,False,"symbols: BXPHARMA, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND"
+liquidity_split,mid,holdout,4,196,0,0,,,False,"symbols: BEXIMCO, BRACBANK, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA"

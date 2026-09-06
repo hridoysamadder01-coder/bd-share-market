@@ -1,0 +1,146 @@
+{
+  "holidays": [
+    {
+      "name": "Shab-e-Barat (*)",
+      "date": "04 February",
+      "days": "Wednesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "13th national parliamentary Election and Referendum",
+      "date": "11-12 February",
+      "days": "Wednesday-Thursday",
+      "n_days": "2 days"
+    },
+    {
+      "name": "Shaheed Day and International Mother Language day",
+      "date": "21 February",
+      "days": "Saturday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Shab-e-Qadar (*)",
+      "date": "17 March",
+      "days": "Tuesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Jumat-ul-Bida (*)",
+      "date": "20 March",
+      "days": "Friday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Eid-ul-Fitr (*)",
+      "date": "17 March - 23 March",
+      "days": "Tuesday-Monday",
+      "n_days": "7 days"
+    },
+    {
+      "name": "Independence day",
+      "date": "26 March",
+      "days": "Thursday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Bengali New Year's day",
+      "date": "14 April",
+      "days": "Tuesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "May Day",
+      "date": "01 May",
+      "days": "Friday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Buddha Purnima (*)",
+      "date": "01 May",
+      "days": "Friday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Eid-ul-Azha (*)",
+      "date": "25 May - 31 May",
+      "days": "Monday-Sunday",
+      "n_days": "7 days"
+    },
+    {
+      "name": "Muharram (Ashura) (*)",
+      "date": "26 June",
+      "days": "Friday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Trading Holiday (Bank Holiday)",
+      "date": "01 July",
+      "days": "Wednesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "July Uprising Day",
+      "date": "05 August",
+      "days": "Wednesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Eid-E-Milad-un-Nabi (SAW)*",
+      "date": "26 August",
+      "days": "Wednesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Janmashtami",
+      "date": "4 September",
+      "days": "Friday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Durgapuja (Dashami)",
+      "date": "20-21 October",
+      "days": "Tuesday-Wednesday",
+      "n_days": "2 days"
+    },
+    {
+      "name": "Victory Day",
+      "date": "16 December",
+      "days": "Wednesday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Christmas Day",
+      "date": "25 December",
+      "days": "Friday",
+      "n_days": "1 day"
+    },
+    {
+      "name": "Trading Holiday (Bank Holiday)",
+      "date": "31 December",
+      "days": "Thursday",
+      "n_days": "1 day"
+    }
+  ],
+  "sessions": [
+    {
+      "Market": "Public Spot Debt",
+      "Pre-open and \n                    Opening Session": "Not Applicable",
+      "Continuous \n                    Trading Session": "10:00 AM to 2:00 PM",
+      "Closing & \n                    post-closing (Trade at Close Price) session": "2:00 PM to 2:10 PM"
+    },
+    {
+      "Market": "Block",
+      "Pre-open and \n                    Opening Session": "Not Applicable",
+      "Continuous \n                    Trading Session": "10:00 AM to 2:00 PM",
+      "Closing & \n                    post-closing (Trade at Close Price) session": "Not Applicable"
+    }
+  ],
+  "source": "dse",
+  "endpoint": "https://www.dsebd.org/hts.php",
+  "exchange": "DSE",
+  "receipt_utc": "2026-09-06T15:49:28.943662+00:00",
+  "http_status": 200,
+  "raw_path": "raw/dse/20260906T154928.9_hts_sessions.html.gz",
+  "raw_sha256": "f4a95ea32b7c93dd544fb085bfceb4369464d61fc0dbd8223cf4effb530cbeea",
+  "truth": "OBSERVED"
+}

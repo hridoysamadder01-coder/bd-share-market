@@ -1,0 +1,37 @@
+test,variant,split,h,n_frames,n_signal,episodes,lift_vs_base,incremental_vs_best_baseline,passed,note
+real,holdout,holdout,4,1287,1,1,-0.23275862068965517,-0.3258426966292135,,best simple baseline = b_one_frame_pressure
+baseline_comparison,composite - b_one_frame_pressure,holdout,4,1287,1,1,-0.23275862068965517,-0.3258426966292135,False,"block bootstrap 95% CI [-0.4192, -0.2274] (blocks of 20 frames, 649 resamples)"
+baseline,b_imb_l1,holdout,4,1287,474,87,0.08158737087152626,,,
+baseline,b_imb_top5,holdout,4,1287,687,59,0.021972092556341943,,,
+baseline,b_imb_weighted,holdout,4,1287,653,65,0.03217246659977821,,,
+baseline,b_largest_wall_bid,holdout,4,1287,669,48,0.018362455543528694,,,
+baseline,b_one_frame_pressure,holdout,4,1287,89,106,0.09308407593955834,,,
+graded_score,score_ge_3,holdout,4,1287,548,83,-0.001006795872136923,-0.09409087181169526,,
+graded_score,score_ge_4,holdout,4,1287,210,70,0.0005747126436781713,-0.09250936329588016,,
+graded_score,score_ge_5,holdout,4,1287,61,27,0.045929903900508745,-0.04715417203904959,,
+graded_score,score_ge_6,holdout,4,1287,17,9,0.0025354969574036545,-0.09054857898215468,,
+graded_score,score_ge_7,holdout,4,1287,1,1,-0.23275862068965517,-0.3258426966292135,,
+timestamp_permutation,circular shift within symbol,holdout,4,1287,1,1,-0.23275862068965517,,False,"p = 1.0000 over 440 permutations; null mean -0.0509, null p95 0.7672"
+side_flip,mirror_composite → P(down),holdout,4,1287,1,1,-0.28879310344827586,,False,"down-lift of the side-flipped composite (must be > 0 for a real, symmetric mechanism)"
+anchor_shift,placebo_shift_-h,holdout,4,1287,1,1,-0.23275862068965517,-0.3258426966292135,False,placebo must show |lift| < ½ real lift
+anchor_shift,leak_control_shift_+h,holdout,4,1287,1,1,-0.23275862068965517,-0.3258426966292135,,future-shifted signal: expected to inflate (test sensitivity)
+removal,stale_removed,holdout,4,1119,1,1,-0.2308584686774942,-0.3258426966292135,True,kept 1119/1287 frames
+removal,duplicate_removed,holdout,4,526,1,1,-0.2230769230769231,-0.3258426966292135,True,kept 526/1287 frames
+removal,crossed_locked_removed,holdout,4,1016,1,1,-0.23275862068965517,-0.3258426966292135,True,kept 1016/1287 frames
+removal,largest_wall_removed,holdout,4,1287,0,1,,,False,composite recomputed with the largest visible level removed from the imbalance inputs
+leave_one_symbol_out,without BEXIMCO,holdout,4,1195,1,1,-0.2409778812572759,-0.3333333333333333,False,
+leave_one_symbol_out,without BRACBANK,holdout,4,1195,1,1,-0.23076923076923078,-0.3372093023255814,False,
+leave_one_symbol_out,without BXPHARMA,holdout,4,1195,1,1,-0.21621621621621623,-0.3157894736842105,False,
+leave_one_symbol_out,without GP,holdout,4,1195,1,1,-0.2322053675612602,-0.3125,False,
+leave_one_symbol_out,without IPDC,holdout,4,1195,1,1,-0.2244418331374853,-0.3253012048192771,False,
+leave_one_symbol_out,without LOVELLO,holdout,4,1195,0,0,,,False,
+leave_one_symbol_out,without MALEKSPIN,holdout,4,1195,1,1,-0.23563892145369286,-0.34615384615384615,False,
+leave_one_symbol_out,without ORIONPHARM,holdout,4,1196,1,1,-0.23826291079812206,-0.32142857142857145,False,
+leave_one_symbol_out,without POWERGRID,holdout,4,1195,1,1,-0.24178403755868544,-0.3333333333333333,False,
+leave_one_symbol_out,without PTL,holdout,4,1195,1,1,-0.2346698113207547,-0.3176470588235294,False,
+leave_one_symbol_out,without SAIHAMCOT,holdout,4,1195,1,1,-0.23384253819036427,-0.325,False,
+leave_one_symbol_out,without SAIHAMTEX,holdout,4,1195,1,1,-0.23275862068965517,-0.3258426966292135,False,
+leave_one_symbol_out,without SHARPIND,holdout,4,1195,1,1,-0.23296703296703297,-0.32954545454545453,False,
+leave_one_symbol_out,without SQURPHARMA,holdout,4,1195,1,1,-0.22996515679442509,-0.32894736842105265,False,
+liquidity_split,top,holdout,4,644,1,1,-0.25183374083129584,-0.34782608695652173,False,"symbols: BXPHARMA, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND"
+liquidity_split,mid,holdout,4,643,0,0,,,False,"symbols: BEXIMCO, BRACBANK, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA"

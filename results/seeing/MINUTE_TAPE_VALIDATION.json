@@ -1,0 +1,147 @@
+{
+ "source": "Muntasib-creator/DSE_dataset (MIT) trade-minute files",
+ "year": 2023,
+ "symbols": {
+  "BRACBANK": {
+   "rows_in_year": 2844,
+   "trading_days": 242,
+   "prints_per_day_median": 10.0,
+   "median_gap_between_prints_s": 660.0,
+   "share_multi_price_minutes": 0.0,
+   "phase_share": {
+    "CONTINUOUS": 0.9293,
+    "CLOSED": 0.0447,
+    "POST_CLOSE": 0.026
+   },
+   "fwd4_after_volume_spike_mean_bp": 0.0,
+   "fwd4_unconditional_mean_bp": 0.0,
+   "n_volume_spikes": 106,
+   "parse_problems": 0
+  },
+  "GP": {
+   "rows_in_year": 5912,
+   "trading_days": 243,
+   "prints_per_day_median": 21.0,
+   "median_gap_between_prints_s": 360.0,
+   "share_multi_price_minutes": 0.0,
+   "phase_share": {
+    "CONTINUOUS": 0.9036,
+    "CLOSED": 0.0612,
+    "POST_CLOSE": 0.0352
+   },
+   "fwd4_after_volume_spike_mean_bp": 0.0,
+   "fwd4_unconditional_mean_bp": 0.0,
+   "n_volume_spikes": 248,
+   "parse_problems": 0
+  },
+  "BXPHARMA": {
+   "rows_in_year": 5426,
+   "trading_days": 237,
+   "prints_per_day_median": 7.0,
+   "median_gap_between_prints_s": 120.0,
+   "share_multi_price_minutes": 0.133984518982676,
+   "phase_share": {
+    "CONTINUOUS": 0.8747,
+    "CLOSED": 0.0815,
+    "POST_CLOSE": 0.0439
+   },
+   "fwd4_after_volume_spike_mean_bp": 3.040058917232002,
+   "fwd4_unconditional_mean_bp": -0.03253906595520761,
+   "n_volume_spikes": 144,
+   "parse_problems": 0
+  },
+  "BEXIMCO": {
+   "rows_in_year": 2353,
+   "trading_days": 236,
+   "prints_per_day_median": 5.0,
+   "median_gap_between_prints_s": 360.0,
+   "share_multi_price_minutes": 0.0,
+   "phase_share": {
+    "CONTINUOUS": 0.8861,
+    "CLOSED": 0.0731,
+    "POST_CLOSE": 0.0408
+   },
+   "fwd4_after_volume_spike_mean_bp": 0.0,
+   "fwd4_unconditional_mean_bp": 0.0,
+   "n_volume_spikes": 59,
+   "parse_problems": 0
+  },
+  "SQURPHARMA": {
+   "rows_in_year": 24166,
+   "trading_days": 243,
+   "prints_per_day_median": 86.0,
+   "median_gap_between_prints_s": 60.0,
+   "share_multi_price_minutes": 0.1141686667218406,
+   "phase_share": {
+    "CONTINUOUS": 0.895,
+    "CLOSED": 0.0651,
+    "POST_CLOSE": 0.0399
+   },
+   "fwd4_after_volume_spike_mean_bp": 0.14277292343736195,
+   "fwd4_unconditional_mean_bp": 0.04302402809773273,
+   "n_volume_spikes": 675,
+   "parse_problems": 0
+  },
+  "LHBL": {
+   "rows_in_year": 35098,
+   "trading_days": 243,
+   "prints_per_day_median": 157.0,
+   "median_gap_between_prints_s": 60.0,
+   "share_multi_price_minutes": 0.1771041084962106,
+   "phase_share": {
+    "CONTINUOUS": 0.8716,
+    "CLOSED": 0.0821,
+    "POST_CLOSE": 0.0463
+   },
+   "fwd4_after_volume_spike_mean_bp": 1.8713787763147927,
+   "fwd4_unconditional_mean_bp": -0.2091384503887503,
+   "n_volume_spikes": 1025,
+   "parse_problems": 0
+  }
+ },
+ "note": "phase labels use the session table in force in 2026 (10:00-14:00 / 14:00-14:10, dsebd.org/hts.php); older years traded to 14:30, so late prints appear as CLOSED here \u2014 a dated session journal (D-16) is the fix, not a relabelling",
+ "truth": {
+  "OBSERVED": [
+   "high",
+   "interval_volume",
+   "low",
+   "ltp",
+   "open",
+   "t_recv",
+   "t_source"
+  ],
+  "INFERRED": [],
+  "NOT_OBSERVABLE": [
+   "ask_levels",
+   "ask_orders_per_level",
+   "best_ask",
+   "best_bid",
+   "bid_levels",
+   "bid_orders_per_level",
+   "block_prints",
+   "book_depth_count",
+   "breaker_pct",
+   "cancel_vs_trade_split",
+   "close_published",
+   "day_trades",
+   "day_value",
+   "day_volume",
+   "interval_trades",
+   "interval_value",
+   "interval_vwap",
+   "level_quantity_delta",
+   "lower_limit",
+   "market_category",
+   "market_trades",
+   "market_value",
+   "market_volume",
+   "order_events",
+   "queue_position",
+   "tick_size",
+   "trade_prints",
+   "trade_side",
+   "upper_limit",
+   "yclose"
+  ]
+ }
+}

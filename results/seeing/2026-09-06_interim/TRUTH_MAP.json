@@ -1,0 +1,23 @@
+{
+ "bid_levels / ask_levels (price, qty; top-N as displayed)": "OBSERVED",
+ "best_bid / best_ask / spread / mid / microprice / depth_topK / imbalances": "OBSERVED (arithmetic on observed levels)",
+ "orders per level": "NOT_OBSERVABLE (no obtained source shows order counts)",
+ "book_agree (two independent book sensors identical)": "OBSERVED",
+ "book t_source": "NOT_OBSERVABLE (depth pages carry no exchange stamp; frame clock = receipt time)",
+ "cumulative day trades / volume / value (exchange-stamped)": "OBSERVED",
+ "interval trades / volume / value / VWAP between frames": "INFERRED (\u0394 of cumulative totals)",
+ "individual prints": "NOT_OBSERVABLE",
+ "trade side": "INFERRED (quote rule on interval VWAP) / OBSERVED when book locked",
+ "level quantity deltas": "OBSERVED (snapshot diff)",
+ "event class (consumed / cancelled / replenish / sweep)": "INFERRED",
+ "queue position, order ids, intra-interval add/cancel netting": "NOT_OBSERVABLE",
+ "ltp, open, high, low, published close, yclose": "OBSERVED",
+ "forward mid / ltp change (labels)": "OBSERVED (future frames; used only as outcome)",
+ "liquidity change, depletion/replenishment, pressure build/failure, resilience, state": "INFERRED (rules in seeing.features.micro / seeing.state_machine)",
+ "upper/lower limit, tick, breaker % (circuit table)": "OBSERVED (reference, per day)",
+ "shares to the door (ask qty up to the upper limit)": "OBSERVED when the limit is within displayed levels, else LOWER BOUND (flagged)",
+ "market-wide trades / volume / value / breadth": "OBSERVED (LankaBD market stats + watch)",
+ "block-board prints": "OBSERVED (daily list)",
+ "all-symbol L1 with exchange stamp (watch)": "OBSERVED (as-of join; age recorded)",
+ "features": "INFERRED (causal rules; parameters pre-registered in seeing.experiment.design)"
+}

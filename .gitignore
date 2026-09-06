@@ -3,3 +3,23 @@
 *.parquet
 __pycache__/
 data/raw/merged_eod/
+# live capture: uncompressed segments and status are runtime state; compressed
+# segments + MANIFEST are committed after the session as evidence
+evidence/capture/*/segments/*.jsonl
+evidence/capture/*/STATUS.json
+evidence/capture/*/STATUS.json.tmp
+evidence/capture/*/runner.log
+.pytest_cache/
+
+# public collector: raw payload dump and the working output tree (regenerate with
+# python3 -m collector.dse_public_collector); the run's metadata + small normalized
+# tables are committed under evidence/public/<date>/ instead
+data/raw/dse/
+data/raw/dse_company/
+data/raw/dse_extras/
+data/raw/dse_history/
+data/raw/dsebd_depth/
+data/raw/lankabd_*/
+data/normalized/
+data/metadata/
+data/public/
