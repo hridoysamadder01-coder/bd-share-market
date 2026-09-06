@@ -1,0 +1,726 @@
+symbol,in_watch,in_grid,in_circuit,in_dse_latest,has_company_id,company_id,sector_circuit_table,tick_size,breaker_pct,upper_limit,lower_limit
+1JANATAMF,True,True,True,True,True,236.0,Mutual Funds,0.1,10.0,3.8,3.2
+1STPRIMFMF,True,True,True,True,True,239.0,Mutual Funds,0.1,10.0,23.8,19.6
+AAMRANET,True,True,True,True,True,381.0,IT Sector,0.1,10.0,21.7,17.9
+AAMRATECH,True,True,True,True,True,312.0,IT Sector,0.1,10.0,20.0,16.4
+ABB1STMF,True,True,True,True,True,310.0,Mutual Funds,0.1,10.0,3.9,3.3
+ABBANK,True,True,True,True,True,1.0,Bank,0.1,10.0,5.0,4.2
+ABBLPBOND,True,True,True,False,True,10516.0,Corporate Bond,0.5,6.25,1126.0,994.0
+ACFL,True,True,True,True,True,392.0,Textile,0.1,10.0,25.6,21.0
+ACI,True,True,True,True,True,131.0,Pharmaceuticals & Chemicals,0.1,10.0,208.8,171.0
+ACIFORMULA,True,True,True,True,True,132.0,Pharmaceuticals & Chemicals,0.1,10.0,170.9,139.9
+ACMELAB,True,True,True,True,True,369.0,Pharmaceuticals & Chemicals,0.1,10.0,87.0,71.2
+ACMEPL,True,True,True,True,True,10494.0,Pharmaceuticals & Chemicals,0.1,10.0,27.7,22.7
+ACTIVEFINE,True,True,True,True,True,133.0,Pharmaceuticals & Chemicals,0.1,10.0,6.7,5.5
+ADNTEL,True,True,True,True,True,411.0,IT Sector,0.1,10.0,67.9,55.7
+ADVENT,True,True,True,True,True,387.0,Pharmaceuticals & Chemicals,0.1,10.0,15.6,12.8
+AFCAGRO,True,True,True,True,True,332.0,Pharmaceuticals & Chemicals,0.1,10.0,7.4,6.2
+AFTABAUTO,True,True,True,True,True,42.0,Engineering,0.1,10.0,30.5,25.1
+AGNISYSL,True,True,True,True,True,113.0,IT Sector,0.1,10.0,33.4,27.4
+AGRANINS,True,True,True,True,True,188.0,Insurance,0.1,10.0,32.8,27.0
+AIBL1STIMF,True,True,True,True,True,247.0,Mutual Funds,0.1,10.0,6.1,5.1
+AIBLPBOND,True,True,True,False,True,10511.0,Corporate Bond,0.5,5.0,4305.0,3895.0
+AIL,True,True,True,True,True,386.0,Textile,0.1,10.0,37.9,31.1
+AL-HAJTEX,True,True,False,True,True,161.0,,,,,
+ALARABANK,True,True,True,True,True,13.0,Bank,0.1,10.0,18.7,15.3
+ALIF,True,True,True,True,True,402.0,Textile,0.1,10.0,6.0,5.0
+ALLTEX,True,True,True,True,True,162.0,Textile,0.1,10.0,26.2,21.6
+AMANFEED,True,True,True,True,True,359.0,Miscellaneous,0.1,10.0,38.8,31.8
+AMBEEPHA,True,True,True,True,True,134.0,Pharmaceuticals & Chemicals,0.1,7.5,801.9,690.1
+AMCL(PRAN),True,True,True,True,True,86.0,Food & Allied,0.1,8.75,241.5,202.7
+ANLIMAYARN,True,True,True,True,True,163.0,Textile,0.1,10.0,31.7,26.1
+ANWARGALV,True,True,True,True,True,43.0,Engineering,0.1,10.0,118.8,97.2
+AOL,True,True,True,True,True,471.0,Fuel & Power,0.1,10.0,18.7,15.3
+APEXFOODS,True,True,True,True,True,87.0,Food & Allied,0.1,8.75,296.0,248.4
+APEXFOOT,True,True,True,True,True,155.0,Tannery Industries,0.1,8.75,226.3,189.9
+APEXSPINN,True,True,True,True,True,164.0,Textile,0.1,8.75,322.4,270.6
+APEXTANRY,True,True,True,True,True,156.0,Tannery Industries,0.1,10.0,114.1,93.5
+APOLOISPAT,True,True,True,True,True,320.0,Engineering,0.1,10.0,3.2,2.7
+APSCLBOND,True,True,True,False,True,410.0,Corporate Bond,0.5,6.25,1123.0,991.0
+ARAMIT,True,True,True,True,True,121.0,Miscellaneous,0.1,8.75,222.7,186.9
+ARAMITCEM,True,True,True,True,True,2.0,Cement,0.1,10.0,13.3,10.9
+ARGONDENIM,True,True,True,True,True,304.0,Textile,0.1,10.0,25.4,20.8
+ASIAINS,True,True,True,True,True,189.0,Insurance,0.1,10.0,47.5,38.9
+ASIAPACINS,True,True,True,True,True,190.0,Insurance,0.1,10.0,55.3,45.3
+ASIATICLAB,True,True,True,True,True,10526.0,Pharmaceuticals & Chemicals,0.1,10.0,119.9,98.1
+ATLASBANG,True,True,True,True,True,44.0,Engineering,0.1,10.0,91.6,75.0
+AZIZPIPES,True,True,True,True,True,45.0,Engineering,0.1,10.0,86.5,70.9
+BANGAS,True,True,True,True,True,88.0,Food & Allied,0.1,10.0,139.8,114.4
+BANKASI1PB,True,True,True,False,True,10821.0,Corporate Bond,0.5,3.75,8974.0,8326.0
+BANKASIA,True,True,True,True,True,14.0,Bank,0.1,10.0,18.5,15.3
+BARKAPOWER,True,True,True,True,True,102.0,Fuel & Power,0.1,10.0,11.4,9.4
+BATASHOE,True,True,True,True,True,157.0,Tannery Industries,0.1,7.5,956.6,823.2
+BATBC,True,True,True,True,True,89.0,Food & Allied,0.1,8.75,258.0,216.6
+BAYLEASING,True,True,True,True,True,65.0,Financial Institutions,0.1,10.0,5.2,4.4
+BBS,True,True,True,True,True,327.0,Engineering,0.1,10.0,14.6,12.0
+BBSCABLES,True,True,True,True,True,379.0,Engineering,0.1,10.0,20.9,17.1
+BDAUTOCA,True,True,True,True,True,46.0,Engineering,0.1,10.0,217.6,178.2
+BDCOM,True,True,True,True,True,114.0,IT Sector,0.1,10.0,32.8,27.0
+BDFINANCE,True,True,True,True,True,66.0,Financial Institutions,0.1,10.0,14.1,11.7
+BDLAMPS,True,True,True,True,True,47.0,Engineering,0.1,8.75,249.6,209.6
+BDSERVICE,True,True,True,True,True,186.0,Travel & Leisure,0.1,10.0,5.7,4.7
+BDTHAI,True,True,True,True,True,48.0,Engineering,0.1,10.0,18.7,15.3
+BDTHAIFOOD,True,True,True,True,True,10514.0,Food & Allied,0.1,10.0,26.9,22.1
+BDWELDING,True,True,True,True,True,101.0,Fuel & Power,0.1,10.0,14.2,11.7
+BEACHHATCH,True,True,True,True,True,90.0,Food & Allied,0.1,10.0,33.1,27.1
+BEACONPHAR,True,True,True,True,True,135.0,Pharmaceuticals & Chemicals,0.1,10.0,117.2,96.0
+BENGALWTL,True,True,True,True,True,319.0,Engineering,0.1,10.0,25.6,21.0
+BERGERPBL,True,True,True,True,True,122.0,Miscellaneous,0.1,6.25,1590.2,1403.2
+BESTHLDNG,True,True,True,True,True,10803.0,Travel & Leisure,0.1,10.0,16.0,13.2
+BEXGSUKUK,True,True,True,False,True,10495.0,Corporate Bond,0.5,10.0,77.5,63.5
+BEXIMCO,True,True,True,True,True,123.0,Miscellaneous,0.1,10.0,24.7,20.3
+BGIC,True,True,True,True,True,191.0,Insurance,0.1,10.0,47.9,39.3
+BIFC,True,True,True,True,True,67.0,Financial Institutions,0.1,10.0,4.5,3.7
+BNICL,True,True,True,True,True,360.0,Insurance,0.1,10.0,129.2,105.8
+BPML,True,True,True,True,True,390.0,Paper & Printing,0.1,10.0,30.0,24.6
+BPPL,True,True,True,True,True,487.0,Fuel & Power,0.1,10.0,22.3,18.3
+BRACBANK,True,True,True,True,True,15.0,Bank,0.1,10.0,69.0,56.6
+BSC,True,True,True,True,True,124.0,Miscellaneous,0.1,10.0,125.8,103.0
+BSCPLC,True,True,True,True,True,292.0,Telecommunication,0.1,10.0,163.0,133.4
+BSRMLTD,True,True,True,True,True,356.0,Engineering,0.1,10.0,108.9,89.1
+BSRMSTEEL,True,True,True,True,True,49.0,Engineering,0.1,10.0,101.0,82.8
+BXPHARMA,True,True,True,True,True,136.0,Pharmaceuticals & Chemicals,0.1,10.0,168.5,137.9
+CAPITECGBF,True,True,True,True,True,10811.0,Mutual Funds,0.1,10.0,9.2,7.6
+CAPMBDBLMF,True,True,True,True,True,374.0,Mutual Funds,0.1,10.0,8.6,7.2
+CAPMIBBLMF,True,True,True,True,True,384.0,Mutual Funds,0.1,10.0,14.7,12.1
+CBLPBOND,True,True,True,False,True,10537.0,Corporate Bond,0.5,3.75,1076406.0,998594.0
+CENTRALINS,True,True,True,True,True,192.0,Insurance,0.1,10.0,48.9,40.1
+CENTRALPHL,True,True,True,True,True,329.0,Pharmaceuticals & Chemicals,0.1,10.0,11.4,9.4
+CITYBANK,True,True,True,True,True,16.0,Bank,0.1,10.0,33.1,27.1
+CITYGENINS,True,True,True,True,True,193.0,Insurance,0.1,10.0,140.5,115.1
+CLICL,True,True,True,True,True,494.0,Insurance,0.1,10.0,49.8,40.8
+CNATEX,True,True,True,True,True,350.0,Textile,0.1,10.0,3.4,2.8
+CONFIDCEM,True,True,True,True,True,3.0,Cement,0.1,10.0,70.2,57.6
+CONTININS,True,True,True,True,True,194.0,Insurance,0.1,10.0,39.9,32.7
+COPPERTECH,True,True,True,True,True,407.0,Engineering,0.1,10.0,27.1,22.3
+CROWNCEMNT,True,True,True,True,True,7.0,Cement,0.1,10.0,68.8,56.4
+CRYSTALINS,True,True,True,True,True,474.0,Insurance,0.1,10.0,71.6,58.6
+CVOPRL,True,True,True,True,True,288.0,Fuel & Power,0.1,10.0,184.9,151.3
+DACCADYE,True,True,True,True,True,167.0,Textile,0.1,10.0,18.0,14.8
+DAFODILCOM,True,True,True,True,True,115.0,IT Sector,0.1,10.0,184.8,151.2
+DBH,True,True,True,True,True,68.0,Financial Institutions,0.1,10.0,45.6,37.4
+DBH1STMF,True,True,True,True,True,249.0,Mutual Funds,0.1,10.0,5.7,4.7
+DBLPBOND,True,True,True,False,True,10796.0,Corporate Bond,0.5,3.75,6458.0,5992.0
+DEBARACEM,True,False,True,False,False,,Debenture,0.5,6.25,1981.5,1748.5
+DEBBDLUGG,True,False,True,False,False,,Debenture,0.5,7.5,842.5,725.5
+DEBBDWELD,True,False,True,False,False,,Debenture,0.5,6.25,1507.0,1330.0
+DEBBDZIPP,True,False,True,False,False,,Debenture,0.5,7.5,752.5,647.5
+DEBBXDENIM,True,False,True,False,False,,Debenture,0.5,6.25,1540.5,1359.5
+DEBBXFISH,True,False,True,False,False,,Debenture,0.5,7.5,897.5,772.5
+DEBBXKNI,True,False,True,False,False,,Debenture,0.5,7.5,967.5,832.5
+DEBBXTEX,True,False,True,False,False,,Debenture,0.5,6.25,1381.0,1219.0
+DELTALIFE,True,True,True,True,True,195.0,Insurance,0.1,10.0,84.8,69.4
+DELTASPINN,True,True,True,True,True,168.0,Textile,0.1,10.0,8.1,6.7
+DESCO,True,True,True,True,True,104.0,Fuel & Power,0.1,10.0,25.6,21.0
+DESHBANDHU,True,True,True,True,True,50.0,Engineering,0.1,10.0,20.9,17.1
+DGIC,True,True,True,True,True,478.0,Insurance,0.1,10.0,34.7,28.5
+DHAKABANK,True,True,True,True,True,17.0,Bank,0.1,10.0,13.0,10.8
+DHAKAINS,True,True,True,True,True,196.0,Insurance,0.1,10.0,51.2,42.0
+DOMINAGE,True,True,True,True,True,472.0,Engineering,0.1,10.0,69.9,57.3
+DOREENPWR,True,True,True,True,True,368.0,Fuel & Power,0.1,10.0,35.3,28.9
+DSHGARME,True,True,True,True,True,169.0,Textile,0.1,10.0,192.1,157.3
+DSSL,True,True,True,True,True,367.0,Textile,0.1,10.0,13.0,10.8
+DULAMIACOT,True,True,True,True,True,170.0,Textile,0.1,10.0,202.8,166.0
+DUTCHBANGL,True,True,True,True,True,18.0,Bank,0.1,10.0,49.0,40.2
+EASTERNINS,True,True,True,True,True,197.0,Insurance,0.1,10.0,68.2,55.8
+EASTLAND,True,True,True,True,True,198.0,Insurance,0.1,10.0,31.4,25.8
+EASTRNLUB,True,True,True,True,True,105.0,Fuel & Power,0.1,6.25,2084.0,1839.0
+EBL,True,True,True,True,True,19.0,Bank,0.1,10.0,26.2,21.6
+EBL1STMF,True,True,True,True,True,250.0,Mutual Funds,0.1,10.0,4.5,3.7
+EBLNRBMF,True,True,True,True,True,251.0,Mutual Funds,0.1,10.0,3.8,3.2
+ECABLES,True,True,True,True,True,51.0,Engineering,0.1,10.0,146.6,120.0
+EGEN,True,True,True,True,True,485.0,IT Sector,0.1,10.0,27.3,22.5
+EHL,True,True,True,True,True,151.0,Services & Real Estate,0.1,10.0,98.0,80.2
+EIL,True,True,True,True,True,467.0,Insurance,0.1,10.0,35.7,29.3
+EMERALDOIL,True,True,True,True,True,333.0,Food & Allied,0.1,10.0,32.1,26.3
+ENVOYTEX,True,True,True,True,True,305.0,Textile,0.1,10.0,68.0,55.8
+EPGL,True,True,True,True,True,482.0,Fuel & Power,0.1,10.0,20.1,16.5
+ESQUIRENIT,True,True,True,True,True,403.0,Textile,0.1,10.0,28.7,23.5
+ETL,True,True,True,True,True,370.0,Textile,0.1,10.0,14.8,12.2
+EXIM1STMF,True,True,True,True,True,323.0,Mutual Funds,0.1,10.0,7.1,5.9
+EXIMBANK,True,True,True,True,True,20.0,Bank,0.1,10.0,3.2,2.7
+FAMILYTEX,True,True,True,True,True,321.0,Textile,0.1,10.0,2.6,2.2
+FARCHEM,True,True,True,True,True,336.0,Pharmaceuticals & Chemicals,0.1,10.0,17.4,14.4
+FAREASTFIN,True,True,True,True,True,326.0,Financial Institutions,0.1,10.0,2.3,1.9
+FAREASTLIF,True,True,True,True,True,199.0,Insurance,0.1,10.0,22.1,18.1
+FASFIN,True,True,True,True,True,69.0,Financial Institutions,0.1,10.0,2.7,2.3
+FBFIF,True,True,True,True,True,307.0,Mutual Funds,0.1,10.0,3.8,3.2
+FEDERALINS,True,True,True,True,True,200.0,Insurance,0.1,10.0,32.1,26.3
+FEKDIL,True,True,True,True,True,341.0,Textile,0.1,10.0,25.4,20.8
+FINEFOODS,True,True,True,True,True,92.0,Food & Allied,0.1,8.75,503.9,422.9
+FIRSTFIN,True,True,True,True,True,70.0,Financial Institutions,0.1,10.0,5.1,4.3
+FIRSTSBANK,True,True,True,True,True,21.0,Bank,0.1,10.0,2.0,1.8
+FORTUNE,True,True,True,True,True,372.0,Tannery Industries,0.1,10.0,18.8,15.4
+FUWANGCER,True,True,True,True,True,8.0,Ceramics Sector,0.1,10.0,16.0,13.2
+FUWANGFOOD,True,True,True,True,True,93.0,Food & Allied,0.1,10.0,11.2,9.2
+GBBPOWER,True,True,True,True,True,289.0,Fuel & Power,0.1,10.0,15.0,12.4
+GEMINISEA,True,True,True,True,True,94.0,Food & Allied,0.1,10.0,125.4,102.6
+GENEXIL,True,True,True,True,True,399.0,IT Sector,0.1,10.0,40.0,32.8
+GENNEXT,True,True,True,True,True,313.0,Textile,0.1,10.0,3.5,2.9
+GHAIL,True,True,True,True,True,317.0,Food & Allied,0.1,10.0,14.9,12.3
+GHCL,True,True,True,True,True,316.0,Pharmaceuticals & Chemicals,0.1,10.0,23.4,19.2
+GIB,True,True,True,True,True,10524.0,Bank,0.1,10.0,1.8,1.6
+GLDNJMF,True,True,True,True,True,10539.0,Mutual Funds,0.1,10.0,9.0,7.4
+GLOBALINS,True,True,True,True,True,201.0,Insurance,0.1,10.0,51.0,41.8
+GOLDENSON,True,True,True,True,True,52.0,Engineering,0.1,10.0,15.8,13.0
+GP,True,True,True,True,True,160.0,Telecommunication,0.1,8.75,265.4,222.8
+GPHISPAT,True,True,True,True,True,299.0,Engineering,0.1,10.0,19.1,15.7
+GQBALLPEN,True,True,True,True,True,125.0,Miscellaneous,0.1,7.5,610.4,525.4
+GRAMEENS2,True,True,True,True,True,253.0,Mutual Funds,0.1,10.0,13.2,10.8
+GREENDELMF,True,True,True,True,True,254.0,Mutual Funds,0.1,10.0,4.9,4.1
+GREENDELT,True,True,True,True,True,202.0,Insurance,0.1,10.0,75.6,62.0
+GSPFINANCE,True,True,True,True,True,300.0,Financial Institutions,0.1,10.0,4.0,3.4
+HAKKANIPUL,True,True,True,True,True,130.0,Paper & Printing,0.1,10.0,82.1,67.3
+HAMI,True,True,True,True,True,140.0,Miscellaneous,0.1,10.0,164.8,135.0
+HEIDELBCEM,True,True,True,True,True,4.0,Cement,0.1,8.75,231.6,194.4
+HFL,True,True,True,True,True,348.0,Textile,0.1,10.0,15.2,12.6
+HRTEX,True,True,True,True,True,171.0,Textile,0.1,10.0,20.5,16.9
+HWAWELLTEX,True,True,True,True,True,335.0,Textile,0.1,10.0,51.9,42.5
+IBBL2PBOND,True,True,True,False,True,10512.0,Corporate Bond,0.5,5.0,4095.0,3705.0
+IBBLPBOND,True,True,True,False,True,235.0,Corporate Bond,0.5,7.5,705.5,607.5
+IBNSINA,True,True,True,True,True,139.0,Pharmaceuticals & Chemicals,0.1,8.75,342.3,287.3
+IBP,True,True,True,True,True,389.0,Pharmaceuticals & Chemicals,0.1,10.0,19.2,15.8
+ICB,True,True,True,True,True,71.0,Financial Institutions,0.1,10.0,45.7,37.5
+ICB3RDNRB,True,True,True,True,True,257.0,Mutual Funds,0.1,10.0,6.1,5.1
+ICBAGRANI1,True,True,True,True,True,380.0,Mutual Funds,0.1,10.0,8.6,7.2
+ICBAMCL2ND,True,True,True,True,True,259.0,Mutual Funds,0.1,10.0,8.1,6.7
+ICBEPMF1S1,True,True,True,True,True,260.0,Mutual Funds,0.1,10.0,6.6,5.4
+ICBIBANK,True,True,True,True,True,22.0,Bank,0.1,10.0,2.8,2.4
+ICBSONALI1,True,True,True,True,True,324.0,Mutual Funds,0.1,10.0,6.9,5.7
+ICICL,True,True,True,True,True,10534.0,Insurance,0.1,10.0,41.8,34.2
+IDLC,True,True,True,True,True,72.0,Financial Institutions,0.1,10.0,48.2,39.6
+IFADAUTOS,True,True,True,True,True,351.0,Engineering,0.1,10.0,26.2,21.6
+IFIC,True,True,True,True,True,23.0,Bank,0.1,10.0,5.1,4.3
+IFIC1STMF,True,True,True,True,True,262.0,Mutual Funds,0.1,10.0,4.4,3.6
+IFILISLMF1,True,True,True,True,True,263.0,Mutual Funds,0.1,10.0,5.7,4.7
+ILFSL,True,True,True,True,True,73.0,Financial Institutions,0.1,10.0,2.3,1.9
+INDEXAGRO,True,True,True,True,True,479.0,Miscellaneous,0.1,10.0,77.6,63.6
+INTECH,True,True,True,True,True,116.0,IT Sector,0.1,10.0,27.0,22.2
+INTRACO,True,True,True,True,True,388.0,Fuel & Power,0.1,10.0,25.4,20.8
+IPDC,True,True,True,True,True,74.0,Financial Institutions,0.1,10.0,35.2,28.8
+ISLAMIBANK,True,True,True,True,True,24.0,Bank,0.1,10.0,29.8,24.4
+ISLAMICFIN,True,True,True,True,True,75.0,Financial Institutions,0.1,10.0,12.4,10.2
+ISLAMIINS,True,True,True,True,True,203.0,Insurance,0.1,10.0,66.7,54.7
+ISNLTD,True,True,True,True,True,117.0,IT Sector,0.1,10.0,57.3,46.9
+ITC,True,True,True,True,True,364.0,IT Sector,0.1,10.0,51.9,42.5
+JAMUNABANK,True,True,True,True,True,25.0,Bank,0.1,10.0,26.6,21.8
+JAMUNAOIL,True,True,True,True,True,106.0,Fuel & Power,0.1,10.0,193.8,158.6
+JANATAINS,True,True,True,True,True,204.0,Insurance,0.1,10.0,37.5,30.7
+JHRML,True,True,True,True,True,10517.0,Pharmaceuticals & Chemicals,0.1,10.0,53.0,43.4
+JMISMDL,True,True,True,True,True,325.0,Pharmaceuticals & Chemicals,0.1,10.0,150.0,122.8
+JUTESPINN,True,True,True,True,True,118.0,Jute,0.1,8.75,231.6,194.4
+KARNAPHULI,True,True,True,True,True,205.0,Insurance,0.1,10.0,65.4,53.6
+KAY&QUE,True,True,True,True,False,,Engineering,0.1,8.75,414.4,347.8
+KBPPWBIL,True,True,True,True,True,346.0,Miscellaneous,0.1,10.0,37.1,30.5
+KDSALTD,True,True,True,True,True,361.0,Engineering,0.1,10.0,51.9,42.5
+KEYACOSMET,True,True,True,True,True,141.0,Pharmaceuticals & Chemicals,0.1,10.0,5.7,4.7
+KOHINOOR,True,True,True,True,True,142.0,Pharmaceuticals & Chemicals,0.1,7.5,574.4,494.4
+KPCL,True,True,True,True,True,107.0,Fuel & Power,0.1,10.0,12.3,10.1
+KPPL,True,True,True,True,True,339.0,Paper & Printing,0.1,10.0,15.1,12.5
+KTL,True,True,True,True,True,396.0,Textile,0.1,10.0,13.5,11.1
+LANKABAFIN,True,True,True,True,True,76.0,Financial Institutions,0.1,10.0,17.3,14.3
+LBS,True,True,False,False,True,10794.0,,,,,
+LEGACYFOOT,True,True,True,True,True,158.0,Tannery Industries,0.1,10.0,80.9,66.3
+LHB,True,True,True,True,True,5.0,Cement,0.1,10.0,59.1,48.5
+LIBRAINFU,True,True,True,True,True,143.0,Pharmaceuticals & Chemicals,0.1,7.5,638.8,549.8
+LINDEBD,True,True,True,True,True,302.0,Fuel & Power,0.1,7.5,744.6,640.8
+LOVELLO,True,True,True,True,True,486.0,Food & Allied,0.1,10.0,53.0,43.4
+LRBDL,True,True,True,True,True,480.0,Fuel & Power,0.1,10.0,15.9,13.1
+LRGLOBMF1,True,True,True,True,True,232.0,Mutual Funds,0.1,10.0,4.7,3.9
+MAGURAPLEX,True,True,True,True,True,490.0,Paper & Printing,0.1,10.0,94.9,77.7
+MAKSONSPIN,True,True,True,True,True,172.0,Textile,0.1,10.0,6.9,5.7
+MALEKSPIN,True,True,True,True,True,173.0,Textile,0.1,10.0,55.6,45.6
+MARICO,True,True,True,True,True,144.0,Pharmaceuticals & Chemicals,0.1,5.0,2831.5,2561.9
+MATINSPINN,True,True,True,True,True,334.0,Textile,0.1,10.0,68.6,56.2
+MBL1STMF,True,True,True,True,True,264.0,Mutual Funds,0.1,10.0,9.6,8.0
+MBPLCPBOND,True,True,True,False,True,10817.0,Corporate Bond,0.5,5.0,5092.5,4607.5
+MEGCONMILK,True,True,True,True,True,95.0,Food & Allied,0.1,10.0,38.0,31.2
+MEGHNACEM,True,True,True,True,True,6.0,Cement,0.1,10.0,32.8,27.0
+MEGHNAINS,True,True,True,True,True,10528.0,Insurance,0.1,10.0,42.0,34.4
+MEGHNALIFE,True,True,True,True,True,206.0,Insurance,0.1,10.0,61.3,50.3
+MEGHNAPET,True,True,True,True,True,96.0,Food & Allied,0.1,10.0,78.9,64.7
+MERCANBANK,True,True,True,True,True,26.0,Bank,0.1,10.0,7.8,6.4
+MERCINS,True,True,True,True,True,207.0,Insurance,0.1,10.0,47.5,38.9
+METROSPIN,True,True,True,True,True,174.0,Textile,0.1,10.0,11.9,9.9
+MHSML,True,True,True,True,True,331.0,Textile,0.1,10.0,22.8,18.8
+MIDASFIN,True,True,True,True,True,77.0,Financial Institutions,0.1,10.0,5.9,4.9
+MIDLANDBNK,True,True,True,True,True,10532.0,Bank,0.1,10.0,18.9,15.5
+MIRACLEIND,True,True,True,True,True,126.0,Miscellaneous,0.1,10.0,30.8,25.2
+MIRAKHTER,True,True,True,True,True,481.0,Engineering,0.1,10.0,39.0,32.0
+MITHUNKNIT,True,True,True,True,True,175.0,Textile,0.1,10.0,15.6,12.8
+MJLBD,True,True,True,True,True,285.0,Fuel & Power,0.1,10.0,100.6,82.4
+MLDYEING,True,True,True,True,True,394.0,Textile,0.1,10.0,14.0,11.6
+MONNOAGML,True,True,True,True,True,55.0,Engineering,0.1,8.75,355.6,298.4
+MONNOCERA,True,True,True,True,True,9.0,Ceramics Sector,0.1,10.0,93.0,76.2
+MONNOFABR,True,True,True,True,True,488.0,Textile,0.1,10.0,23.9,19.7
+MONOSPOOL,True,True,True,True,True,491.0,Paper & Printing,0.1,10.0,120.0,98.2
+MPETROLEUM,True,True,True,True,True,108.0,Fuel & Power,0.1,8.75,225.3,189.1
+MTB,True,True,True,True,True,27.0,Bank,0.1,10.0,14.6,12.0
+MTBPBOND,True,True,True,False,True,10823.0,Corporate Bond,0.5,3.75,1037500.0,962500.0
+NAHEEACP,True,True,True,True,True,383.0,Engineering,0.1,10.0,39.4,32.4
+NATLIFEINS,True,True,True,True,True,208.0,Insurance,0.1,10.0,108.4,88.8
+NAVANACNG,True,True,True,True,True,56.0,Engineering,0.1,10.0,23.2,19.0
+NAVANAPHAR,True,True,True,True,True,10525.0,Pharmaceuticals & Chemicals,0.1,10.0,74.3,60.9
+NBL,True,True,True,True,True,28.0,Bank,0.1,10.0,3.8,3.2
+NCCBANK,True,True,True,True,True,29.0,Bank,0.1,10.0,16.5,13.5
+NCCBLMF1,True,True,True,True,True,308.0,Mutual Funds,0.1,10.0,6.8,5.6
+NEWLINE,True,True,True,True,True,405.0,Textile,0.1,10.0,6.3,5.3
+NFML,True,True,True,True,True,349.0,Miscellaneous,0.1,10.0,18.8,15.4
+NHFIL,True,True,True,True,True,78.0,Financial Institutions,0.1,10.0,30.4,25.0
+NITOLINS,True,True,True,True,True,209.0,Insurance,0.1,10.0,57.8,47.4
+NORTHERN,True,True,True,True,True,119.0,Jute,0.1,10.0,114.4,93.6
+NORTHRNINS,True,True,True,True,True,210.0,Insurance,0.1,10.0,43.6,35.8
+NPOLYMER,True,True,True,True,True,57.0,Engineering,0.1,10.0,35.6,29.2
+NRBBANK,True,True,True,True,True,10802.0,Bank,0.1,10.0,7.3,6.1
+NRBCBANK,True,True,True,True,True,483.0,Bank,0.1,10.0,9.9,8.1
+NTC,True,True,True,True,True,97.0,Food & Allied,0.1,10.0,171.0,140.0
+NTLTUBES,True,True,True,True,True,58.0,Engineering,0.1,10.0,71.9,58.9
+NURANI,True,True,True,True,True,378.0,Textile,0.1,10.0,3.5,2.9
+OAL,True,True,True,True,True,358.0,Engineering,0.1,10.0,7.4,6.2
+OIMEX,True,True,True,True,True,382.0,Engineering,0.1,10.0,16.7,13.7
+OLYMPIC,True,True,True,True,True,59.0,Food & Allied,0.1,10.0,161.3,132.1
+ONEBANKPLC,True,True,True,True,True,30.0,Bank,0.1,10.0,8.4,7.0
+ORIONINFU,True,True,True,True,True,145.0,Pharmaceuticals & Chemicals,0.1,8.75,240.5,201.9
+ORIONPHARM,True,True,True,True,True,318.0,Pharmaceuticals & Chemicals,0.1,10.0,29.0,23.8
+PADMALIFE,True,True,True,True,True,301.0,Insurance,0.1,10.0,18.3,15.1
+PADMAOIL,True,True,True,True,True,109.0,Fuel & Power,0.1,10.0,213.0,174.4
+PARAMOUNT,True,True,True,True,True,211.0,Insurance,0.1,10.0,67.8,55.6
+PBLPBOND,True,True,True,False,True,10518.0,Corporate Bond,0.5,5.0,4754.0,4302.0
+PDL,True,True,True,True,True,375.0,Textile,0.1,10.0,6.1,5.1
+PENINSULA,True,True,True,True,True,338.0,Travel & Leisure,0.1,10.0,24.2,19.8
+PEOPLESINS,True,True,True,True,True,212.0,Insurance,0.1,10.0,68.9,56.5
+PF1STMF,True,True,True,True,True,265.0,Mutual Funds,0.1,10.0,16.2,13.4
+PHARMAID,True,True,True,True,True,146.0,Pharmaceuticals & Chemicals,0.1,7.5,619.0,532.8
+PHENIXINS,True,True,True,True,True,213.0,Insurance,0.1,10.0,56.2,46.0
+PHOENIXFIN,True,True,True,True,True,79.0,Financial Institutions,0.1,10.0,4.1,3.5
+PHPMF1,True,True,True,True,True,266.0,Mutual Funds,0.1,10.0,3.8,3.2
+PIONEERINS,True,True,True,True,True,214.0,Insurance,0.1,10.0,74.9,61.3
+PLFSL,True,True,True,True,True,80.0,Financial Institutions,0.1,10.0,2.0,1.8
+POPULAR1MF,True,True,True,True,True,267.0,Mutual Funds,0.1,10.0,3.9,3.3
+POPULARLIF,True,True,True,True,True,215.0,Insurance,0.1,10.0,67.4,55.2
+POWERGRID,True,True,True,True,True,110.0,Fuel & Power,0.1,10.0,43.1,35.3
+PRAGATIINS,True,True,True,True,True,216.0,Insurance,0.1,10.0,83.9,68.7
+PRAGATILIF,True,True,True,True,True,217.0,Insurance,0.1,10.0,166.9,136.7
+PREBPBOND,True,True,True,False,True,10515.0,Corporate Bond,0.5,5.0,4688.0,4242.0
+PREMIERBAN,True,True,True,True,True,31.0,Bank,0.1,10.0,6.4,5.4
+PREMIERCEM,True,True,True,True,True,314.0,Cement,0.1,10.0,51.4,42.2
+PREMIERLEA,True,True,True,True,True,81.0,Financial Institutions,0.1,10.0,2.4,2.0
+PRIME1ICBA,True,True,True,True,True,268.0,Mutual Funds,0.1,10.0,6.6,5.4
+PRIMEBANK,True,True,True,True,True,32.0,Bank,0.1,10.0,31.7,26.1
+PRIMEFIN,True,True,True,True,True,82.0,Financial Institutions,0.1,10.0,3.4,2.8
+PRIMEINSUR,True,True,True,True,True,218.0,Insurance,0.1,10.0,60.5,49.5
+PRIMELIFE,True,True,True,True,True,219.0,Insurance,0.1,10.0,42.0,34.4
+PRIMETEX,True,True,True,True,True,177.0,Textile,0.1,10.0,17.8,14.6
+PROGRESLIF,True,True,True,True,True,220.0,Insurance,0.1,10.0,41.9,34.3
+PROVATIINS,True,True,True,True,True,221.0,Insurance,0.1,10.0,64.5,52.9
+PTL,True,True,True,True,True,328.0,Textile,0.1,10.0,82.2,67.4
+PUBALIBANK,True,True,True,True,True,33.0,Bank,0.1,10.0,41.9,34.3
+PURABIGEN,True,True,True,True,True,222.0,Insurance,0.1,10.0,33.5,27.5
+QUASEMIND,True,True,True,True,True,60.0,Engineering,0.1,10.0,46.4,38.0
+QUEENSOUTH,True,True,True,True,True,385.0,Textile,0.1,10.0,17.2,14.2
+RAHIMAFOOD,True,True,True,True,True,98.0,Food & Allied,0.1,10.0,81.9,67.1
+RAHIMTEXT,True,True,True,True,True,178.0,Textile,0.1,10.0,218.2,178.6
+RAKCERAMIC,True,True,True,True,True,10.0,Ceramics Sector,0.1,10.0,33.0,27.0
+RANFOUNDRY,True,True,True,True,True,61.0,Engineering,0.1,10.0,168.1,137.7
+RDFOOD,True,True,True,True,True,276.0,Food & Allied,0.1,10.0,27.0,22.2
+RECKITTBEN,True,True,True,True,True,147.0,Pharmaceuticals & Chemicals,0.1,5.0,3451.4,3122.8
+REGENTTEX,True,True,True,True,True,363.0,Textile,0.1,10.0,6.8,5.6
+RELIANCE1,True,True,True,True,True,271.0,Mutual Funds,0.1,10.0,13.5,11.1
+RELIANCINS,True,True,True,True,True,223.0,Insurance,0.1,10.0,120.6,98.8
+RENATA,True,True,True,True,True,148.0,Pharmaceuticals & Chemicals,0.1,8.75,507.1,425.5
+RENWICKJA,True,True,True,True,True,62.0,Engineering,0.1,7.5,826.5,711.3
+REPUBLIC,True,True,True,True,True,224.0,Insurance,0.1,10.0,45.8,37.6
+RINGSHINE,True,True,True,True,True,409.0,Textile,0.1,10.0,4.4,3.6
+ROBI,True,True,True,True,True,475.0,Telecommunication,0.1,10.0,33.2,27.2
+RSRMSTEEL,True,True,True,True,True,344.0,Engineering,0.1,10.0,8.0,6.6
+RUNNERAUTO,True,True,True,True,True,404.0,Engineering,0.1,10.0,51.7,42.3
+RUPALIBANK,True,True,True,True,True,34.0,Bank,0.1,10.0,18.9,15.5
+RUPALIINS,True,True,True,True,True,225.0,Insurance,0.1,10.0,32.5,26.7
+RUPALILIFE,True,True,True,True,True,226.0,Insurance,0.1,10.0,89.9,73.7
+SAFKOSPINN,True,True,True,True,True,180.0,Textile,0.1,10.0,24.3,19.9
+SAIFPOWER,True,True,True,True,True,342.0,Services & Real Estate,0.1,10.0,10.3,8.5
+SAIHAMCOT,True,True,True,True,True,303.0,Textile,0.1,10.0,26.4,21.6
+SAIHAMTEX,True,True,True,True,True,181.0,Textile,0.1,10.0,37.8,31.0
+SALAMCRST,True,True,True,True,True,63.0,Engineering,0.1,10.0,13.5,11.1
+SALVO,True,True,True,True,True,149.0,Pharmaceuticals & Chemicals,0.1,10.0,37.2,30.6
+SAMATALETH,True,True,True,True,True,159.0,Tannery Industries,0.1,10.0,102.0,83.6
+SAMORITA,True,True,True,True,True,153.0,Services & Real Estate,0.1,10.0,103.6,84.8
+SANDHANINS,True,True,True,True,True,227.0,Insurance,0.1,10.0,28.2,23.2
+SAPORTL,True,True,True,True,True,154.0,Services & Real Estate,0.1,10.0,64.9,53.1
+SAVAREFR,True,True,True,True,True,127.0,Miscellaneous,0.1,8.75,234.3,196.7
+SBACBANK,True,True,True,True,True,492.0,Bank,0.1,10.0,7.3,6.1
+SEAPEARL,True,True,True,True,True,408.0,Travel & Leisure,0.1,10.0,39.1,32.1
+SEB1PBOND,True,True,True,False,True,10833.0,Corporate Bond,0.5,5.0,4830.0,4370.0
+SEMLFBSLGF,True,True,True,True,True,400.0,Mutual Funds,0.1,10.0,7.7,6.3
+SEMLIBBLSF,True,True,True,True,True,376.0,Mutual Funds,0.1,10.0,8.6,7.2
+SHAHJABANK,True,True,True,True,True,35.0,Bank,0.1,10.0,19.2,15.8
+SHARPIND,True,True,True,True,True,179.0,Textile,0.1,10.0,23.7,19.5
+SHASHADNIM,True,True,True,True,True,352.0,Textile,0.1,10.0,30.8,25.2
+SHEPHERD,True,True,True,True,True,377.0,Textile,0.1,10.0,16.6,13.6
+SHURWID,True,True,True,True,True,347.0,Engineering,0.1,10.0,6.6,5.4
+SHYAMPSUG,True,True,True,True,True,99.0,Food & Allied,0.1,8.75,329.6,276.6
+SIBL,True,True,True,True,True,36.0,Bank,0.1,10.0,3.2,2.7
+SICL,True,True,True,True,True,10533.0,Insurance,0.1,10.0,43.7,35.9
+SILCOPHL,True,True,True,True,True,406.0,Pharmaceuticals & Chemicals,0.1,10.0,19.5,16.1
+SILVAPHL,True,True,True,True,True,395.0,Pharmaceuticals & Chemicals,0.1,10.0,14.8,12.2
+SIMTEX,True,True,True,True,True,362.0,Textile,0.1,10.0,28.2,23.2
+SINGERBD,True,True,True,True,True,64.0,Engineering,0.1,10.0,82.8,67.8
+SINOBANGLA,True,True,True,True,True,128.0,Miscellaneous,0.1,10.0,58.1,47.7
+SIPLC,True,True,True,True,True,10496.0,Insurance,0.1,10.0,163.4,133.8
+SJIBLPBOND,True,True,True,False,True,10513.0,Corporate Bond,0.5,5.0,4980.5,4506.5
+SKTRIMS,True,True,True,True,True,391.0,Miscellaneous,0.1,10.0,15.4,12.6
+SONALIANSH,True,True,True,True,True,120.0,Jute,0.1,8.75,234.4,196.8
+SONALILIFE,True,True,True,True,True,484.0,Insurance,0.1,10.0,93.1,76.3
+SONALIPAPR,True,True,True,True,True,468.0,Paper & Printing,0.1,8.75,251.3,210.9
+SONARBAINS,True,True,True,True,True,228.0,Insurance,0.1,10.0,42.1,34.5
+SONARGAON,True,True,True,True,True,182.0,Textile,0.1,10.0,110.6,90.6
+SOUTHEASTB,True,True,True,True,True,37.0,Bank,0.1,10.0,12.7,10.5
+SPCERAMICS,True,True,True,True,True,11.0,Ceramics Sector,0.1,10.0,22.7,18.7
+SPCL,True,True,True,True,True,337.0,Fuel & Power,0.1,10.0,58.0,47.6
+SQUARETEXT,True,True,True,True,True,183.0,Textile,0.1,10.0,54.4,44.6
+SQURPHARMA,True,True,True,True,True,150.0,Pharmaceuticals & Chemicals,0.1,8.75,236.6,198.6
+SSSTEEL,True,True,True,True,True,398.0,Engineering,0.1,10.0,7.3,6.1
+STANCERAM,True,True,True,True,True,12.0,Ceramics Sector,0.1,10.0,75.4,61.8
+STANDARINS,True,True,True,True,True,229.0,Insurance,0.1,10.0,55.4,45.4
+STANDBANKL,True,True,True,True,True,38.0,Bank,0.1,10.0,4.9,4.1
+STYLECRAFT,True,True,True,True,True,184.0,Textile,0.1,10.0,59.5,48.7
+SUMITPOWER,True,True,True,True,True,111.0,Fuel & Power,0.1,10.0,17.2,14.2
+SUNLIFEINS,True,True,True,True,True,315.0,Insurance,0.1,10.0,55.1,45.1
+TAKAFULINS,True,True,True,True,True,230.0,Insurance,0.1,10.0,59.5,48.7
+TALLUSPIN,True,True,True,True,True,185.0,Textile,0.1,10.0,8.4,7.0
+TAMIJTEX,True,True,True,True,True,489.0,Textile,0.1,10.0,134.7,110.3
+TB10Y0127,True,False,True,False,True,10630.0,G-SEC (T.Bond),0.0,2.0,101.27,97.29
+TB10Y0130,True,False,True,False,True,10703.0,G-SEC (T.Bond),0.0,2.0,101.95,97.95
+TB10Y0132,True,False,True,False,True,10738.0,G-SEC (T.Bond),0.0,2.0,93.41,89.75
+TB10Y0135,True,False,True,False,True,10855.0,G-SEC (T.Bond),0.0,2.0,120.35,115.63
+TB10Y0231,True,False,True,False,True,10722.0,G-SEC (T.Bond),0.0,2.0,89.1,85.6
+TB10Y0234,True,False,True,False,True,10834.0,G-SEC (T.Bond),0.0,2.0,119.02,114.36
+TB10Y0333,True,False,True,False,True,10810.0,G-SEC (T.Bond),0.0,2.0,99.76,95.84
+TB10Y0335,True,False,True,False,True,10859.0,G-SEC (T.Bond),0.0,2.0,118.6,113.94
+TB10Y0429,True,False,True,False,True,10684.0,G-SEC (T.Bond),0.0,2.0,98.35,94.49
+TB10Y0434,True,False,True,False,True,10851.0,G-SEC (T.Bond),0.0,2.0,118.8,114.14
+TB10Y0530,True,False,True,False,True,10707.0,G-SEC (T.Bond),0.0,2.0,99.68,95.78
+TB10Y0531,True,False,True,False,True,10727.0,G-SEC (T.Bond),0.0,2.0,87.61,84.17
+TB10Y0532,True,False,True,False,True,10743.0,G-SEC (T.Bond),0.0,2.0,98.93,95.05
+TB10Y0535,True,False,True,False,True,10863.0,G-SEC (T.Bond),0.0,2.0,118.93,114.27
+TB10Y0628,True,False,True,False,True,10663.0,G-SEC (T.Bond),0.0,2.0,99.05,95.17
+TB10Y0629,True,False,True,False,True,10689.0,G-SEC (T.Bond),0.0,2.0,100.18,96.26
+TB10Y0630,True,False,True,False,True,10709.0,G-SEC (T.Bond),0.0,2.0,99.33,95.43
+TB10Y0632,True,False,True,False,True,10745.0,G-SEC (T.Bond),0.0,2.0,99.11,95.23
+TB10Y0634,True,False,True,False,True,10843.0,G-SEC (T.Bond),0.0,2.0,120.36,115.64
+TB10Y0730,True,False,True,False,True,10711.0,G-SEC (T.Bond),0.0,2.0,96.76,92.96
+TB10Y0731,True,False,True,False,True,10730.0,G-SEC (T.Bond),0.0,2.0,85.54,82.18
+TB10Y0735,True,False,True,False,True,10874.0,G-SEC (T.Bond),0.0,2.0,112.39,107.99
+TB10Y0829,True,False,True,False,True,10694.0,G-SEC (T.Bond),0.0,2.0,102.84,98.8
+TB10Y0833,True,False,True,False,True,10822.0,G-SEC (T.Bond),0.0,2.0,103.95,99.87
+TB10Y0932,True,False,True,False,True,10749.0,G-SEC (T.Bond),0.0,2.0,98.25,94.39
+TB10Y1027,True,False,True,False,True,10646.0,G-SEC (T.Bond),0.0,2.0,99.85,95.93
+TB10Y1030,True,False,True,False,True,10717.0,G-SEC (T.Bond),0.0,2.0,88.68,85.2
+TB10Y1031,True,False,True,False,True,10734.0,G-SEC (T.Bond),0.0,2.0,91.28,87.7
+TB10Y1128,True,False,True,False,True,10673.0,G-SEC (T.Bond),0.0,2.0,97.35,93.53
+TB10Y1135,True,False,True,False,True,10880.0,G-SEC (T.Bond),0.0,2.0,109.67,105.37
+TB10Y1229,True,False,True,False,True,10701.0,G-SEC (T.Bond),0.0,2.0,102.54,98.52
+TB10Y1232,True,False,True,False,True,10862.0,G-SEC (T.Bond),0.0,2.0,99.23,95.33
+TB15Y0127,True,False,True,False,True,10631.0,G-SEC (T.Bond),0.0,2.0,102.95,98.91
+TB15Y0128,True,False,True,False,True,10652.0,G-SEC (T.Bond),0.0,2.0,105.96,101.8
+TB15Y0129,True,False,True,False,True,10679.0,G-SEC (T.Bond),0.0,2.0,107.91,103.67
+TB15Y0227,True,False,True,False,True,10632.0,G-SEC (T.Bond),0.0,2.0,103.26,99.22
+TB15Y0228,True,False,True,False,True,10654.0,G-SEC (T.Bond),0.0,2.0,106.3,102.14
+TB15Y0229,True,False,True,False,True,10681.0,G-SEC (T.Bond),0.0,2.0,107.97,103.73
+TB15Y0327,True,False,True,False,True,10634.0,G-SEC (T.Bond),0.0,2.0,103.53,99.47
+TB15Y0328,True,False,True,False,True,10656.0,G-SEC (T.Bond),0.0,2.0,106.6,102.42
+TB15Y0329,True,False,True,False,True,10683.0,G-SEC (T.Bond),0.0,2.0,108.03,103.79
+TB15Y0339,True,False,True,False,True,10839.0,G-SEC (T.Bond),0.0,2.0,124.87,119.97
+TB15Y0340,True,False,True,False,True,10860.0,G-SEC (T.Bond),0.0,2.0,127.65,122.65
+TB15Y0427,True,False,True,False,True,10635.0,G-SEC (T.Bond),0.0,2.0,103.76,99.7
+TB15Y0428,True,False,True,False,True,10658.0,G-SEC (T.Bond),0.0,2.0,106.74,102.56
+TB15Y0429,True,False,True,False,True,10685.0,G-SEC (T.Bond),0.0,2.0,108.19,103.95
+TB15Y0431,True,False,True,False,True,10725.0,G-SEC (T.Bond),0.0,2.0,95.24,91.5
+TB15Y0437,True,False,True,False,True,10785.0,G-SEC (T.Bond),0.0,2.0,94.7,90.98
+TB15Y0527,True,False,True,False,True,10637.0,G-SEC (T.Bond),0.0,2.0,104.07,99.99
+TB15Y0528,True,False,True,False,True,10660.0,G-SEC (T.Bond),0.0,2.0,106.93,102.73
+TB15Y0529,True,False,True,False,True,10688.0,G-SEC (T.Bond),0.0,2.0,108.53,104.27
+TB15Y0535,True,False,True,False,True,10779.0,G-SEC (T.Bond),0.0,2.0,100.79,96.83
+TB15Y0627,True,False,True,False,True,10638.0,G-SEC (T.Bond),0.0,2.0,104.34,100.24
+TB15Y0628,True,False,True,False,True,10662.0,G-SEC (T.Bond),0.0,2.0,107.1,102.9
+TB15Y0629,True,False,True,False,True,10691.0,G-SEC (T.Bond),0.0,2.0,108.95,104.67
+TB15Y0635,True,False,True,False,True,10780.0,G-SEC (T.Bond),0.0,2.0,100.59,96.65
+TB15Y0637,True,False,True,False,True,10786.0,G-SEC (T.Bond),0.0,2.0,98.67,94.81
+TB15Y0727,True,False,True,False,True,10640.0,G-SEC (T.Bond),0.0,2.0,104.55,100.45
+TB15Y0728,True,False,True,False,True,10666.0,G-SEC (T.Bond),0.0,2.0,107.28,103.08
+TB15Y0729,True,False,True,False,True,10692.0,G-SEC (T.Bond),0.0,2.0,109.13,104.85
+TB15Y0730,True,False,True,False,True,10713.0,G-SEC (T.Bond),0.0,2.0,103.78,99.72
+TB15Y0736,True,False,True,False,True,10784.0,G-SEC (T.Bond),0.0,2.0,79.35,76.23
+TB15Y0828,True,False,True,False,True,10668.0,G-SEC (T.Bond),0.0,2.0,107.47,103.25
+TB15Y0829,True,False,True,False,True,10696.0,G-SEC (T.Bond),0.0,2.0,108.96,104.68
+TB15Y0840,True,False,True,False,True,10884.0,G-SEC (T.Bond),0.0,2.0,112.26,107.86
+TB15Y0926,True,False,True,False,True,10625.0,G-SEC (T.Bond),0.0,2.0,102.05,98.05
+TB15Y0927,True,False,True,False,True,10643.0,G-SEC (T.Bond),0.0,2.0,104.76,100.66
+TB15Y0928,True,False,True,False,True,10670.0,G-SEC (T.Bond),0.0,2.0,107.61,103.39
+TB15Y0929,True,False,True,False,True,10697.0,G-SEC (T.Bond),0.0,2.0,109.14,104.86
+TB15Y0930,True,False,True,False,True,10715.0,G-SEC (T.Bond),0.0,2.0,98.36,94.5
+TB15Y0933,True,False,True,False,True,10763.0,G-SEC (T.Bond),0.0,2.0,93.31,89.65
+TB15Y1026,True,False,True,False,True,10626.0,G-SEC (T.Bond),0.0,2.0,102.23,98.23
+TB15Y1027,True,False,True,False,True,10645.0,G-SEC (T.Bond),0.0,2.0,105.05,100.93
+TB15Y1028,True,False,True,False,True,10671.0,G-SEC (T.Bond),0.0,2.0,107.72,103.5
+TB15Y1029,True,False,True,False,True,10699.0,G-SEC (T.Bond),0.0,2.0,109.05,104.77
+TB15Y1126,True,False,True,False,True,10628.0,G-SEC (T.Bond),0.0,2.0,102.39,98.37
+TB15Y1127,True,False,True,False,True,10648.0,G-SEC (T.Bond),0.0,2.0,105.38,101.24
+TB15Y1128,True,False,True,False,True,10675.0,G-SEC (T.Bond),0.0,2.0,107.59,103.37
+TB15Y1129,True,False,True,False,True,10700.0,G-SEC (T.Bond),0.0,2.0,109.03,104.75
+TB15Y1133,True,False,True,False,True,10766.0,G-SEC (T.Bond),0.0,2.0,94.83,91.11
+TB15Y1226,True,False,True,False,True,10629.0,G-SEC (T.Bond),0.0,2.0,102.6,98.58
+TB15Y1227,True,False,True,False,True,10650.0,G-SEC (T.Bond),0.0,2.0,105.66,101.52
+TB15Y1228,True,False,True,False,True,10677.0,G-SEC (T.Bond),0.0,2.0,107.77,103.55
+TB20Y0128,True,False,True,False,True,10653.0,G-SEC (T.Bond),0.0,2.0,107.27,103.07
+TB20Y0129,True,False,True,False,True,10678.0,G-SEC (T.Bond),0.0,2.0,109.61,105.31
+TB20Y0131,True,False,True,False,True,10721.0,G-SEC (T.Bond),0.0,2.0,102.12,98.12
+TB20Y0132,True,False,True,False,True,10739.0,G-SEC (T.Bond),0.0,2.0,114.16,109.68
+TB20Y0133,True,False,True,False,True,10754.0,G-SEC (T.Bond),0.0,2.0,118.97,114.31
+TB20Y0134,True,False,True,False,True,10768.0,G-SEC (T.Bond),0.0,2.0,120.13,115.41
+TB20Y0143,True,False,True,False,True,10864.0,G-SEC (T.Bond),0.0,2.0,99.87,95.95
+TB20Y0228,True,False,True,False,True,10655.0,G-SEC (T.Bond),0.0,2.0,107.51,103.29
+TB20Y0229,True,False,True,False,True,10680.0,G-SEC (T.Bond),0.0,2.0,109.92,105.6
+TB20Y0230,True,False,True,False,True,10704.0,G-SEC (T.Bond),0.0,2.0,101.48,97.5
+TB20Y0231,True,False,True,False,True,10723.0,G-SEC (T.Bond),0.0,2.0,102.1,98.1
+TB20Y0232,True,False,True,False,True,10740.0,G-SEC (T.Bond),0.0,2.0,115.13,110.61
+TB20Y0233,True,False,True,False,True,10755.0,G-SEC (T.Bond),0.0,2.0,119.67,114.97
+TB20Y0234,True,False,True,False,True,10769.0,G-SEC (T.Bond),0.0,2.0,120.0,115.3
+TB20Y0328,True,False,True,False,True,10657.0,G-SEC (T.Bond),0.0,2.0,107.74,103.52
+TB20Y0329,True,False,True,False,True,10682.0,G-SEC (T.Bond),0.0,2.0,110.23,105.91
+TB20Y0330,True,False,True,False,True,10705.0,G-SEC (T.Bond),0.0,2.0,101.28,97.3
+TB20Y0331,True,False,True,False,True,10724.0,G-SEC (T.Bond),0.0,2.0,102.18,98.18
+TB20Y0332,True,False,True,False,True,10741.0,G-SEC (T.Bond),0.0,2.0,115.86,111.32
+TB20Y0333,True,False,True,False,True,10756.0,G-SEC (T.Bond),0.0,2.0,119.87,115.17
+TB20Y0334,True,False,True,False,True,10770.0,G-SEC (T.Bond),0.0,2.0,119.05,114.39
+TB20Y0342,True,False,True,False,True,10792.0,G-SEC (T.Bond),0.0,2.0,91.4,87.82
+TB20Y0428,True,False,True,False,True,10659.0,G-SEC (T.Bond),0.0,2.0,107.92,103.68
+TB20Y0429,True,False,True,False,True,10686.0,G-SEC (T.Bond),0.0,2.0,107.1,102.9
+TB20Y0430,True,False,True,False,True,10706.0,G-SEC (T.Bond),0.0,2.0,101.03,97.07
+TB20Y0431,True,False,True,False,True,10726.0,G-SEC (T.Bond),0.0,2.0,102.2,98.2
+TB20Y0432,True,False,True,False,True,10742.0,G-SEC (T.Bond),0.0,2.0,116.65,112.07
+TB20Y0433,True,False,True,False,True,10757.0,G-SEC (T.Bond),0.0,2.0,120.08,115.38
+TB20Y0434,True,False,True,False,True,10771.0,G-SEC (T.Bond),0.0,2.0,118.66,114.0
+TB20Y0436,True,False,True,False,True,10783.0,G-SEC (T.Bond),0.0,2.0,96.29,92.51
+TB20Y0528,True,False,True,False,True,10661.0,G-SEC (T.Bond),0.0,2.0,108.15,103.91
+TB20Y0529,True,False,True,False,True,10687.0,G-SEC (T.Bond),0.0,2.0,106.4,102.22
+TB20Y0530,True,False,True,False,True,10708.0,G-SEC (T.Bond),0.0,2.0,101.08,97.12
+TB20Y0531,True,False,True,False,True,10728.0,G-SEC (T.Bond),0.0,2.0,102.17,98.17
+TB20Y0532,True,False,True,False,True,10744.0,G-SEC (T.Bond),0.0,2.0,117.44,112.84
+TB20Y0533,True,False,True,False,True,10758.0,G-SEC (T.Bond),0.0,2.0,120.32,115.6
+TB20Y0534,True,False,True,False,True,10772.0,G-SEC (T.Bond),0.0,2.0,118.15,113.51
+TB20Y0540,True,False,True,False,True,10789.0,G-SEC (T.Bond),0.0,2.0,104.18,100.1
+TB20Y0545,True,False,True,False,True,10865.0,G-SEC (T.Bond),0.0,2.0,126.13,121.19
+TB20Y0628,True,False,True,False,True,10664.0,G-SEC (T.Bond),0.0,2.0,108.26,104.02
+TB20Y0629,True,False,True,False,True,10690.0,G-SEC (T.Bond),0.0,2.0,104.24,100.16
+TB20Y0630,True,False,True,False,True,10710.0,G-SEC (T.Bond),0.0,2.0,100.88,96.92
+TB20Y0631,True,False,True,False,True,10729.0,G-SEC (T.Bond),0.0,2.0,102.13,98.13
+TB20Y0632,True,False,True,False,True,10746.0,G-SEC (T.Bond),0.0,2.0,117.42,112.82
+TB20Y0633,True,False,True,False,True,10759.0,G-SEC (T.Bond),0.0,2.0,120.6,115.88
+TB20Y0634,True,False,True,False,True,10773.0,G-SEC (T.Bond),0.0,2.0,117.76,113.14
+TB20Y0639,True,False,True,False,True,10788.0,G-SEC (T.Bond),0.0,2.0,103.49,99.43
+TB20Y0640,True,False,True,False,True,10790.0,G-SEC (T.Bond),0.0,2.0,101.89,97.89
+TB20Y0641,True,False,True,False,True,10791.0,G-SEC (T.Bond),0.0,2.0,77.78,74.72
+TB20Y0642,True,False,True,False,True,10793.0,G-SEC (T.Bond),0.0,2.0,98.97,95.09
+TB20Y0727,True,False,True,False,True,10641.0,G-SEC (T.Bond),0.0,2.0,108.04,103.8
+TB20Y0728,True,False,True,False,True,10665.0,G-SEC (T.Bond),0.0,2.0,108.43,104.17
+TB20Y0729,True,False,True,False,True,10693.0,G-SEC (T.Bond),0.0,2.0,101.84,97.84
+TB20Y0730,True,False,True,False,True,10712.0,G-SEC (T.Bond),0.0,2.0,100.99,97.03
+TB20Y0731,True,False,True,False,True,10731.0,G-SEC (T.Bond),0.0,2.0,103.47,99.41
+TB20Y0732,True,False,True,False,True,10747.0,G-SEC (T.Bond),0.0,2.0,117.32,112.72
+TB20Y0733,True,False,True,False,True,10760.0,G-SEC (T.Bond),0.0,2.0,120.84,116.1
+TB20Y0734,True,False,True,False,True,10774.0,G-SEC (T.Bond),0.0,2.0,118.01,113.39
+TB20Y0735,True,False,True,False,True,10781.0,G-SEC (T.Bond),0.0,2.0,111.55,107.17
+TB20Y0744,True,False,True,False,True,10849.0,G-SEC (T.Bond),0.0,2.0,128.65,123.61
+TB20Y0827,True,False,True,False,True,10642.0,G-SEC (T.Bond),0.0,2.0,107.95,103.71
+TB20Y0828,True,False,True,False,True,10667.0,G-SEC (T.Bond),0.0,2.0,108.66,104.4
+TB20Y0829,True,False,True,False,True,10695.0,G-SEC (T.Bond),0.0,2.0,101.11,97.15
+TB20Y0830,True,False,True,False,True,10714.0,G-SEC (T.Bond),0.0,2.0,101.06,97.1
+TB20Y0831,True,False,True,False,True,10732.0,G-SEC (T.Bond),0.0,2.0,104.46,100.36
+TB20Y0832,True,False,True,False,True,10748.0,G-SEC (T.Bond),0.0,2.0,117.38,112.78
+TB20Y0833,True,False,True,False,True,10761.0,G-SEC (T.Bond),0.0,2.0,121.08,116.34
+TB20Y0834,True,False,True,False,True,10775.0,G-SEC (T.Bond),0.0,2.0,117.3,112.7
+TB20Y0845,True,False,True,False,True,10879.0,G-SEC (T.Bond),0.0,2.0,111.09,106.73
+TB20Y0927,True,False,True,False,True,10644.0,G-SEC (T.Bond),0.0,2.0,107.17,102.97
+TB20Y0928,True,False,True,False,True,10669.0,G-SEC (T.Bond),0.0,2.0,108.82,104.56
+TB20Y0930,True,False,True,False,True,10716.0,G-SEC (T.Bond),0.0,2.0,101.06,97.1
+TB20Y0931,True,False,True,False,True,10733.0,G-SEC (T.Bond),0.0,2.0,107.4,103.18
+TB20Y0932,True,False,True,False,True,10750.0,G-SEC (T.Bond),0.0,2.0,117.3,112.7
+TB20Y0933,True,False,True,False,True,10762.0,G-SEC (T.Bond),0.0,2.0,121.13,116.38
+TB20Y0934,True,False,True,False,True,10776.0,G-SEC (T.Bond),0.0,2.0,118.17,113.53
+TB20Y1027,True,False,True,False,True,10647.0,G-SEC (T.Bond),0.0,2.0,107.2,103.0
+TB20Y1028,True,False,True,False,True,10672.0,G-SEC (T.Bond),0.0,2.0,108.95,104.67
+TB20Y1029,True,False,True,False,True,10698.0,G-SEC (T.Bond),0.0,2.0,102.68,98.66
+TB20Y1030,True,False,True,False,True,10718.0,G-SEC (T.Bond),0.0,2.0,101.01,97.05
+TB20Y1031,True,False,True,False,True,10735.0,G-SEC (T.Bond),0.0,2.0,110.51,106.17
+TB20Y1032,True,False,True,False,True,10751.0,G-SEC (T.Bond),0.0,2.0,117.43,112.83
+TB20Y1033,True,False,True,False,True,10764.0,G-SEC (T.Bond),0.0,2.0,121.17,116.41
+TB20Y1034,True,False,True,False,True,10777.0,G-SEC (T.Bond),0.0,2.0,118.62,113.96
+TB20Y1127,True,False,True,False,True,10649.0,G-SEC (T.Bond),0.0,2.0,107.14,102.94
+TB20Y1128,True,False,True,False,True,10674.0,G-SEC (T.Bond),0.0,2.0,109.09,104.81
+TB20Y1130,True,False,True,False,True,10719.0,G-SEC (T.Bond),0.0,2.0,101.65,97.67
+TB20Y1131,True,False,True,False,True,10736.0,G-SEC (T.Bond),0.0,2.0,111.03,106.67
+TB20Y1132,True,False,True,False,True,10752.0,G-SEC (T.Bond),0.0,2.0,117.7,113.08
+TB20Y1133,True,False,True,False,True,10765.0,G-SEC (T.Bond),0.0,2.0,120.41,115.69
+TB20Y1134,True,False,True,False,True,10778.0,G-SEC (T.Bond),0.0,2.0,118.97,114.31
+TB20Y1135,True,False,True,False,True,10782.0,G-SEC (T.Bond),0.0,2.0,99.11,95.23
+TB20Y1138,True,False,True,False,True,10787.0,G-SEC (T.Bond),0.0,2.0,95.6,91.86
+TB20Y1227,True,False,True,False,True,10651.0,G-SEC (T.Bond),0.0,2.0,107.16,102.96
+TB20Y1228,True,False,True,False,True,10676.0,G-SEC (T.Bond),0.0,2.0,109.26,104.98
+TB20Y1229,True,False,True,False,True,10702.0,G-SEC (T.Bond),0.0,2.0,102.12,98.12
+TB20Y1230,True,False,True,False,True,10720.0,G-SEC (T.Bond),0.0,2.0,102.04,98.04
+TB20Y1231,True,False,True,False,True,10737.0,G-SEC (T.Bond),0.0,2.0,111.7,107.32
+TB20Y1232,True,False,True,False,True,10753.0,G-SEC (T.Bond),0.0,2.0,118.33,113.69
+TB20Y1233,True,False,True,False,True,10767.0,G-SEC (T.Bond),0.0,2.0,120.46,115.74
+TB20Y1242,True,False,True,False,True,10845.0,G-SEC (T.Bond),0.0,2.0,100.61,96.67
+TB2Y0127,True,False,True,False,True,10866.0,G-SEC (T.Bond),0.0,2.0,103.07,99.03
+TB2Y0227,True,False,True,False,True,10857.0,G-SEC (T.Bond),0.0,2.0,102.88,98.84
+TB2Y0327,True,False,True,False,True,10867.0,G-SEC (T.Bond),0.0,2.0,103.19,99.15
+TB2Y0427,True,False,True,False,True,10861.0,G-SEC (T.Bond),0.0,2.0,103.97,99.89
+TB2Y0527,True,False,True,False,True,10868.0,G-SEC (T.Bond),0.0,2.0,104.08,100.0
+TB2Y0627,True,False,True,False,True,10871.0,G-SEC (T.Bond),0.0,2.0,104.55,100.45
+TB2Y0727,True,False,True,False,True,10885.0,G-SEC (T.Bond),0.0,2.0,104.34,100.24
+TB2Y0927,True,False,True,False,True,10877.0,G-SEC (T.Bond),0.0,2.0,103.01,98.97
+TB2Y1026,True,False,True,False,True,10869.0,G-SEC (T.Bond),0.0,2.0,102.22,98.22
+TB2Y1126,True,False,True,False,True,10856.0,G-SEC (T.Bond),0.0,2.0,102.54,98.52
+TB2Y1127,True,False,True,False,True,10883.0,G-SEC (T.Bond),0.0,2.0,103.2,99.16
+TB5Y0128,True,False,True,False,True,10846.0,G-SEC (T.Bond),0.0,2.0,100.99,97.03
+TB5Y0230,True,False,True,False,True,10858.0,G-SEC (T.Bond),0.0,2.0,105.61,101.47
+TB5Y0327,True,False,True,False,True,10633.0,G-SEC (T.Bond),0.0,2.0,100.71,96.77
+TB5Y0428,True,False,True,False,True,10814.0,G-SEC (T.Bond),0.0,2.0,100.6,96.66
+TB5Y0429,True,False,True,False,True,10840.0,G-SEC (T.Bond),0.0,2.0,108.43,104.17
+TB5Y0430,True,False,True,False,True,10870.0,G-SEC (T.Bond),0.0,2.0,110.89,106.55
+TB5Y0527,True,False,True,False,True,10636.0,G-SEC (T.Bond),0.0,2.0,101.3,97.32
+TB5Y0529,True,False,True,False,True,10844.0,G-SEC (T.Bond),0.0,2.0,109.43,105.13
+TB5Y0628,True,False,True,False,False,,G-SEC (T.Bond),0.0,2.0,101.12,97.16
+TB5Y0630,True,False,True,False,True,10873.0,G-SEC (T.Bond),0.0,2.0,111.21,106.85
+TB5Y0727,True,False,True,False,True,10639.0,G-SEC (T.Bond),0.0,2.0,101.31,97.33
+TB5Y0828,True,False,True,False,True,10829.0,G-SEC (T.Bond),0.0,2.0,101.39,97.41
+TB5Y0926,True,False,True,False,True,10624.0,G-SEC (T.Bond),0.0,2.0,101.91,97.91
+TB5Y0928,True,False,True,False,True,10818.0,G-SEC (T.Bond),0.0,2.0,101.47,97.49
+TB5Y0930,True,False,True,False,True,10876.0,G-SEC (T.Bond),0.0,2.0,103.7,99.64
+TB5Y1029,True,False,True,False,True,10852.0,G-SEC (T.Bond),0.0,2.0,111.54,107.16
+TB5Y1126,True,False,True,False,True,10627.0,G-SEC (T.Bond),0.0,2.0,101.58,97.6
+TB5Y1127,True,False,True,False,True,10872.0,G-SEC (T.Bond),0.0,2.0,100.67,96.73
+TB5Y1128,True,False,True,False,True,10831.0,G-SEC (T.Bond),0.0,2.0,104.99,100.87
+TB5Y1130,True,False,True,False,True,10882.0,G-SEC (T.Bond),0.0,2.0,106.31,102.15
+TB5Y1228,True,False,True,False,True,10830.0,G-SEC (T.Bond),0.0,2.0,103.7,99.64
+TB5Y1229,True,False,True,False,True,10854.0,G-SEC (T.Bond),0.0,2.0,111.52,107.14
+TECHNODRUG,True,True,True,True,True,10816.0,Pharmaceuticals & Chemicals,0.1,10.0,48.9,40.1
+TILIL,True,True,True,True,True,10535.0,Insurance,0.1,10.0,51.9,42.5
+TITASGAS,True,True,True,True,True,112.0,Fuel & Power,0.1,10.0,19.9,16.3
+TOSRIFA,True,True,True,True,True,357.0,Textile,0.1,10.0,23.2,19.0
+TRUSTB1MF,True,True,True,True,True,270.0,Mutual Funds,0.1,10.0,4.0,3.4
+TRUSTBANK,True,True,True,True,True,39.0,Bank,0.1,10.0,16.1,13.3
+TUNGHAI,True,True,True,True,True,340.0,Textile,0.1,10.0,4.6,3.8
+UCB,True,True,True,True,True,40.0,Bank,0.1,10.0,10.0,8.2
+UCB2PBOND,True,True,True,False,True,10826.0,Corporate Bond,0.5,5.0,4935.0,4465.0
+UNILEVERCL,True,True,True,True,True,138.0,Food & Allied,0.1,5.0,2102.2,1902.0
+UNIONBANK,True,True,True,True,True,10499.0,Bank,0.1,10.0,1.6,1.4
+UNIONCAP,True,True,True,True,True,84.0,Financial Institutions,0.1,10.0,4.8,4.0
+UNIONINS,True,True,True,True,True,493.0,Insurance,0.1,10.0,55.4,45.4
+UNIQUEHRL,True,True,True,True,True,311.0,Travel & Leisure,0.1,10.0,47.7,39.1
+UNITEDFIN,True,True,True,True,True,83.0,Financial Institutions,0.1,10.0,19.4,16.0
+UNITEDINS,True,True,True,True,True,231.0,Insurance,0.1,10.0,71.3,58.5
+UPGDCL,True,True,True,True,True,355.0,Fuel & Power,0.1,10.0,124.2,101.7
+USMANIAGL,True,True,True,True,True,129.0,Miscellaneous,0.1,10.0,65.4,53.6
+UTTARABANK,True,True,True,True,True,41.0,Bank,0.1,10.0,22.8,18.8
+UTTARAFIN,True,True,True,True,True,85.0,Financial Institutions,0.1,10.0,14.1,11.7
+VAMLBDMF1,True,True,True,True,True,366.0,Mutual Funds,0.1,10.0,7.8,6.4
+VAMLRBBF,True,True,True,True,True,373.0,Mutual Funds,0.1,10.0,8.9,7.3
+VFSTDL,True,True,True,True,True,393.0,Textile,0.1,10.0,16.1,13.3
+WALTONHIL,True,True,True,True,True,469.0,Engineering,0.1,8.75,426.5,357.9
+WATACHEM,True,True,True,True,True,343.0,Pharmaceuticals & Chemicals,0.1,10.0,150.2,123.0
+WMSHIPYARD,True,True,True,True,True,345.0,Engineering,0.1,10.0,10.0,8.2
+YPL,True,True,True,True,True,371.0,Engineering,0.1,10.0,23.5,19.3
+ZAHEENSPIN,True,True,True,True,True,353.0,Textile,0.1,10.0,6.0,5.0
+ZAHINTEX,True,True,True,True,True,286.0,Textile,0.1,10.0,8.8,7.2
+ZEALBANGLA,True,True,True,True,True,100.0,Food & Allied,0.1,10.0,200.7,164.3
+ACHIASF,False,False,False,False,True,10523.0,,,,,
+AMPL,False,False,False,False,True,10521.0,,,,,
+AOPLC,False,False,False,False,True,10540.0,,,,,
+APEXWEAV,False,False,False,False,True,10507.0,,,,,
+BBL2NDSB,False,False,False,False,True,10881.0,,,,,
+BDPAINTS,False,False,False,False,True,10536.0,,,,,
+BENGALBISC,False,False,False,False,True,10506.0,,,,,
+CRAFTSMAN,False,False,False,False,True,10837.0,,,,,
+HIMADRI,False,False,False,False,True,10508.0,,,,,
+IBBT2BOND3,False,False,False,False,True,10848.0,,,,,
+IFICSBOND2,False,False,False,False,True,10819.0,,,,,
+IFICSBOND3,False,False,False,False,True,10820.0,,,,,
+KAY&AMP;QUE,False,False,False,False,True,53.0,,,,,
+KBSEED,False,False,False,False,True,10519.0,,,,,
+KFL,False,False,False,False,True,10501.0,,,,,
+MAMUNAGRO,False,False,False,False,True,10503.0,,,,,
+MASTERAGRO,False,False,False,False,True,10498.0,,,,,
+MKFOOTWEAR,False,False,False,False,True,10800.0,,,,,
+MOSTFAMETL,False,False,False,False,True,10500.0,,,,,
+NIALCO,False,False,False,False,True,10509.0,,,,,
+ORYZAAGRO,False,False,False,False,True,10497.0,,,,,
+PALUGB1,False,False,False,False,True,10795.0,,,,,
+RAPLCSBOND,False,False,False,False,True,10875.0,,,,,
+RENATAPS,False,False,False,False,True,10878.0,,,,,
+SADHESIVE,False,False,False,False,True,10520.0,,,,,
+TB10Y0123,False,False,False,False,True,10550.0,,,,,
+TB10Y0223,False,False,False,False,True,10551.0,,,,,
+TB10Y0323,False,False,False,False,True,10554.0,,,,,
+TB10Y0423,False,False,False,False,True,10557.0,,,,,
+TB10Y0425,False,False,False,False,True,10599.0,,,,,
+TB10Y0723,False,False,False,False,True,10563.0,,,,,
+TB10Y0724,False,False,False,False,True,10587.0,,,,,
+TB10Y0726,False,False,False,False,True,10622.0,,,,,
+TB10Y1122,False,False,False,False,True,10545.0,,,,,
+TB10Y1123,False,False,False,False,True,10571.0,,,,,
+TB10Y1124,False,False,False,False,True,10591.0,,,,,
+TB10Y1222,False,False,False,False,True,10546.0,,,,,
+TB15Y0123,False,False,False,False,True,10549.0,,,,,
+TB15Y0223,False,False,False,False,True,10552.0,,,,,
+TB15Y0224,False,False,False,False,True,10574.0,,,,,
+TB15Y0226,False,False,False,False,True,10615.0,,,,,
+TB15Y0323,False,False,False,False,True,10553.0,,,,,
+TB15Y0324,False,False,False,False,True,10576.0,,,,,
+TB15Y0423,False,False,False,False,True,10556.0,,,,,
+TB15Y0425,False,False,False,False,True,10598.0,,,,,
+TB15Y0523,False,False,False,False,True,10558.0,,,,,
+TB15Y0524,False,False,False,False,True,10580.0,,,,,
+TB15Y0526,False,False,False,False,True,10619.0,,,,,
+TB15Y0623,False,False,False,False,True,10559.0,,,,,
+TB15Y0624,False,False,False,False,True,10582.0,,,,,
+TB15Y0626,False,False,False,False,True,10620.0,,,,,
+TB15Y0723,False,False,False,False,True,10561.0,,,,,
+TB15Y0724,False,False,False,False,True,10586.0,,,,,
+TB15Y0823,False,False,False,False,True,10565.0,,,,,
+TB15Y0824,False,False,False,False,True,10588.0,,,,,
+TB15Y0825,False,False,False,False,True,10606.0,,,,,
+TB15Y0826,False,False,False,False,True,10623.0,,,,,
+TB15Y0923,False,False,False,False,True,10566.0,,,,,
+TB15Y0924,False,False,False,False,True,10589.0,,,,,
+TB15Y1022,False,False,False,False,True,10543.0,,,,,
+TB15Y1023,False,False,False,False,True,10567.0,,,,,
+TB15Y1122,False,False,False,False,True,10544.0,,,,,
+TB15Y1123,False,False,False,False,True,10569.0,,,,,
+TB15Y1125,False,False,False,False,True,10611.0,,,,,
+TB15Y1222,False,False,False,False,True,10547.0,,,,,
+TB15Y1223,False,False,False,False,True,10572.0,,,,,
+TB2Y0123,False,False,False,False,True,10548.0,,,,,
+TB2Y0126,False,False,False,False,True,10835.0,,,,,
+TB2Y0324,False,False,False,False,True,10575.0,,,,,
+TB2Y0423,False,False,False,False,True,10555.0,,,,,
+TB2Y0526,False,False,False,False,True,10841.0,,,,,
+TB2Y0624,False,False,False,False,True,10581.0,,,,,
+TB2Y0723,False,False,False,False,True,10560.0,,,,,
+TB2Y0823,False,False,False,False,True,10564.0,,,,,
+TB2Y0826,False,False,False,False,True,10850.0,,,,,
+TB2Y1123,False,False,False,False,True,10568.0,,,,,
+TB5Y0324,False,False,False,False,True,10577.0,,,,,
+TB5Y0624,False,False,False,False,True,10583.0,,,,,
+TB5Y0626,False,False,False,False,True,10621.0,,,,,
+TB5Y0723,False,False,False,False,True,10562.0,,,,,
+TB5Y0724,False,False,False,False,True,10585.0,,,,,
+TB5Y1123,False,False,False,False,True,10570.0,,,,,
+TB5Y1224,False,False,False,False,True,10593.0,,,,,
+TR1GSTGZCB,False,False,False,False,True,10827.0,,,,,
+TR2GSTGZCB,False,False,False,False,True,10828.0,,,,,
+WEBCOATS,False,False,False,False,True,10824.0,,,,,
+WONDERTOYS,False,False,False,False,True,10505.0,,,,,
+YUSUFLOUR,False,False,False,False,True,10538.0,,,,,

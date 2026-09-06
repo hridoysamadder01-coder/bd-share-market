@@ -1,0 +1,20 @@
+{
+  "displayed_depth_price_volume_per_level": "OBSERVED (snapshot, both sensors)",
+  "all_symbol_l1_and_day_totals": "OBSERVED",
+  "per_instrument_exchange_timestamp": "OBSERVED (LankaBD watch, tape)",
+  "book_exchange_timestamp": "NOT_AVAILABLE (depth pages carry no exchange stamp; receipt time is recorded)",
+  "cumulative_intraday_trades_volume_value": "OBSERVED (~1 row/min, exchange-stamped)",
+  "interval_trades_volume_value_vwap": "INFERRED (difference of consecutive cumulative rows)",
+  "individual_trade_prints": "NOT_AVAILABLE",
+  "trade_side_aggressor": "NOT_AVAILABLE (inferable only by a quote rule on interval VWAP)",
+  "number_of_orders_per_level": "NOT_AVAILABLE",
+  "order_ids": "NOT_AVAILABLE",
+  "queue_position": "NOT_AVAILABLE",
+  "intra_interval_add_cancel_netting": "NOT_AVAILABLE",
+  "circuit_limits_tick_size_breaker_pct": "OBSERVED",
+  "block_board_prints": "OBSERVED (daily board)",
+  "historical_ohlcv_trades_value": "OBSERVED (official day-end archive)",
+  "sector_category_market_cap_free_float_outstanding": "OBSERVED (company page)",
+  "pe_eps_dividend_shareholding": "OBSERVED (company page)",
+  "nav": "NOT_AVAILABLE on the DSE company page for equities (mutual funds publish NAV separately)"
+}

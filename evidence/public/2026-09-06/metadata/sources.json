@@ -1,0 +1,76 @@
+{
+  "dsebd.org": {
+    "latest_share_price_scroll_l.php": {
+      "method": "GET",
+      "gives": "all-symbol L1 + day totals",
+      "truth": "OBSERVED"
+    },
+    "ajax/load-instrument.php": {
+      "method": "POST {inst}",
+      "gives": "displayed depth (price, volume per level)",
+      "truth": "OBSERVED",
+      "note": "snapshot L2; no order counts, no order ids"
+    },
+    "displayCompany.php": {
+      "method": "GET {name}",
+      "truth": "OBSERVED",
+      "gives": "sector, market category, market cap, free-float market cap, outstanding securities, capital, face value, market lot, P/E, EPS and dividend history, shareholding %, 52-week range"
+    },
+    "day_end_archive.php": {
+      "method": "GET {startDate,endDate,inst=All Instrument,archive=data}",
+      "gives": "historical OHLCV, trades, value",
+      "truth": "OBSERVED"
+    },
+    "hts.php": {
+      "method": "GET",
+      "gives": "trading sessions and holidays",
+      "truth": "OBSERVED"
+    }
+  },
+  "lankabd.com": {
+    "Home/MarketDepthData": {
+      "method": "POST {Symbol,Exchange} + anti-forgery token",
+      "gives": "displayed depth",
+      "truth": "OBSERVED"
+    },
+    "api/datafeed/IndexLiveData/LiveStockWatchData": {
+      "method": "GET",
+      "gives": "all-symbol L1 with per-instrument exchange stamp",
+      "truth": "OBSERVED"
+    },
+    "api/Company/MkSecondDataSymbol": {
+      "method": "GET {cid,tradeCounts}",
+      "gives": "exchange-stamped CUMULATIVE intraday rows (~1/min)",
+      "truth": "OBSERVED_CUMULATIVE",
+      "note": "cumulative totals, NOT individual prints"
+    },
+    "api/datafeed/IndexLiveData/LiveDSETradeStatistics": {
+      "method": "GET",
+      "gives": "market totals and breadth",
+      "truth": "OBSERVED"
+    },
+    "api/APIMarket/GetLatestBlockMarket": {
+      "method": "GET",
+      "gives": "block-board prints",
+      "truth": "OBSERVED"
+    },
+    "Home/CircuitBreaker": {
+      "method": "GET",
+      "gives": "per-symbol circuit limits, tick size, breaker %",
+      "truth": "OBSERVED"
+    },
+    "api/APIMarket/GetDataGrid": {
+      "method": "GET",
+      "gives": "all-symbol grid",
+      "truth": "OBSERVED"
+    },
+    "Home/MinuteChartMatrix": {
+      "method": "GET",
+      "gives": "symbol → company-id map",
+      "truth": "OBSERVED"
+    }
+  },
+  "excluded_on_policy": {
+    "amarstock.com": "robots.txt disallows this agent"
+  }
+}
