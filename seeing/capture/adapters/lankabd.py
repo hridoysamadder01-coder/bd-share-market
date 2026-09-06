@@ -262,13 +262,20 @@ class LankaBDTapeAdapter:
             if not isinstance(r, list) or len(r) < 5:
                 out.problems.append(f"row {i} malformed: {r!r}"[:200])
                 continue
+            # a non-numeric stamp flags this one row (kept, t_source_utc None) instead of losing the whole pull
+            try:
+                t_src = epoch_ms_to_utc(r[0]).isoformat()
+                t_ms = int(r[0])
+            except (TypeError, ValueError, OverflowError, OSError):
+                out.problems.append(f"row {i} bad stamp: {r[0]!r}"[:200])
+                t_src, t_ms = None, None
             out.frames.append({
                 "symbol": (key or "").upper(), "row_index": i,
-                "t_source_ms": r[0], "t_source_utc": epoch_ms_to_utc(r[0]).isoformat(),
+                "t_source_ms": r[0], "t_source_utc": t_src,
                 "price": r[1], "cum_trades": r[2], "cum_volume": r[3], "cum_value_mn": r[4],
                 "price2": r[5] if len(r) > 5 else None,
             })
-        out.frames.sort(key=lambda f: (f["t_source_ms"], f["row_index"]))
+        out.frames.sort(key=lambda f: ((f["t_source_utc"] is None), f["t_source_utc"] or "", f["row_index"]))
         out.problems += [] if d.get("length") in (None, len(rows)) else \
             [f"length {d.get('length')} != rows {len(rows)} (partial pull)"]
         return out

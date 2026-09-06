@@ -63,6 +63,7 @@ class PoliteClient:
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _last_send: float = 0.0
     _consecutive_errors: int = 0
+    _fallback_hosts: set = field(default_factory=set)      # hosts whose chain failed verification once
     stats: Dict[str, int] = field(default_factory=lambda: {"requests": 0, "errors": 0, "tls_fallbacks": 0})
 
     def backoff_s(self) -> float:
@@ -87,9 +88,16 @@ class PoliteClient:
                                    "t_send_utc": now_utc().isoformat(), "tls_verify": True}
             self._last_send = time.monotonic()
             self.stats["requests"] += 1
+            host = url.split("/")[2] if "//" in url else url
+            # a host that already failed verification once (broken upstream chain) goes straight to the
+            # unverified request: one wire request per poll instead of two, and the record says so
+            verify: Any = False if (allow_tls_fallback and host in self._fallback_hosts) else True
+            if verify is False:
+                env["tls_verify"] = False
+                env["tls_fallback_reason"] = "cached: host failed chain verification earlier in this session"
             try:
                 r = self.session.request(method, url, headers=hdrs, data=data, params=params,
-                                         timeout=self.timeout_s, allow_redirects=True)
+                                         timeout=self.timeout_s, allow_redirects=True, verify=verify)
                 env["t_first_byte_utc"] = now_utc().isoformat()
                 body = r.content
                 env["t_last_byte_utc"] = now_utc().isoformat()
@@ -106,6 +114,7 @@ class PoliteClient:
                 if allow_tls_fallback and _is_cert_error(e) and \
                         any(h in url for h in TLS_FALLBACK_HOSTS):
                     self.stats["tls_fallbacks"] += 1
+                    self._fallback_hosts.add(host)
                     try:
                         r = self.session.request(method, url, headers=hdrs, data=data, params=params,
                                                  timeout=self.timeout_s, allow_redirects=True,
