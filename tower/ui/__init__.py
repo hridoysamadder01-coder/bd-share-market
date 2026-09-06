@@ -7,7 +7,6 @@ The server never computes market quantities: every number it serves is read
 from the store written by ``tower.replay`` / ``tower.live`` (see
 ``tower/CONTRACTS.md``, "State store format"). Files are tailed, so a store
 that is still growing and a finished replay store are served the same way.
+Import ``tower.ui.server`` for ``create_app`` / ``StoreReader`` (kept out of
+this package ``__init__`` so ``python3 -m tower.ui.server`` runs cleanly).
 """
-from .server import StoreReader, create_app  # noqa: F401
-
-__all__ = ["StoreReader", "create_app"]
