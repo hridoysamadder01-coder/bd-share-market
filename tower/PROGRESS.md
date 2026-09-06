@@ -1,5 +1,13 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
+05:45 UTC: head 7f0110a (tower) = e57d491 cross-module fixes + merge of seeing 140e8cb (adapter fixes). Verify verdicts in:
+book (65 tests), tape_queue (434/3 → fixed), normalize (436/1 → fixed); in progress: fusion, circuit_auction; queued: resilience,
+cross, 4 mech families, ingest_go, experiment, ui (2-wide, slow). Gate pre-run (04:57, GATE.json in results/tower/gate_pre):
+fixture determinism OK; capture replay 75,580 events → 14 symbols, 0 failures, 41/49 mechanisms vary (8 flat: conditions
+absent today), placeholders none (benign: 3 except-no-ops + 1 abstract), go vet/test/build 0. FULL gate running on 7f0110a
+→ results/tower/gate/GATE.json (task bhtolcv2b). Seeing interim 05:05: 1,284 frames, 0 composite episodes → BLOCKED (committed
+90d5f36). PLAN: on gate result → PR #4 body + receipt on this head; fold later verify fixes as follow-up commits + final gate.
+
 04:33 UTC: live tailer verified against the growing capture in --tail-only mode (45 s: 43 records → 1333 events → 29 states,
 12 symbols, 0 reconstruction failures, lag 3.5 s); live.py now honours --max-seconds inside catch-up and reports
 unprocessed_backlog/deadline_hit/catchup_records in RUN.json; tests/tower/test_live_tail.py added (4 tests). engine.py forwards

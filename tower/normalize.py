@@ -314,9 +314,12 @@ def events_from_frames(source: str, frames: Sequence[Dict[str, Any]], *, t_recv:
             payload = {k: v for k, v in fr.items() if k != "symbol"}
             inst = fr.get("instrument_number")
             always = ("t_recv", "t_source") if t_exch is not None else ("t_recv",)
-            out.append(mk(EventType.QUOTE, symbol=sym, t_exch=t_exch, price=_price_or_none(fr.get("ltp")),
+            # a zero-flagged watch field is the feed's 'not populated' sentinel: not observed, and never a price
+            zero = set(fr.get("zero_fields") or ())
+            price = None if "ltp" in zero else _price_or_none(fr.get("ltp"))
+            out.append(mk(EventType.QUOTE, symbol=sym, t_exch=t_exch, price=price,
                           instrument_id=str(inst) if inst is not None else None, payload=payload,
-                          observed_fields=_observed(fr, always)))
+                          observed_fields=_observed(fr, always, exclude=zero)))
         if source == "lankabd_watch" and frames:
             # market-wide breadth derived from this poll: INFERRED, rule stated in the payload
             b = _breadth(frames)

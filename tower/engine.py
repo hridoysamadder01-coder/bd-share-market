@@ -69,6 +69,11 @@ class _Sym:
     block: Optional[Dict[str, Any]] = None
     last_quote: Dict[str, Any] = field(default_factory=dict)
     has_book_or_tape: bool = False
+    tdate: Optional[Any] = None                 # trading date of the last processed event (day-roll detection)
+
+
+# quote fields that belong to one session: they never carry into the next trading date's first frames
+_SESSION_QUOTE_FIELDS = ("ltp", "open", "high", "low", "close_published", "day_trades", "day_volume", "day_value_mn")
 
 
 class Engine:
@@ -102,6 +107,12 @@ class Engine:
             b = EvolvingBook(s.tick or self.cfg.default_tick)
             s.books[source] = b
         return b
+
+    def set_day_history(self, symbol: str, records: List[Dict[str, Any]]) -> None:
+        """Supply prior-session records (see ``CircuitEngine.set_day_history`` /
+        ``circuit.day_history_from_tables``) so streak fields become observable. A single-day
+        capture carries none: without this call the circuit streak stays 'unknown' (never 0)."""
+        self._sym(symbol).circuit.set_day_history(symbol, records)
 
     def metrics_snapshot(self) -> Dict[str, Any]:
         m = dict(self.metrics)
@@ -161,6 +172,15 @@ class Engine:
         if ev.symbol is None:
             return None
         s = self._sym(ev.symbol)
+        tdate = trading_date(ev.t_recv)
+        if s.tdate is not None and tdate != s.tdate:
+            # trading-date roll: the previous session's ltp/open/high/low/day totals are not this
+            # session's quote (the circuit/auction engines gate on phase but cannot see a stale same-phase quote)
+            for k in _SESSION_QUOTE_FIELDS:
+                s.last_quote.pop(k, None)
+            s.has_book_or_tape = False
+            self.metrics["day_rolls"] = self.metrics.get("day_rolls", 0) + 1
+        s.tdate = tdate
         touched_book = False
         if et == EventType.REFERENCE:
             p = ev.payload
@@ -237,9 +257,6 @@ class Engine:
         if book is not None:
             book.fill_state(ms)
             ms.book_source = primary
-        # quote-level fields (fusion sets provenance; fallback to the latest seen)
-        if ms.ltp is None and s.last_quote.get("ltp") is not None:
-            ms.ltp = s.last_quote["ltp"]
         ms.session_state["quote"] = dict(s.last_quote)
         if s.block:
             ms.session_state["block"] = s.block
@@ -252,6 +269,11 @@ class Engine:
             s.queue.on_book(ms, book)
         s.queue.fill_state(ms)
         self.fuser.fill_state(ms, ev.t_recv)
+        # ltp precedence: exchange-stamped tape row (tape.fill_state) → fused primary quote with provenance
+        # (fuser.fill_state) → the engine's latest seen quote, labelled as such, only when nothing else observed it
+        if ms.ltp is None and s.last_quote.get("ltp") is not None:
+            ms.ltp = s.last_quote["ltp"]
+            ms.provenance.setdefault("ltp", "engine:last_quote")
         s.circuit.on_state(ms, s.hist)
         s.circuit.fill_state(ms)
         s.auction.fill_state(ms)

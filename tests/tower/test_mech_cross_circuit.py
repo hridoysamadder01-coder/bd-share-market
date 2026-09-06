@@ -702,7 +702,10 @@ def test_realdata_fixture_circuit_readings_reflect_limits_and_closed_gate():
         assert m.evidence["score_ungated"] > 0 and m.score == 0.0
         assert m.evidence["inputs"]["rule_source"] is not None
     streaks = [ms.mechanisms["circuit_streak"].evidence.get("regime") for ms in states if "circuit_streak" in ms.mechanisms]
-    assert "none" in streaks and set(streaks) <= {None, "none", "unknown", "streak_up", "streak_down"}
+    # no prior-day history is supplied in a single-capture replay, so the streak is not observable:
+    # the mechanism must say 'unknown' (never a silent streak of 0 → 'none')
+    assert streaks and set(streaks) <= {None, "unknown", "none", "streak_up", "streak_down"}
+    assert "unknown" in streaks and "none" not in streaks
     ll = [ms.mechanisms["cross_lead_lag"] for ms in states if "cross_lead_lag" in ms.mechanisms]
     assert ll and all(m.evidence.get("missing") for m in ll)
 
