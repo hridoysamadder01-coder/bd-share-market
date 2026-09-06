@@ -280,19 +280,55 @@ def parse_page_table(html: str) -> Tuple[List[str], List[List[str]]]:
         body = [r for r in rows if len(r) == width]
         head_cells = [th.get_text(" ", strip=True) for th in t.find_all("th")]
         head = head_cells if len(head_cells) == width else body[0]
-        data = body[1:] if head is body[0] else body
+        stripped = [h.strip() for h in head]
+        data = [r for r in body if [x.strip() for x in r] != stripped]     # the header row is not data
         score = len(data) * width
         if score > best[0]:
             best = (score, [h.strip() for h in head], data)
     return best[1], best[2]
 
 
+def parse_market_statistics(html: str) -> Dict[str, Any]:
+    """The official day-end statistics report (market-statistics.php), which is plain text,
+    not a table: breadth per market category, day totals, market capitalisation by instrument
+    class, and the block-transactions board. Anything the report does not print stays absent."""
+    text = BeautifulSoup(html, "lxml").get_text("\n")
+    out: Dict[str, Any] = {"breadth": [], "block": []}
+    m = re.search(r"TODAY'S SHARE MARKET\s*:\s*(\d{4}-\d{2}-\d{2})", text)
+    out["report_date"] = m.group(1) if m else None
+    for m in re.finditer(r"([A-Za-z][A-Za-z .()&-]*?)\s*\n\s*ISSUES ADVANCED\s*:\s*(\d+)\s*\n\s*"
+                         r"ISSUES DECLINED\s*:\s*(\d+)\s*\n\s*ISSUES UNCHANGED\s*:\s*(\d+)\s*\n\s*"
+                         r"TOTAL ISSUES TRADED\s*:\s*(\d+)", text):
+        out["breadth"].append({"category": m.group(1).strip(), "advanced": int(m.group(2)),
+                               "declined": int(m.group(3)), "unchanged": int(m.group(4)),
+                               "total_traded": int(m.group(5))})
+    for key, pat in (("day_trades", r"NO\. OF TRADES\s*:\s*([\d,.]+)"),
+                     ("day_volume", r"VOLUME\(Nos\.\)\s*:\s*([\d,.]+)"),
+                     ("day_value_tk", r"VALUE\(Tk\)\s*:\s*([\d,.]+)"),
+                     ("mcap_equity_tk", r"1\.\s*EQUITY\s*:?\s*([\d,.]+)"),
+                     ("mcap_mutual_fund_tk", r"2\.\s*MUTUAL FUND\s*:?\s*([\d,.]+)"),
+                     ("mcap_debt_tk", r"3\.\s*DEBT SECURITIES\s*:?\s*([\d,.]+)"),
+                     ("mcap_total_tk", r"TOTAL\s*:?\s*([\d,.]+)\s*\n")):
+        mm = re.search(pat, text)
+        out[key] = num(mm.group(1)) if mm else None
+    m = re.search(r"PRICES IN BLOCK TRANSACTIONS\s*:\s*(\d{4}-\d{2}-\d{2})", text)
+    out["block_date"] = m.group(1) if m else None
+    tail = text[m.end():] if m else ""
+    for line in tail.splitlines():
+        mm = re.match(r"\s*([A-Z0-9][A-Z0-9.()&-]{1,20})\s+([\d,.]+)\s+([\d,.]+)\s+(\d+)\s+([\d,]+)\s+([\d,.]+)\s*$",
+                      line)
+        if mm:
+            out["block"].append({"symbol": mm.group(1), "max_price": num(mm.group(2)),
+                                 "min_price": num(mm.group(3)), "trades": int(mm.group(4)),
+                                 "quantity": num(mm.group(5)), "value_mn": num(mm.group(6)),
+                                 "block_date": out["block_date"]})
+    return out
+
+
 EXTRA_PAGES = {
     "circuit_breaker_official": "/cbul.php",
     "pe_at_a_glance": "/latest_PE.php",
-    "company_listing": "/company_listing.php",
     "sector_wise_company_list": "/by_industrylisting.php",
-    "market_statistics": "/market-statistics.php",
     "top_ten_gainer": "/top_ten_gainer.php",
     "top_ten_loser": "/top_ten_loser.php",
     "marginable_securities": "/marginable-securities.php",
@@ -429,8 +465,23 @@ class Collector:
     def extras(self) -> Dict[str, List[Dict[str, Any]]]:
         """Official DSE day-end pages, each stored raw and normalized with the page's own columns."""
         out: Dict[str, List[Dict[str, Any]]] = {}
+        f = self.get_retry(f"{DSE}/market-statistics.php", {})
+        row = self.record("dse_extras", "market_statistics", f, "html")
+        if f.ok:
+            ms = parse_market_statistics(f.body.decode("utf-8", "replace"))
+            p = self.prov(row)
+            if ms["breadth"]:
+                out["market_statistics_breadth"] = [{**r, "report_date": ms["report_date"], **p}
+                                                    for r in ms["breadth"]]
+            if ms["block"]:
+                out["market_statistics_block"] = [{**r, **p} for r in ms["block"]]
+            totals = {k: v for k, v in ms.items() if k not in ("breadth", "block")}
+            if any(v is not None for v in totals.values()):
+                out["market_statistics_totals"] = [{**totals, **p}]
+            print(f"[{utcnow()[11:19]}] extras market_statistics: {len(ms['breadth'])} breadth rows, "
+                  f"{len(ms['block'])} block rows", file=sys.stderr, flush=True)
         for name, path in EXTRA_PAGES.items():
-            f = self.client.get(f"{DSE}{path}", allow_tls_fallback=True, headers={"Accept": "text/html"})
+            f = self.get_retry(f"{DSE}{path}", {})
             row = self.record("dse_extras", name, f, "html")
             if not f.ok:
                 continue

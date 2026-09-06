@@ -81,3 +81,36 @@ def test_archive_parser_reads_the_trading_code_of_the_all_instrument_archive():
     assert set(by) == {"GP", "BATBC"}
     assert by["GP"]["close"] == 320.4 and by["GP"]["day_trades"] == 1234 and by["GP"]["day_volume"] == 39000
     assert by["BATBC"]["day_value_mn"] == 6.1 and by["BATBC"]["trade_date"] == "2026-09-03"
+
+
+def test_market_statistics_report_is_parsed_from_the_official_text():
+    """market-statistics.php is a plain-text report, not a table: breadth per category, day
+    totals, market capitalisation by instrument class and the block board are all read from it."""
+    from collector.dse_public_collector import parse_market_statistics
+    html = open(os.path.join(FIXTURES, "dsebd_market_statistics_2026-09-06.html"), encoding="utf-8").read()
+    ms = parse_market_statistics(html)
+    assert ms["report_date"] == "2026-09-06" and ms["block_date"] == "2026-09-06"
+    by = {r["category"]: r for r in ms["breadth"]}
+    assert by["All Category"] == {"category": "All Category", "advanced": 20, "declined": 348,
+                                  "unchanged": 21, "total_traded": 389}
+    assert by["A Category"]["declined"] == 168 and by["Z Category"]["total_traded"] == 118
+    assert set(by) >= {"All Category", "A Category", "B Category", "N Category", "Z Category"}
+    assert ms["day_trades"] == 178150.0 and ms["day_volume"] == 204341869.0
+    assert ms["day_value_tk"] == 5452768307.80
+    assert ms["mcap_equity_tk"] == 3456850605183.20 and ms["mcap_debt_tk"] == 3430092389399.60
+    assert ms["mcap_total_tk"] == 6917160139876.50
+    blk = {r["symbol"]: r for r in ms["block"]}
+    assert len(blk) == 35 and blk["SAIHAMTEX"]["quantity"] == 941523.0
+    assert blk["SAIHAMTEX"]["max_price"] == 35.2 and blk["SAIHAMTEX"]["min_price"] == 31.0
+    assert blk["ACMEPL"]["value_mn"] == 12.0 and blk["ACMEPL"]["trades"] == 1
+
+
+def test_page_table_picks_the_data_table_not_the_ticker():
+    from collector.dse_public_collector import parse_page_table
+    html = ("<table><tr><td>TICK 1.00 +1%</td></tr><tr><td>TICK2 2.00</td></tr><tr><td>T3 3</td></tr></table>"
+            "<table><tr><th>Code</th><th>Limit</th><th>Tick</th></tr>"
+            "<tr><td>GP</td><td>10</td><td>0.1</td></tr><tr><td>BATBC</td><td>20</td><td>0.1</td></tr>"
+            "<tr><td>ACI</td><td>30</td><td>0.1</td></tr></table>")
+    head, rows = parse_page_table(html)
+    assert head == ["Code", "Limit", "Tick"]
+    assert [r[0] for r in rows] == ["GP", "BATBC", "ACI"]
