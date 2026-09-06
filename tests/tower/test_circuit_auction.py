@@ -44,7 +44,8 @@ class Sim:
         self.rows = 0
 
     def step(self, s, bids=(), asks=(), ltp=None, phase="CONTINUOUS", interval_volume=None, interval_value=None,
-             open_px=None, yclose=None, t=None):
+             open_px=None, yclose=None, t=None, rows_added=1, first_row=False, mono=False, cum_volume=None,
+             cum_value=None, feed="lankabd_tape"):
         t = t or _t(s)
         self.seq += 1
         ms = MarketState(symbol=self.symbol, t=t, seq=self.seq, session_phase=phase, tick_size=self.tick)
@@ -59,13 +60,16 @@ class Sim:
             q["open"] = open_px
         ms.session_state["quote"] = q
         if interval_volume is not None:
-            self.rows += 1
+            self.rows += rows_added
             ms.interval_volume = interval_volume
-            ms.session_state["tape"] = {"feed": "lankabd_tape", "rows": self.rows,
-                                        "last_interval_value": interval_value}
+            ms.trade_volume, ms.trade_value = cum_volume, cum_value
+            ms.session_state["tape"] = {"feed": feed, "rows": self.rows, "last_interval_value": interval_value,
+                                        "last_first_row": first_row, "last_monotone_break": mono}
         elif self.rows:
-            ms.interval_volume = self.hist.last(1)[0].interval_volume if len(self.hist) else None
-            ms.session_state["tape"] = dict(self.hist.last(1)[0].session_state.get("tape") or {}) if len(self.hist) else {}
+            prev = self.hist.last(1)[0] if len(self.hist) else None
+            ms.interval_volume = prev.interval_volume if prev else None
+            ms.trade_volume, ms.trade_value = (prev.trade_volume, prev.trade_value) if prev else (None, None)
+            ms.session_state["tape"] = dict(prev.session_state.get("tape") or {}) if prev else {}
         self.eng.on_state(ms, self.hist)
         self.eng.fill_state(ms)
         fill_pressure(ms, self.hist)
@@ -195,19 +199,164 @@ def test_machinery_hit_lock_unlock_relock_queue_and_volume_accounting():
     assert d["locked_up_close"] is True and d["unlock_count"] == 1 and d["relock_count"] == 1
     assert d["date"] == "2026-09-06" and d["upper"] == 11.0 and d["time_locked_s"] == 210.0
     assert abs(d["locked_share"] - 210.0 / 330.0) < 1e-9 and d["close"] == 11.0
-    assert ms_locked_down_mirror()
+    assert d["session_observed_s"] == 330.0
 
 
-def ms_locked_down_mirror() -> bool:
+def test_machinery_locked_down_mirror():
     sim = Sim(symbol="DN", yclose=10.0)
     sim.eng.on_reference("DN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
-    sim.step(0, bids=[(9.1, 100)], asks=[(9.2, 100)], ltp=9.2)
+    c0 = sim.step(0, bids=[(9.1, 100)], asks=[(9.2, 100)], ltp=9.2).circuit
+    assert c0["nearer_limit"] == "down" and c0["hit_down"] is False and c0["shares_to_floor"] == 100.0
+    assert c0["floor_visible"] is False                                      # displayed bids stop at 9.1 > 9.0
     m = sim.step(30, bids=[], asks=[(9.0, 7000), (9.1, 100)], ltp=9.0)
     c = m.circuit
-    ok = c["locked_down"] is True and c["hit_down"] is True and c["queue_at_lower"] == 7000.0
-    ok = ok and c["queue_side"] == "down" and c["locked_up"] is False and c["shares_to_floor"] == 0.0
+    assert c["locked_down"] is True and c["hit_down"] is True and c["queue_at_lower"] == 7000.0
+    assert c["queue_side"] == "down" and c["locked_up"] is False and c["hit_up"] is False
+    assert c["shares_to_floor"] == 0.0 and c["floor_visible"] is True
+    assert c["first_hit_side"] == "down" and c["first_hit_time"] == _t(30) and c["first_lock_time"] == _t(30)
+    assert c["pre_hit_state"]["liquidity_door_side"] == 100.0                # bid liquidity that was consumed
+    assert c["liquidity_before_hit"] == 100.0 and c["dist_down_ticks"] == 0.0
     m2 = sim.step(90, bids=[], asks=[(9.0, 7000)], ltp=9.0)
-    return ok and m2.circuit["time_locked_down_s"] == 60.0 and m2.circuit["time_locked_up_s"] == 0.0
+    assert m2.circuit["time_locked_down_s"] == 60.0 and m2.circuit["time_locked_up_s"] == 0.0
+    assert m2.circuit["time_locked_s"] == 60.0 and m2.circuit["queue_persistence_s"] == 60.0
+    # unlock: a bid reappears
+    m3 = sim.step(120, bids=[(9.0, 50)], asks=[(9.0, 6000)], ltp=9.0)
+    assert m3.circuit["locked_down"] is False and m3.circuit["unlock_count"] == 1
+    assert m3.circuit["queue_delta_60s"] == -1000.0 and m3.circuit["queue_decay"] == 1000.0
+    d = sim.eng.day_summary("DN")
+    assert d["locked_down_close"] is False and d["ever_locked_down"] is True and d["first_hit_side"] == "down"
+
+
+def test_machinery_pre_open_residual_book_is_not_session_bookkeeping():
+    """A capture starts hours before the open with the previous session's residual book (bids at
+    the upper limit, no asks) and the carried ltp = previous close. The flags describe that book,
+    but nothing of TODAY's session (lock time, first lock, unlocks, open price, session clock,
+    streak "locked now", break day) may come from it."""
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim.eng.set_day_history("SYN", _hist(n_up=2, upper=11.0, lower=9.0, locked_share=0.9, unlock_count=0))
+    t_closed = T0 - timedelta(hours=3)                                      # 07:00 Dhaka → CLOSED
+    t_pre = T0 - timedelta(minutes=20)                                      # 09:40 Dhaka → PRE_OPEN
+    c0 = sim.step(0, bids=[(11.0, 4000), (10.9, 100)], asks=[], ltp=11.0, phase="CLOSED", t=t_closed).circuit
+    assert c0["in_session"] is False and c0["locked_up"] is True and c0["hit_up"] is True    # the displayed book
+    assert c0["first_lock_time"] is None and c0["first_hit_time"] is None and c0["time_locked_s"] == 0.0
+    assert c0["open_price"] is None and c0["session_elapsed_s"] is None
+    assert c0["consecutive_upper_streak"] == 2 and c0["break_day"] is None and c0["next_session"] is None
+    assert c0["streak_continuation_strength"] is None and c0["streak_weakening"] is None
+    c1 = sim.step(0, bids=[(11.0, 4000), (10.9, 100)], asks=[], ltp=11.0, phase="PRE_OPEN", t=t_pre).circuit
+    assert c1["time_locked_s"] == 0.0 and c1["session_elapsed_s"] is None and c1["open_price"] is None
+    assert c1["unlock_count"] == 0 and c1["ever_locked_up"] is False
+    # the open: a fresh two-sided book below the limit — NOT an unlock, and the session clock starts here
+    c2 = sim.step(0, bids=[(10.7, 300)], asks=[(10.8, 200)], ltp=10.75).circuit
+    assert c2["in_session"] is True and c2["unlock_count"] == 0 and c2["relock_count"] == 0
+    assert c2["session_elapsed_s"] == 0.0 and c2["open_price"] == 10.75 and c2["break_day"] is True
+    assert c2["next_session"] == "reversal" and c2["streak_weakening"] is False
+    assert c2["consecutive_upper_streak"] == 2
+    c3 = sim.step(60, bids=[(11.0, 500)], asks=[], ltp=11.0).circuit
+    assert c3["locked_up"] is True and c3["first_lock_time"] == _t(60) and c3["first_hit_time"] == _t(60)
+    assert c3["pre_hit_state"]["t"] == _t(0).isoformat()                    # the update before the hit, today
+    assert c3["session_elapsed_s"] == 60.0 and c3["time_locked_s"] == 0.0 and c3["consecutive_upper_streak"] == 3
+    c4 = sim.step(120, bids=[(11.0, 500)], asks=[], ltp=11.0).circuit
+    assert c4["time_locked_s"] == 60.0 and abs(c4["locked_share_today"] - 0.5) < 1e-9
+    assert abs(c4["streak_continuation_strength"] - 0.5 / 0.9) < 1e-9
+    # after the close the residual locked book is still displayed but the clocks stop
+    t_after = T0 + timedelta(hours=5)                                       # 15:00 Dhaka → CLOSED
+    c5 = sim.step(0, bids=[(11.0, 500)], asks=[], ltp=11.0, phase="CLOSED", t=t_after).circuit
+    assert c5["time_locked_s"] == 60.0 and c5["session_elapsed_s"] == 120.0 and c5["locked_up"] is True
+    assert c5["queue_delta_60s"] is None and c5["approach_velocity"] is None   # no session dynamics after the close
+    d = sim.eng.day_summary("SYN")
+    assert d["locked_up_close"] is True and d["session_observed_s"] == 120.0 and d["locked_share"] == 0.5
+    assert d["time_locked_s"] == 60.0 and d["unlock_count"] == 0
+
+
+def test_machinery_open_price_needs_the_session_and_prefers_the_published_open():
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    t_pre = T0 - timedelta(minutes=10)
+    assert sim.step(0, ltp=10.0, open_px=10.0, phase="PRE_OPEN", t=t_pre).circuit["open_price"] is None
+    assert sim.step(0, ltp=10.4).circuit["open_price"] == 10.4              # first in-session ltp
+    assert sim.step(5, ltp=10.6).circuit["open_price"] == 10.4              # frozen
+    sim2 = Sim(symbol="P", yclose=10.0)
+    assert sim2.step(0, ltp=10.6, open_px=10.3).circuit["open_price"] == 10.3   # a published open wins
+
+
+def test_machinery_tape_rows_first_row_monotone_break_and_multi_row_pull():
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    near = dict(bids=[(10.85, 200)], asks=[(10.9, 100), (11.0, 400)], ltp=10.9)   # within 2 % of the door
+    # the first row of the day is the cumulative total: it carries no interval, so nothing is attributed
+    c0 = sim.step(0, interval_volume=50000, interval_value=5e5, first_row=True, cum_volume=50000, cum_value=5e5, **near).circuit
+    assert c0["volume_approaching"] == 0.0 and c0["turnover_approaching"] == 0.0
+    c1 = sim.step(30, interval_volume=700, interval_value=7500, cum_volume=50700, cum_value=507500, **near).circuit
+    assert c1["volume_approaching"] == 700.0 and c1["turnover_approaching"] == 7500.0
+    # a monotone break (negative Δ, kept and flagged by the tape) is not traded volume
+    c2 = sim.step(60, interval_volume=300, interval_value=3000, mono=True, cum_volume=50400, cum_value=504500, **near).circuit
+    assert c2["volume_approaching"] == 700.0
+    # one pull delivered three rows: the frame shows the last interval only, the cumulative totals bridge them
+    c3 = sim.step(90, interval_volume=100, interval_value=1000, rows_added=3, cum_volume=51400, cum_value=514500, **near).circuit
+    assert c3["volume_approaching"] == 700.0 + 1000.0 and c3["turnover_approaching"] == 7500.0 + 10000.0
+    # a repeated frame with the same row count adds nothing
+    c4 = sim.step(100, **near).circuit
+    assert c4["volume_approaching"] == 1700.0
+    # a feed switch restarts the row clock: its first row is not attributed
+    c5 = sim.step(130, interval_volume=900, interval_value=9000, feed="other_tape", cum_volume=5, cum_value=5, **near).circuit
+    assert c5["volume_approaching"] == 1700.0
+    c6 = sim.step(160, interval_volume=200, interval_value=2000, feed="other_tape", cum_volume=205, cum_value=2005, **near).circuit
+    assert c6["volume_approaching"] == 1900.0
+
+
+def test_machinery_queue_persistence_is_per_side_and_fill_state_recomputes_for_a_new_update():
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    a = sim.step(0, bids=[(11.0, 100), (10.9, 50)], asks=[(11.0, 200)], ltp=11.0).circuit
+    assert a["queue_side"] == "up" and a["queue_at_upper"] == 100.0 and a["queue_persistence_s"] == 0.0
+    b = sim.step(60, bids=[(11.0, 100), (10.9, 50)], asks=[(11.0, 200)], ltp=11.0).circuit
+    assert b["queue_persistence_s"] == 60.0
+    # the nearer limit flips to the lower side: its queue has just appeared — persistence restarts at 0
+    c = sim.step(90, bids=[(9.0, 100)], asks=[(9.0, 300), (9.1, 50)], ltp=9.0).circuit
+    assert c["queue_side"] == "down" and c["queue_at_lower"] == 300.0 and c["queue_persistence_s"] == 0.0
+    d = sim.step(120, bids=[(9.0, 100)], asks=[(9.0, 300), (9.1, 50)], ltp=9.0).circuit
+    assert d["queue_persistence_s"] == 30.0
+    # fill_state for an update that was never passed to on_state computes it instead of serving the stale one
+    ms = MarketState(symbol="SYN", t=_t(150), seq=99, session_phase="CONTINUOUS", tick_size=0.1, ltp=10.0)
+    ms.session_state["quote"] = {"yclose": 10.0}
+    sim.eng.fill_state(ms)
+    assert ms.circuit["price"] == 10.0 and ms.circuit["nearer_limit"] == "up" and ms.circuit["queue_side"] is None
+
+
+def test_machinery_pre_hit_state_never_reads_a_previous_session():
+    sim = Sim(yclose=10.0)
+    sim.eng.on_reference("SYN", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim.step(0, bids=[(10.5, 100)], asks=[(10.6, 100)], ltp=10.5)
+    sim.step(60, bids=[(10.6, 100)], asks=[(10.7, 100)], ltp=10.6)
+    # the next trading date opens straight at the limit: the last state in history is yesterday's
+    t1 = T0 + timedelta(days=1)
+    c = sim.step(0, bids=[(11.0, 900)], asks=[], ltp=11.0, yclose=10.6, t=t1).circuit
+    assert c["first_hit_time"] == t1 and c["pre_hit_state"]["t"] is None
+    assert c["pre_hit_state"]["missing"] == ["no update before the hit"] and c["pressure_before_hit"] is None
+
+
+def test_machinery_day_history_from_tables_keys_published_limits_by_the_scrape_session():
+    import pandas as pd
+    # the circuit page scraped on 2026-09-06 carries reference_date 2026-09-03 (the previous close's
+    # date); its limits are the ones in force on 09-06, not on 09-03
+    books = pd.DataFrame([
+        {"symbol": "X", "t_recv": pd.Timestamp("2026-09-06 04:10:00+00:00"), "ltp": 10.5, "close_published": None,
+         "yclose": 10.0, "open": 10.2},
+        {"symbol": "X", "t_recv": pd.Timestamp("2026-09-06 08:20:00+00:00"), "ltp": 10.9, "close_published": 10.9,
+         "yclose": 10.0, "open": 10.2},
+        {"symbol": "X", "t_recv": pd.Timestamp("2026-09-07 05:00:00+00:00"), "ltp": 11.9, "close_published": None,
+         "yclose": 10.9, "open": 11.0},
+    ])
+    circ = pd.DataFrame([{"symbol": "X", "t_recv": pd.Timestamp("2026-09-06 01:06:00+00:00"), "reference_date": "2026-09-03",
+                          "upper_limit": 10.9, "lower_limit": 9.1, "tick_size": 0.1}])
+    recs = day_history_from_tables({"books": books, "circuit": circ}, "X")
+    assert [r["date"] for r in recs] == ["2026-09-06", "2026-09-07"]
+    assert recs[0]["upper"] == 10.9 and recs[0]["lower"] == 9.1 and recs[0]["close"] == 10.9
+    assert recs[0]["locked_up_close"] is True                               # closed at the published limit
+    # 09-07 has no circuit row: the band schedule on yclose 10.9 → 11.9 / 9.9
+    assert recs[1]["upper"] == 11.9 and recs[1]["lower"] == 9.9 and recs[1]["close"] == 11.9
+    assert recs[1]["locked_up_close"] is True and recs[1]["open"] == 11.0
 
 
 # ============================================================================ exceptions
@@ -299,9 +448,17 @@ def test_machinery_break_day_and_next_session_classification():
     c3 = sim2.step(60, bids=[(8.3, 100)], asks=[(8.4, 100)], ltp=8.4).circuit
     assert c3["break_day"] is True and c3["break_behaviour"]["reversal"] is False   # 8.35 < prior lower 9.0
     assert c3["unlock_count"] == 1 and c3["streak_weakening"] is True
-    # no history → streak fields not observable
+    # no history ever supplied → streak fields not observable (None, never a silent 0)
     c4 = Sim(symbol="N").step(0, ltp=10.0).circuit
-    assert c4["consecutive_upper_streak"] == 0 and c4["next_session"] is None and c4["break_day"] is None
+    assert c4["consecutive_upper_streak"] is None and c4["prior_upper_streak"] is None
+    assert c4["streak_history_observed"] is False and c4["next_session"] is None and c4["break_day"] is None
+    # an EMPTY history is an observation: no prior session locked → 0, and locked now → 1
+    sim5 = Sim(symbol="E", yclose=10.0)
+    sim5.eng.on_reference("E", 11.0, 9.0, 0.1, 10.0, rule_source="lankabd_circuit")
+    sim5.eng.set_day_history("E", [])
+    c5 = sim5.step(0, bids=[(11.0, 100)], asks=[], ltp=11.0).circuit
+    assert c5["streak_history_observed"] is True and c5["prior_upper_streak"] == 0
+    assert c5["consecutive_upper_streak"] == 1 and c5["consecutive_lower_streak"] == 0 and c5["break_day"] is None
 
 
 def test_machinery_day_roll_appends_summary_and_carries_streak():
@@ -388,6 +545,37 @@ def test_machinery_auction_transition_gap_vs_yclose_without_auction_feed_and_clo
     b.on_event(_ev(EventType.AUCTION, datetime(2026, 9, 3, 3, 55, tzinfo=timezone.utc),
                    payload={"indicative_price": 50.0, "matched_qty": 100, "imbalance_qty": 50, "imbalance_side": "buy"}))
     assert b.fill_state(ms3)["indicative_price"] is None and b.fill_state(ms3)["auction_events"] == 1
+
+
+def test_machinery_auction_transition_from_closed_same_date_and_late_tick():
+    # no update fell inside PRE_OPEN: CLOSED (same trading date) → CONTINUOUS is still the open
+    a = AuctionEngine()
+    t_closed = datetime(2026, 9, 6, 1, 30, tzinfo=timezone.utc)             # 07:30 Dhaka → CLOSED
+    d0 = a.fill_state(MarketState(symbol="SYN", t=t_closed, session_phase="CLOSED", tick_size=None, ltp=10.0))
+    assert d0["source"] is None and d0["transition_time"] is None
+    t_open = datetime(2026, 9, 6, 4, 0, 2, tzinfo=timezone.utc)
+    ms1 = MarketState(symbol="SYN", t=t_open, session_phase="CONTINUOUS", tick_size=None, ltp=10.3)
+    ms1.session_state["quote"] = {"yclose": 10.0}
+    d1 = a.fill_state(ms1)
+    assert d1["transition_time"] == t_open and d1["open_ltp"] == 10.3 and d1["open_reference"] == "yclose"
+    assert d1["open_gap_ticks"] is None                                     # tick not known yet — not 0
+    ms2 = MarketState(symbol="SYN", t=t_open + timedelta(seconds=30), session_phase="CONTINUOUS", tick_size=0.1, ltp=10.8)
+    d2 = a.fill_state(ms2)
+    assert d2["open_ltp"] == 10.3 and abs(d2["open_gap_ticks"] - 3.0) < 1e-9   # frozen open, gap once the tick exists
+    # a CLOSED update of the PREVIOUS date followed by CONTINUOUS is a replay starting mid-session: no open
+    b = AuctionEngine()
+    b.fill_state(MarketState(symbol="SYN", t=datetime(2026, 9, 3, 12, 0, tzinfo=timezone.utc), session_phase="CLOSED", tick_size=0.1))
+    d3 = b.fill_state(MarketState(symbol="SYN", t=datetime(2026, 9, 6, 6, 0, tzinfo=timezone.utc), session_phase="CONTINUOUS",
+                                  tick_size=0.1, ltp=10.0))
+    assert d3["transition_time"] is None and d3["open_ltp"] is None and d3["last_phase_change"]["to"] == "CONTINUOUS"
+    # imbalance sign conventions: a negative imbalance quantity without a side is a sell imbalance
+    c = AuctionEngine()
+    t_pre = datetime(2026, 9, 6, 3, 50, tzinfo=timezone.utc)
+    c.on_event(_ev(EventType.AUCTION, t_pre, payload={"indicative_price": 10.0, "matched_qty": 1000, "imbalance_qty": -1000}))
+    d4 = c.fill_state(MarketState(symbol="SYN", t=t_pre, session_phase="PRE_OPEN", tick_size=0.1))
+    assert abs(d4["auction_pressure"] + 0.5) < 1e-9 and d4["imbalance_side"] is None
+    c.on_event(_ev(EventType.AUCTION, t_pre, payload={"indicative_price": 10.0, "matched_qty": 0, "imbalance_qty": 0, "imbalance_side": "B"}))
+    assert c.fill_state(MarketState(symbol="SYN", t=t_pre, session_phase="PRE_OPEN", tick_size=0.1))["auction_pressure"] is None
 
 
 # ============================================================================ real data

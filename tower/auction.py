@@ -21,13 +21,16 @@ pre-open proxy
     ``source='pre_open_book_proxy'``, ``indicative_price`` None. Outside
     PRE_OPEN with no auction feed everything is None (``source`` None).
 transition
-    the first update in CONTINUOUS after a PRE_OPEN update is the auction →
-    continuous transition: ``transition_time`` is that update's time and
-    ``open_gap_ticks`` = (opening ltp − reference) / tick where the reference is
-    the indicative price when one was delivered, else yclose
+    the first update in CONTINUOUS after a non-continuous update (PRE_OPEN, or
+    CLOSED when no pre-open update was delivered) of the SAME trading date is the
+    auction → continuous transition: ``transition_time`` is that update's time
+    and ``open_gap_ticks`` = (opening ltp − reference) / tick where the reference
+    is the indicative price when one was delivered, else yclose
     (``open_reference`` names which). When no ltp is available at the transition
     the gap is filled by the first later update that carries one (the opening
-    price is the first print of the continuous session).
+    price is the first print of the continuous session); when the tick is not
+    known yet the gap is computed as soon as it is. A replay that starts inside
+    the continuous session has no transition (``None``).
 
 ``fill_state`` only ever writes ``ms.auction`` — no continuous-session field is
 touched.
@@ -83,7 +86,7 @@ class AuctionEngine:
         self._last: Optional[_Auction] = None
         self._n_events = 0
         self._prev_phase: Optional[str] = None
-        self._seen_pre_open_date: Any = None
+        self._prev_date: Any = None
         self._transition_time: Optional[datetime] = None
         self._transition_date: Any = None
         self._open_ltp: Optional[float] = None
@@ -124,15 +127,14 @@ class AuctionEngine:
         # phase transitions
         if self._prev_phase is not None and phase != self._prev_phase:
             self._phase_changes.append({"t": ms.t.isoformat(), "from": self._prev_phase, "to": phase})
-            if self._prev_phase == "PRE_OPEN" and phase == "CONTINUOUS":
+            # the open: a non-continuous update of the same trading date preceded this continuous one
+            if phase == "CONTINUOUS" and self._prev_phase in ("PRE_OPEN", "CLOSED") and self._prev_date == today:
                 self._transition_time = ms.t
                 self._transition_date = today
                 self._open_ltp = None
                 self._open_gap_ticks = None
                 self._open_reference = None
                 self._open_reference_price = None
-        if phase == "PRE_OPEN":
-            self._seen_pre_open_date = today
         if self._phase_changes:
             d["last_phase_change"] = self._phase_changes[-1]
 
@@ -175,12 +177,15 @@ class AuctionEngine:
                     if yclose is not None and yclose > 0:
                         ref_px, ref_name = yclose, "yclose"
                 self._open_reference, self._open_reference_price = ref_name, ref_px
-                if ref_px is not None and ms.tick_size:
-                    self._open_gap_ticks = (ms.ltp - ref_px) / ms.tick_size
+            if (self._open_gap_ticks is None and self._open_ltp is not None
+                    and self._open_reference_price is not None and ms.tick_size):
+                # the opening print and its reference are frozen; the gap needs a tick, taken when known
+                self._open_gap_ticks = (self._open_ltp - self._open_reference_price) / ms.tick_size
             d["open_ltp"] = self._open_ltp
             d["open_gap_ticks"] = self._open_gap_ticks
             d["open_reference"] = self._open_reference
             d["open_reference_price"] = self._open_reference_price
         self._prev_phase = phase
+        self._prev_date = today
         ms.auction = d
         return d
