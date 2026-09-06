@@ -129,6 +129,40 @@ python3 experiments/verify_footprint_causality.py         # footprint/outcome ca
 **The Phase 5 holdout (2019-01-01 → 2022-07-27) is sealed** — `phase45_footprints.py`
 drops it at load and asserts. Do not run anything on it until Phase 5.
 
+## `seeing/` — one synchronized participant-side market-seeing engine (2026-09-06)
+
+Implements the pipeline the acquisition document only designed:
+source adapters → raw immutable capture → timestamp/sequence normalization → book
+reconstruction → tape reconstruction → event/queue reconstruction → source fusion → one
+synchronized market state → microstructure features → state machine → experiment →
+falsification → KEEP / KILL / BLOCKED. Every field carries a truth class: OBSERVED,
+INFERRED or NOT_OBSERVABLE (`seeing/truth.py`); nothing is invented.
+
+Sources actually reached from the research container (`evidence/SOURCE_ACCESS_LEDGER.md`):
+the exchange site's public depth AJAX (`dsebd.org/ajax/load-instrument.php`), LankaBD's
+depth POST and JSON live APIs (all-symbol watch with exchange stamps, per-company minute
+tape, market stats, block board, circuit limits), the DSE holiday/session page. Adapters
+for richer sources exist and are tested but need external inputs: broker Level-II /
+Time & Sales exports, a HAR recording of the owner's own DSE Investor session, and a FIX
+market-data session (DSE MDS / BHOMS) — see the ledger for the exact dependency of each.
+
+```bash
+python3 -m pytest -q tests                                   # 45 tests
+python3 -m seeing.capture.runner --out evidence/capture/DATE --start 03:50 --end 08:20   # live capture (UTC)
+python3 -m seeing verify     --capture evidence/capture/DATE    # hash chain / CRC
+python3 -m seeing experiment --capture evidence/capture/DATE --out results/seeing/DATE
+python3 -m seeing.report --exp results/seeing/DATE --capture evidence/capture/DATE \
+        --out reports/SEEING_EXPERIMENT_REPORT_DATE.md
+```
+
+The experiment (`seeing/experiment/design.py`, pre-registered before the first live frame)
+tests whether persistent bid pressure + ask thinning + bid replenishment + positive
+multi-level transition + stable spread + time persistence + price-response behaviour carries
+information beyond L1 / top-K / weighted imbalance, the largest wall and one-frame pressure,
+under chronological dev/val/holdout, matched controls, timestamp permutation, side flip,
+anchor shift, stale/duplicate/crossed/largest-wall removal, leave-one-symbol-out, liquidity
+split and block bootstrap. If it does not beat the simpler baseline it is killed.
+
 ## Status
 
 `RESEARCH_STATUS.md` — current phase, what is proved, what is not.
