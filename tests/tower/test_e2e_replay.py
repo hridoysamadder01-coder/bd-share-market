@@ -171,3 +171,24 @@ def test_realdata_live_session_capture(tmp_path):
         nonempty += sum(1 for x in rows if not x["empty_book"])
     print(f"live capture: {n} events, {len(syms)} symbols, {nonempty} non-empty book states")
     assert r.engine.metrics_snapshot()["reconstruction_failures"] == 0
+
+
+def test_machinery_previous_session_tape_rows_are_not_applied():
+    """A tape pull before the first trade of the day carries the previous session's rows
+    (exchange stamp on another trading date): they must be counted and never applied."""
+    from tower.engine import Engine, EngineConfig
+    from tower.events import Event, EventType
+    eng = Engine(EngineConfig(strict=True))
+    t_recv = datetime(2026, 9, 6, 3, 56, tzinfo=timezone.utc)
+    eng.process(Event(source="lankabd_depth", event_type=EventType.BOOK_SNAPSHOT, t_recv=t_recv, seq_local=0, symbol="X",
+                      payload={"bids": [(10.0, 100.0)], "asks": [(10.1, 100.0)]}, is_snapshot=True))
+    old = Event(source="lankabd_tape", event_type=EventType.CUM_TOTALS, t_recv=t_recv, seq_local=1, symbol="X",
+                t_exch=datetime(2026, 9, 3, 8, 9, tzinfo=timezone.utc),
+                payload={"cum_trades": 1139, "cum_volume": 1043807, "cum_value_mn": 65.234, "price": 62.8})
+    assert eng.process(old) is None
+    assert eng.metrics["previous_session_tape_rows"] == 1
+    today = Event(source="lankabd_tape", event_type=EventType.CUM_TOTALS, t_recv=t_recv + timedelta(minutes=10), seq_local=2,
+                  symbol="X", t_exch=datetime(2026, 9, 6, 4, 5, tzinfo=timezone.utc),
+                  payload={"cum_trades": 3, "cum_volume": 300, "cum_value_mn": 0.00303, "price": 10.1})
+    ms = eng.process(today)
+    assert ms is not None and ms.trade_count == 3 and ms.interval_volume == 300

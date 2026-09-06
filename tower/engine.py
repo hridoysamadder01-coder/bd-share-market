@@ -36,6 +36,7 @@ from .state import MarketState, MechanismState
 from .tape import TapeState
 from .timeline import Timeline
 from .truth_map import STATE_TRUTH
+from seeing.clock import trading_date
 
 BOOK_TYPES = (EventType.BOOK_SNAPSHOT, EventType.BOOK_UPDATE)
 
@@ -204,6 +205,12 @@ class Engine:
             s.tape.on_trade(ev.t_recv, ev.price, ev.qty, aggressor=ev.aggressor, trade_id=ev.trade_id, book=b,
                             t_exch=ev.t_exch, source=ev.source)
         elif et == EventType.CUM_TOTALS:
+            # A tape pull made before the day's first trade returns the PREVIOUS session's rows
+            # (observed 2026-09-06 03:5x UTC). Rows whose exchange stamp falls on another trading
+            # date than the receipt are not today's tape: counted, never applied.
+            if ev.t_exch is not None and trading_date(ev.t_exch) != trading_date(ev.t_recv):
+                self.metrics["previous_session_tape_rows"] = self.metrics.get("previous_session_tape_rows", 0) + 1
+                return None
             primary = self.fuser.primary_book_source(ev.symbol, ev.t_recv)
             b = s.books.get(primary) if primary else None
             p = ev.payload

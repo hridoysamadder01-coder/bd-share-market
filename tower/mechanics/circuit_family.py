@@ -341,7 +341,9 @@ class CircuitPrehitPressure(CircuitMechanism):
                 minutes = door / rate
                 f_door = 1.0 - ramp(minutes, 2.0, 30.0)
             else:
-                minutes, f_door = (float("inf") if door > 0 else 0.0), (0.0 if door > 0 else 1.0)
+                # not approaching: the time to the door is not a finite observation → None (never
+                # Infinity, which is neither JSON nor a measurement); door factor 0 while shares remain
+                minutes, f_door = (None if door > 0 else 0.0), (0.0 if door > 0 else 1.0)
             if visible is False:
                 f_door *= 0.85
         return {"velocity_abs_factor": f_abs, "velocity_z_factor": f_z, "velocity_factor": f_vel,

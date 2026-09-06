@@ -1,5 +1,13 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
+04:18 UTC: ALL 14 implement stages done (experiment 11 tests, ui files present); verify stages still running.
+Live replay of today's capture works (results/tower/live_probe2, 14 symbols, 0 failures). Static phone page published:
+https://claude.ai/code/artifact/68dd957a-597e-4e43-928e-c78c3326652c (republish by re-running
+`python3 -m tower.ui.export_static --store results/tower/<store> --out <scratchpad>/dse_tower_live.html --points 140` and
+Artifact publish of the SAME file path). Fixed: quote-only states suppressed (engine), inf→null (state/_jsonable, exporter),
+circuit_prehit minutes_to_door None when not approaching. Remaining: verify results, full suite, UI server run + screenshot,
+Go compat test, experiment run on live store, placeholder sweep, final commit/push/PR body, artifact zip, receipt.
+
 PR #4 (draft) = tower branch → base claude/dse-market-fusion-engine-7w4iju (separate from PR #3). Pushed e62a568 with 186 tower tests green.
 
 Worktree: /home/user/bd-share-market-tower · branch claude/dse-observation-tower (based on claude/dse-market-fusion-engine-7w4iju)
