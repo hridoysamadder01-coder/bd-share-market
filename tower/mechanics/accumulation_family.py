@@ -72,6 +72,8 @@ class DirectedMechanism(Mechanism):
     None (→ the base rule) when no direction, start mid or mid is known.
     """
 
+    _EPISODE_STATES = ("building", "active", "confirmed")
+
     def __init__(self) -> None:
         super().__init__()
         self._episode_dir = 0
@@ -82,9 +84,12 @@ class DirectedMechanism(Mechanism):
         return (ms.mid - self._start_mid) * self._episode_dir > 0
 
     def update(self, ms: MarketState, hist: StateHistory):
+        prev = self._state
         st = super().update(ms, hist)
         d = st.evidence.get("direction")
-        if st.state in ("building", "active", "confirmed"):
+        if st.state in self._EPISODE_STATES:
+            if prev not in self._EPISODE_STATES:
+                self._episode_dir = 0            # a new episode: the previous one's direction is not inherited
             if d in (1, -1):
                 self._episode_dir = d
         elif st.state == "inactive":
@@ -94,26 +99,90 @@ class DirectedMechanism(Mechanism):
 
 
 # ============================================================================ helpers
+def reading(mech: Mechanism, score: float, ev: Dict[str, Any], base: Dict[str, Any], note: str) -> MechanismReading:
+    """The family's reading: whenever ``ev["missing"]`` names an input the mechanism needs, the
+    score is 0 and no direction is implied (CONTRACTS: never a computed score on a substituted
+    constant) — the measured evidence is kept so the reader sees what *was* observable."""
+    if ev.get("missing"):
+        score = 0.0
+        ev["direction"] = 0
+    return MechanismReading(mech.name, mech.family, clamp01(score), "inactive", ev, base, note=note)
+
+
+def all_states(fr: Frame) -> List[MarketState]:
+    """The whole causal history (states at or before now) followed by the current state."""
+    return fr.past + [fr.ms]
+
+
+def state_before(fr: Frame, state: MarketState) -> Optional[MarketState]:
+    """The state that precedes ``state`` in the causal history (by identity, so states sharing a
+    timestamp are told apart); None when ``state`` is the oldest one held."""
+    sts = all_states(fr)
+    for i in range(len(sts) - 1, -1, -1):
+        if sts[i] is state:
+            return sts[i - 1] if i > 0 else None
+    return None
+
+
+def _tape_identity(s: MarketState) -> Tuple[Any, ...]:
+    return (s.trade_volume, s.interval_volume, s.interval_trades, s.interval_vwap)
+
+
+def _tape_key(s: MarketState) -> Any:
+    tp = s.session_state.get("tape") if isinstance(s.session_state, dict) else None
+    clock = tp.get("tape_clock") if isinstance(tp, dict) else None
+    return clock if clock is not None else (s.trade_count, s.trade_volume, s.interval_volume, s.interval_trades)
+
+
+def _tape_flagged(s: MarketState) -> bool:
+    tp = s.session_state.get("tape") if isinstance(s.session_state, dict) else None
+    return isinstance(tp, dict) and bool(tp.get("last_first_row") or tp.get("last_monotone_break"))
+
+
 def tape_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
-    """``Frame.tape_rows`` with two more rules.  (1) Identity: the tape clock advances when a
-    cumulative feed re-serves unchanged totals, so consecutive rows whose cumulative identity
-    (cum_volume, interval volume, interval trades, vwap) is identical are the same interval
-    polled again and are kept once (only applied when the row carries a cumulative volume).
-    (2) Rows the tape engine flagged as the day's first row (its "interval" is the whole day
-    so far) or as a monotone break (a source-side reset) carry no interval information and
-    are dropped (``session_state.tape.last_first_row`` / ``last_monotone_break``)."""
+    """Distinct tape intervals that *started inside the window*, oldest first, each row carrying
+    the state it was first seen in (``state``) — the same identity rule as ``Frame.tape_rows``
+    (the tape clock when carried, else the (trade_count, trade_volume, interval_volume,
+    interval_trades) tuple) with three more rules:
+
+    (1) Re-polls: the tape clock advances when a cumulative feed re-serves unchanged totals
+        while the state keeps carrying the last real interval, so a row whose cumulative identity
+        (cum_volume, interval volume, interval trades, vwap) equals the previous row's is the
+        same interval polled again and is kept once (only when a cumulative volume is carried).
+    (2) Window boundary: the walk starts before the window so that an interval first seen
+        *before* the cutoff and still re-polled inside it is not counted as a new row at the
+        window's first state (a trade must leave the window ``seconds`` after it happened).
+    (3) Rows the tape engine flagged as the day's first row (its "interval" is the whole day so
+        far) or as a monotone break (a source-side reset) carry no interval information and are
+        dropped (``session_state.tape.last_first_row`` / ``last_monotone_break``)."""
+    cutoff = fr.ms.t - timedelta(seconds=seconds)
+    sts = all_states(fr)
+    # start the walk at the last tape-carrying state before the window (its identity seeds the dedupe)
+    start = 0
+    for i in range(len(sts) - 1, -1, -1):
+        s = sts[i]
+        if s.t < cutoff and (s.interval_volume is not None or s.trade_volume is not None):
+            start = i
+            break
     out: List[Dict[str, Any]] = []
-    for r in fr.tape_rows(seconds):
-        st = fr.at_or_before(r["t"])
-        tp = st.session_state.get("tape") if (st is not None and isinstance(st.session_state, dict)) else None
-        if isinstance(tp, dict) and (tp.get("last_first_row") or tp.get("last_monotone_break")):
+    last_key: Any = object()
+    last_ident: Optional[Tuple[Any, ...]] = None
+    for s in sts[start:]:
+        if s.interval_volume is None and s.trade_volume is None:
             continue
-        if out and r["cum_volume"] is not None:
-            p = out[-1]
-            if (p["cum_volume"], p["volume"], p["trades"], p["vwap"]) == \
-                    (r["cum_volume"], r["volume"], r["trades"], r["vwap"]):
-                continue
-        out.append(r)
+        key = _tape_key(s)
+        if key == last_key:
+            continue
+        last_key = key
+        ident = _tape_identity(s)
+        if s.trade_volume is not None and ident == last_ident:
+            continue                                     # the same interval polled again
+        last_ident = ident
+        if s.t < cutoff or _tape_flagged(s):
+            continue
+        out.append({"t": s.t, "volume": s.interval_volume, "trades": s.interval_trades,
+                    "direction": s.trade_flow_direction, "vwap": s.interval_vwap, "cum_volume": s.trade_volume,
+                    "state": s})
     return out
 
 
@@ -124,12 +193,26 @@ def classified_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
     for r in tape_rows(fr, seconds):
         if not r["volume"] or r["direction"] is None:
             continue
-        st = fr.at_or_before(r["t"])
         row = dict(r)
-        row["mid"] = mid_of(st) if st is not None else None
-        row["state"] = st
+        row["mid"] = mid_of(r["state"])
         out.append(row)
     return out
+
+
+def volume_since(fr: Frame, pre: MarketState) -> Optional[float]:
+    """Traded volume after ``pre`` up to now: Δ cumulative day volume when both carry it, else Σ
+    of the distinct tape intervals first seen after ``pre`` (None when the tape is not observable)."""
+    ms = fr.ms
+    if ms.trade_volume is not None and pre.trade_volume is not None and ms.trade_volume >= pre.trade_volume:
+        return float(ms.trade_volume - pre.trade_volume)
+    sts = all_states(fr)
+    idx = next((i for i in range(len(sts) - 1, -1, -1) if sts[i] is pre), None)
+    if idx is None:
+        return None
+    after = {id(s) for s in sts[idx + 1:]}
+    rows = [r for r in tape_rows(fr, (ms.t - pre.t).total_seconds() + 1.0)
+            if id(r["state"]) in after and r["volume"] is not None]
+    return float(sum(r["volume"] for r in rows)) if rows else (0.0 if ms.trade_volume is not None else None)
 
 
 def flow_summary(rows: Sequence[Dict[str, Any]]) -> Dict[str, Optional[float]]:
@@ -297,8 +380,8 @@ def _passive(mech: Mechanism, ms: MarketState, hist: StateHistory, side: str) ->
         ev["engine_stacks_120s"] = q[side].get("stacks_120s")
     if not tick:
         ev["missing"] = ["tick_size"]
-    return MechanismReading(mech.name, mech.family, clamp01(score), "inactive", ev, base,
-                            note=f"{side} absorbed {absorbed:.0f} ({absorbed_share:.2f} of flow), refill {refill_ratio:.2f}")
+    return reading(mech, score, ev, base,
+                   f"{side} absorbed {absorbed:.0f} ({absorbed_share:.2f} of flow), refill {refill_ratio:.2f}")
 
 
 @register
@@ -405,7 +488,7 @@ class BlockAbsorption(DirectedMechanism):
             big = max(burst_rows, key=lambda r: r["volume"])
             d = big["direction"]
             hit_side = "ask" if (d is not None and d > 0) else ("bid" if (d is not None and d < 0) else None)
-            prev = fr.at_or_before(big["t"] - timedelta(microseconds=1))
+            prev = state_before(fr, big["state"])
             if hit_side is not None and prev is not None:
                 _, tq = best_of(prev, hit_side)
                 vs_touch = safe_div(largest, tq) if tq else None
@@ -443,8 +526,7 @@ class BlockAbsorption(DirectedMechanism):
             missing.append("trade_flow_direction")
         if missing:
             ev["missing"] = missing
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"burst {burst_vol:.0f} ratio {ratio} move {move}")
+        return reading(self, score, ev, base, f"burst {burst_vol:.0f} ratio {ratio} move {move}")
 
 
 # ============================================================================ #12
@@ -501,8 +583,7 @@ class InventoryRebalancing(DirectedMechanism):
               "direction": 0, "window_s": self.window_s}
         if reversion is None:
             ev["missing"] = ["mid/tick_size"]
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"{flips} flips over {len(rows)} rows, symmetry {symmetry}")
+        return reading(self, score, ev, base, f"{flips} flips over {len(rows)} rows, symmetry {symmetry}")
 
 
 # ============================================================================ #13
@@ -541,12 +622,11 @@ class AdverseRetreat(DirectedMechanism):
         last = rows[-1]
         d = last["direction"]
         side = "ask" if d > 0 else "bid"
-        states = fr.states(self.window_s)
-        idx = next((i for i, s in enumerate(states) if s is last["state"]), None)
-        pre = states[idx - 1] if (idx is not None and idx > 0) else last["state"]
-        if pre is None:
-            return missing_reading(self, ["history (no state before the trade)"], base)
-        traded = fr.volume_over((ms.t - pre.t).total_seconds()) if ms.t > pre.t else 0.0
+        # the book before the trade: the state preceding the one that first carried the row (by
+        # identity — states sharing a timestamp are told apart); the trade's own state when it is
+        # the oldest held (then its volume is already inside that state's cumulative total)
+        pre = state_before(fr, last["state"]) or last["state"]
+        traded = volume_since(fr, pre) if pre is not last["state"] else 0.0
         traded = traded or 0.0
         k_pre, k_now = topk_depth(pre, side), topk_depth(ms, side)
         _, t_pre = best_of(pre, side)
@@ -588,8 +668,7 @@ class AdverseRetreat(DirectedMechanism):
               "direction": direction, "window_s": self.window_s}
         if d_spread is None:
             ev["missing"] = ["spread_ticks/tick_size"]
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"{side} pulled {pulled_share:.2f} after trade, spread +{d_spread}")
+        return reading(self, score, ev, base, f"{side} pulled {pulled_share:.2f} after trade, spread +{d_spread}")
 
 
 # ============================================================================ #28 / #29
@@ -655,8 +734,8 @@ def _stealth(mech: Mechanism, ms: MarketState, hist: StateHistory, want: int) ->
         missing.append("mid/tick_size")
     if missing:
         ev["missing"] = missing
-    return MechanismReading(mech.name, mech.family, clamp01(score), "inactive", ev, base,
-                            note=f"net {net_share:.2f} over {fs['rows']} rows, low-intensity {low}, flat {flat}")
+    return reading(mech, score, ev, base,
+                   f"net {net_share:.2f} over {fs['rows']} rows, low-intensity {low}, flat {flat}")
 
 
 @register
@@ -771,8 +850,8 @@ class Absorption(DirectedMechanism):
             ev["missing"] = ["touch qty (zero throughout the window)"]
         if retreat is None:
             ev.setdefault("missing", []).append("tick_size")
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"{side} absorbed flow {abs(signed):.0f} vs touch {q_ref:.0f}, refill {refill_ratio}")
+        return reading(self, score, ev, base,
+                       f"{side} absorbed flow {abs(signed):.0f} vs touch {q_ref:.0f}, refill {refill_ratio}")
 
 
 # ============================================================================ #38 / #39
@@ -816,16 +895,19 @@ class _CompositeState(DirectedMechanism):
             if not r.evidence.get("missing"):
                 missing_all = False
             best = max(best, eff)
-        # roll the composite window (one point per state time; a repeated time is replaced)
-        if self._pts and self._pts[-1][0] == ms.t:
-            self._pts[-1] = (ms.t, best)
-        elif self._pts and ms.t < self._pts[-1][0]:
-            pass                                     # out-of-order state: keep the window monotone
-        else:
-            self._pts.append((ms.t, best))
+        # roll the composite window (one point per state time; a repeated time is replaced).  An
+        # instant at which every component lacks its inputs carries no information and adds no
+        # point (a 0 there would be a silent zero dragging the mean down).
         cutoff = ms.t - timedelta(seconds=self.window_s)
+        if not missing_all:
+            if self._pts and self._pts[-1][0] == ms.t:
+                self._pts[-1] = (ms.t, best)
+            elif self._pts and ms.t < self._pts[-1][0]:
+                pass                                 # out-of-order state: keep the window monotone
+            else:
+                self._pts.append((ms.t, best))
         self._pts = [p for p in self._pts if p[0] >= cutoff]
-        if missing_all:
+        if missing_all or not self._pts:
             miss = sorted({m for s in subs.values() for m in (s["missing"] or [])})
             return missing_reading(self, miss or ["component inputs"], base, {"components": subs})
         vals = [v for _, v in self._pts]
@@ -842,8 +924,7 @@ class _CompositeState(DirectedMechanism):
               "points": len(vals), "span_s": span, "span_factor": s_span, "net_buy_share": net_buy_share,
               "total_volume": fs["total"], "mid_change_ticks": fr.mid_change_ticks(self.window_s),
               "direction": direction, "window_s": self.window_s}
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"mean {mean:.2f} persistence {persistence:.2f} over {span:.0f} s")
+        return reading(self, score, ev, base, f"mean {mean:.2f} persistence {persistence:.2f} over {span:.0f} s")
 
 
 @register

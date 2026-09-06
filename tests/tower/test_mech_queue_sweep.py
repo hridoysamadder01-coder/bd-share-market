@@ -676,6 +676,22 @@ def test_machinery_vacuum_snapback_null_without_recovery_and_late_recovery_fades
     assert rl.evidence["seconds_since_trough"] > r.evidence["seconds_since_trough"]
 
 
+def test_machinery_vacuum_snapback_sub_tick_wobble_then_rally_is_not_a_snapback():
+    """Seen on the live capture: a depth trough that moved the mid one tick, followed by a five-tick
+    rally — revert_share 5 (clipped to a full revert) but nothing to snap back from. The excursion
+    factor keeps it below building; a two-tick excursion keeps the full credit."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(21)]
+    st += [S(5 * i, shift(scale(BIDS, 0.1), -1), shift(scale(ASKS, 0.1), -1), tv=2000.0) for i in range(21, 25)]
+    st += [S(5 * i, shift(BIDS, 4), shift(ASKS, 4), tv=2000.0) for i in range(25, 29)]
+    r = run(sf.VacuumSnapback(), st)[-1]
+    assert r.evidence["excursion_ticks"] == pytest.approx(-1.0)
+    assert r.evidence["revert_share"] == pytest.approx(5.0)
+    assert r.evidence["excursion_factor"] == pytest.approx(1.0 / 3.0)
+    assert r.score < sf.VacuumSnapback.build_threshold
+    full = run(sf.VacuumSnapback(), _snapback_scenario())[-1]
+    assert full.evidence["excursion_factor"] == 1.0 and full.score >= 0.6
+
+
 # ============================================================================= #20 liquidity_run
 def _run_scenario(ticks: int = 6, flow_dir: float = 1.0, stall: bool = True) -> List[MarketState]:
     st = []
@@ -786,6 +802,23 @@ def test_machinery_liquidity_depletion_price_move_and_evidence():
     st[-1].liquidity_depletion = 0.75
     r = run(sf.LiquidityDepletion(), st)[-1]
     assert r.evidence["engine_depletion"] == 0.75 and r.evidence["depletion"] == 0.75
+
+
+def test_machinery_liquidity_depletion_best_improvement_is_not_depletion():
+    """The best bid improving by one tick to a fresh small queue is a different queue, not the old one
+    depleted: the touch comparisons are void (price changed), top-K grew, the reading stays inactive.
+    The same queue thinning at an unchanged price is a depletion."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(24)]
+    st.append(S(120, [(10.1, 50.0)] + BIDS, ASKS, tv=1000.0))
+    r = run(sf.LiquidityDepletion(), st)[-1]
+    assert r.evidence["touch_price_changed"] == {"bid": True, "ask": False}
+    assert r.evidence["per_side_touch"]["bid"] is None and r.evidence["depletion_touch"] is None
+    assert r.evidence["per_side_touch"]["ask"] == pytest.approx(0.0)
+    assert r.evidence["depletion"] < 0.2 and r.score == 0.0          # top-K only (9.6 left the top 5)
+    same = list(st[:-1]) + [S(120, [(10.0, 50.0)] + BIDS[1:], ASKS, tv=1000.0)]
+    rs = run(sf.LiquidityDepletion(), same)[-1]
+    assert rs.evidence["per_side_touch"]["bid"] == pytest.approx(0.95) and rs.evidence["depletion"] == pytest.approx(0.95)
+    assert rs.evidence["direction"] == -1
 
 
 # ============================================================================= lifecycle

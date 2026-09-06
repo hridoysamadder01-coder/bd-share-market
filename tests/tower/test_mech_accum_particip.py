@@ -151,6 +151,169 @@ def test_machinery_tape_rows_dedupe_repolled_interval():
     assert fs["sell"] == 300.0 and fs["signed"] == -300.0
 
 
+def test_machinery_tape_rows_interval_leaves_window():
+    """A cumulative feed keeps re-serving the last interval with an advancing tape clock: a trade
+    at t = 100 must be inside a 120-s window at t = 150 and *gone* at t = 400 — a re-poll inside
+    the window is not a new row at the window's first state."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(20)]
+    st.append(S(100, BIDS, [(10.1, 500.0)] + ASKS[1:], tv=1500.0, iv=500.0, itr=1, dirn=1.0))
+    st += [S(105 + 5 * j, BIDS, ASKS, tv=1500.0, iv=500.0, itr=1, dirn=1.0) for j in range(60)]
+    hist = StateHistory()
+    seen: Dict[float, List[Tuple[float, float]]] = {}
+    for ms in st:
+        fr = af.Frame(ms, hist)
+        s = (ms.t - T0).total_seconds()
+        if s in (150.0, 219.0, 220.0, 225.0, 400.0):
+            seen[s] = [((r["t"] - T0).total_seconds(), r["volume"]) for r in af.classified_rows(fr, 120)]
+        hist.push(ms)
+    assert seen[150.0] == [(100.0, 500.0)]
+    assert seen[220.0] == [(100.0, 500.0)]          # the cutoff is inclusive: still inside at exactly 120 s
+    assert seen[225.0] == [] and seen[400.0] == []
+    # the same through a mechanism: the flow is missing at t = 400, not a 300-s-old print
+    rs = run(af.Absorption(), st)
+    assert rs[30].evidence["signed_flow"] == 500.0                  # t = 150
+    assert rs[-1].score == 0.0 and rs[-1].evidence["missing"]
+
+
+def test_machinery_tape_rows_flagged_rows_dropped():
+    """The day's first row and a monotone break carry no interval: dropped, and their re-polls too."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(4)]
+    first = S(20, BIDS, ASKS, tv=5000.0, iv=5000.0, itr=40, dirn=1.0)
+    first.session_state["tape"]["last_first_row"] = True
+    repoll = S(25, BIDS, ASKS, tv=5000.0, iv=5000.0, itr=40, dirn=1.0)
+    repoll.session_state["tape"]["last_first_row"] = True
+    real = S(30, BIDS, ASKS, tv=5300.0, iv=300.0, itr=1, dirn=1.0)
+    brk = S(35, BIDS, ASKS, tv=4000.0, iv=-1300.0, itr=-30, dirn=None)
+    brk.session_state["tape"]["last_monotone_break"] = True
+    st += [first, repoll, real, brk]
+    hist = StateHistory()
+    for ms in st[:-1]:
+        hist.push(ms)
+    rows = [r for r in af.tape_rows(af.Frame(st[-1], hist), 60) if r["volume"] is not None]
+    assert [(r["volume"], (r["t"] - T0).total_seconds()) for r in rows] == [(300.0, 30.0)]
+    assert rows[0]["state"] is real
+
+
+def test_machinery_duplicate_timestamp_pre_state_by_identity():
+    """Two states share a timestamp (the trade's state and a book update right after it): the
+    book *before* the trade is found by identity, so the traded volume is subtracted from the
+    depth that vanished instead of being counted as pulled."""
+    st = [S(5 * i, BIDS, ASKS, tv=1000.0) for i in range(10)]
+    trade = S(50, BIDS, [(10.1, 800.0)] + ASKS[1:], tv=1200.0, iv=200.0, itr=1, dirn=1.0)
+    after = S(50, BIDS, [(10.3, 200.0), (10.4, 200.0)], tv=1200.0, iv=200.0, itr=1, dirn=1.0)
+    st += [trade, after]
+    st += [S(55 + 5 * j, BIDS, [(10.3, 200.0), (10.4, 200.0)], tv=1200.0, iv=200.0, itr=1, dirn=1.0)
+           for j in range(3)]
+    r = run(af.AdverseRetreat(), st)[-1]
+    assert r.evidence["depth_topk_pre"] == pytest.approx(3300.0)
+    assert r.evidence["traded_since_pre"] == pytest.approx(200.0)
+    assert r.evidence["pulled_share"] == pytest.approx((3300.0 - 400.0 - 200.0) / 3300.0)
+    # the impact path's origin mid is the pre-trade mid as well
+    hist = StateHistory()
+    for ms in st[:-1]:
+        hist.push(ms)
+    path = pf.flow_path(af.Frame(st[-1], hist), 600, TICK)
+    assert path["mid0"] == pytest.approx(10.05)
+    assert af.state_before(af.Frame(st[-1], hist), trade) is st[9]
+    assert af.state_before(af.Frame(st[-1], hist), st[0]) is None
+
+
+def test_machinery_missing_inputs_score_zero_not_a_default():
+    """When an input the rule needs is unobservable the score is 0 with the input named — never a
+    substituted constant (a 0.5 "neutral" factor) times the rest."""
+    # stealth: no trade_intensity and no interval trades anywhere → low-intensity unobservable
+    st = [S((m.t - T0).total_seconds(), m.bids, m.asks, tv=m.trade_volume, iv=m.interval_volume, itr=None,
+            dirn=m.trade_flow_direction, intensity=None) for m in _stealth_scenario()]
+    r = run(af.StealthAccumulation(), st)[-1]
+    assert r.evidence["net_share"] == pytest.approx(1.0) and r.evidence["low_intensity"] is None
+    assert "trade_intensity/interval_trades" in r.evidence["missing"]
+    assert r.score == 0.0 and r.evidence["direction"] == 0
+    # absorption: a one-level book without a tick size → the best-price hold cannot be judged
+    st = []
+    for m in _absorption_scenario():
+        st.append(S((m.t - T0).total_seconds(), m.bids[:1], m.asks[:1], tv=m.trade_volume, iv=m.interval_volume,
+                    itr=m.interval_trades, dirn=m.trade_flow_direction, tick=None))
+    r = run(af.Absorption(), st)[-1]
+    assert r.evidence["flow_vs_touch"] == pytest.approx(3.0) and r.evidence["retreat_ticks"] is None
+    assert "tick_size" in r.evidence["missing"] and r.score == 0.0
+    # block absorption: nothing in the burst carries a direction → one-sidedness unobservable
+    st = _block_scenario()
+    for m in st:
+        if (m.t - T0).total_seconds() >= 845:
+            m.trade_flow_direction = None
+    r = run(af.BlockAbsorption(), st)[-1]
+    assert r.evidence["volume_ratio"] > 10 and r.evidence["one_sided"] is None
+    assert "trade_flow_direction" in r.evidence["missing"] and r.score == 0.0
+    # passive accumulation without a tick: the hold / flatness cannot be judged
+    st = [S((m.t - T0).total_seconds(), m.bids[:1], m.asks[:1], tv=m.trade_volume, iv=m.interval_volume,
+            itr=m.interval_trades, dirn=m.trade_flow_direction, tick=None) for m in _passive_scenario()]
+    r = run(af.PassiveAccumulation(), st)[-1]
+    assert r.evidence["absorbed_share"] == pytest.approx(1.0) and r.evidence["missing"] == ["tick_size"]
+    assert r.score == 0.0
+
+
+def test_machinery_composite_ignores_uninformative_instants():
+    """Instants at which every component lacks its inputs (a book without a tape) add no point to
+    the composite window: they are neither zeros dragging the mean down nor span."""
+    quiet = [S(5 * i, BIDS, ASKS) for i in range(20)]                     # 0..95 s, no tape at all
+    scen = [S((m.t - T0).total_seconds() + 100.0, m.bids, m.asks, tv=m.trade_volume, iv=m.interval_volume,
+              itr=m.interval_trades, dirn=m.trade_flow_direction) for m in _passive_scenario("bid", n=60)]
+    rs = run(af.AccumulationLike(), quiet + scen)
+    assert all(r.score == 0.0 and r.evidence.get("missing") for r in rs[:20])
+    # 59 points: the scenario's own first state carries no interval yet, so it adds none either
+    assert rs[-1].evidence["points"] == 59 and rs[-1].evidence["span_s"] == pytest.approx(580.0)
+    ref = run(af.AccumulationLike(), _passive_scenario("bid", n=60))[-1]
+    assert ref.evidence["points"] == 59
+    # the composite mean is the mean over the informative instants only (rs[20] is the scenario's
+    # first, interval-less state): 20 silent zeros would have scaled it by 59 / 79
+    informative = [r.evidence["strongest_now"] for r in rs[21:]]
+    assert len(informative) == 59
+    assert rs[-1].evidence["mean_strongest"] == pytest.approx(sum(informative) / len(informative))
+    assert rs[-1].score >= 0.6
+
+
+def test_machinery_episode_direction_not_inherited_by_next_episode():
+    """A directed mechanism judges an episode's outcome by the direction *that* episode carried; a
+    later episode without a direction resolves (never fails) even after a directed one."""
+    class Scripted(af.DirectedMechanism):
+        name, family = "scripted", "test"
+
+        def __init__(self, script):
+            super().__init__()
+            self.script = list(script)
+
+        def compute(self, ms, hist):
+            score, d = self.script.pop(0)
+            from tower.mechanics.base import MechanismReading
+            return MechanismReading(self.name, self.family, score, "inactive", {"direction": d}, {})
+
+    # episode 1 (direction +1) resolves on a rising mid; episode 2 carries direction 0 and the mid falls
+    script = [(0.8, 1), (0.8, 1), (0.0, 0), (0.8, 0), (0.8, 0), (0.0, 0)]
+    mids = [10.0, 10.0, 10.5, 10.5, 10.5, 9.0]
+    mech = Scripted(script)
+    hist = StateHistory()
+    out = []
+    for i, m in enumerate(mids):
+        ms = S(5 * i, shift(BIDS, (m - 10.05) / TICK), shift(ASKS, (m - 10.05) / TICK))
+        out.append(mech.update(ms, hist))
+        hist.push(ms)
+    assert [o.state for o in out] == ["active", "active", "resolved", "active", "active", "resolved"]
+    assert out[1].evidence["episode_direction"] == 1 and out[4].evidence["episode_direction"] == 0
+
+
+@pytest.mark.parametrize("name", ACC_NAMES + PART_NAMES)
+def test_machinery_deterministic_same_inputs_same_reading(name):
+    """Two fresh instances over the same states produce byte-identical readings."""
+    import json
+    from tower.state import _jsonable
+    st = _passive_scenario("bid", n=40) if name != "participation_footprint" else _participation_scenario()
+    a = run(REGISTRY[name](), st, use_update=True)
+    b = run(REGISTRY[name](), st, use_update=True)
+    for x, y in zip(a, b):
+        assert json.dumps(_jsonable(x.evidence), sort_keys=True) == json.dumps(_jsonable(y.evidence), sort_keys=True)
+        assert x.score == y.score and x.state == y.state
+
+
 # ============================================================================= #6 / #7 passive
 def _passive_scenario(side: str = "bid", n: int = 30, refill: bool = True, sell: float = 300.0,
                       price_move: int = 0) -> List[MarketState]:

@@ -37,7 +37,8 @@ from ..state import MarketState
 from ..windows import clamp01, curvature, safe_div, sign, slope
 from .base import Mechanism, MechanismReading, StateHistory, register
 from .queue_family import Frame, _EPS, _cv, baselines, best_of, geo_mean, mid_of, missing_reading, ramp
-from .accumulation_family import DirectedMechanism, classified_rows, flow_summary, tape_missing, tape_rows
+from .accumulation_family import (DirectedMechanism, classified_rows, flow_summary, reading, state_before,
+                                  tape_missing, tape_rows)
 
 
 # ============================================================================ #8
@@ -226,8 +227,7 @@ class ParticipationFootprint(DirectedMechanism):
               "window_s": self.window_s, "bucket_s": self.bucket_s}
         if stability is None:
             ev["missing"] = ["ratio series (< 2 buckets)"]
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"{mode}: {len(used)} buckets, cv {cv}, coverage {coverage:.2f}")
+        return reading(self, score, ev, base, f"{mode}: {len(used)} buckets, cv {cv}, coverage {coverage:.2f}")
 
 
 # ============================================================================ #10 / #43
@@ -240,9 +240,7 @@ def flow_path(fr: Frame, seconds: float, tick: float) -> Dict[str, Any]:
     fs = flow_summary(rows)
     if not rows:
         return {"rows": [], "flow": fs, "dir": 0, "x": [], "y": [], "mid0": None}
-    states = fr.states(seconds)
-    idx = next((i for i, s in enumerate(states) if s is rows[0]["state"]), None)
-    origin = states[idx - 1] if (idx is not None and idx > 0) else None
+    origin = state_before(fr, rows[0]["state"])
     mid0 = mid_of(origin) if origin is not None else None
     if mid0 is None:
         mid0 = rows[0]["mid"]
@@ -392,5 +390,4 @@ class MetaorderImpact(DirectedMechanism):
               "direction": direction, "window_s": self.window_s}
         if len(pos) < 4:
             ev["missing"] = ["impact points with flow > 0 and move > 0 (< 4)"]
-        return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"beta {beta} r2 {r2} concavity {concavity}")
+        return reading(self, score, ev, base, f"beta {beta} r2 {r2} concavity {concavity}")

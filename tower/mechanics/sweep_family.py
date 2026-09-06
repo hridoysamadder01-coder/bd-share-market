@@ -472,7 +472,8 @@ class VacuumSnapback(Mechanism):
     from); depth_return = (depth_now − trough) / (pre − trough).  time factor
     = 1 up to 60 s after the trough, then falling linearly to 0 at 180 s.
     score = geometric mean(ramp(collapse, 0.4 → 0.9), ramp(revert_share, 0.3 →
-    0.9), ramp(depth_return, 0.3 → 0.9)) × time factor.  The resilience
+    0.9), ramp(depth_return, 0.3 → 0.9)) × ramp(|excursion|, 0.5 → 2 ticks)
+    (a sub-tick wobble has nothing to snap back from) × time factor.  The resilience
     record's ``snapback`` flag is reported as corroboration.  direction =
     sign(mid_now − mid_low) (the reversal's direction).
     """
@@ -519,12 +520,15 @@ class VacuumSnapback(Mechanism):
         depth_return = ((d_now - d_low) / (pre - d_low)) if (pre is not None and pre - d_low > _EPS) else None
         dt = (ms.t - t_low).total_seconds()
         tf = 1.0 if dt <= self.fast_s else clamp01(1.0 - (dt - self.fast_s) / (self.late_s - self.fast_s))
-        score = geo_mean([ramp(collapse, 0.4, 0.9), ramp(revert, 0.3, 0.9), ramp(depth_return, 0.3, 0.9)]) * tf
+        # a wobble of under a tick has nothing to snap back from: a later rally is not a reversal of it
+        s_exc = ramp(abs(exc_ticks), 0.5, 2.0) if exc_ticks is not None else 0.0
+        score = geo_mean([ramp(collapse, 0.4, 0.9), ramp(revert, 0.3, 0.9), ramp(depth_return, 0.3, 0.9)]) * s_exc * tf
         res = ms.session_state.get("resilience") if isinstance(ms.session_state, dict) else None
         direction = sign(mid_now - mid_low) if (score > 0 and mid_now is not None and mid_low is not None) else 0
         ev = {"depth_pre": pre, "depth_trough": d_low, "depth_now": d_now, "collapse": collapse,
               "depth_return": depth_return, "mid_pre": mid_pre, "mid_trough": mid_low, "mid_now": mid_now,
-              "excursion_ticks": exc_ticks, "revert_share": revert, "seconds_since_trough": dt, "time_factor": tf,
+              "excursion_ticks": exc_ticks, "excursion_factor": s_exc, "revert_share": revert,
+              "seconds_since_trough": dt, "time_factor": tf,
               "t_trough": t_low.isoformat(), "engine_snapback": (res.get("snapback") if isinstance(res, dict) else None),
               "direction": direction, "window_s": self.window_s}
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
@@ -698,7 +702,10 @@ class LiquidityDepletion(Mechanism):
     latest: depletion = 1 − now / then for every series; the largest of them
     (and the queue engine's ``liquidity_depletion`` estimate, when present) is
     the depletion share — one side emptying is a depletion even when the other
-    side is untouched.
+    side is untouched.  Touch quantities are compared only while the best price
+    is unchanged (a best that stepped to a fresh queue is a different queue:
+    those touch series are None, ``touch_price_changed`` says so, and the top-K
+    series carries the measurement).
     consistency = share of the non-zero touch-depth steps that fall.  price
     factor = 1 − |mid(now) − mid(then)| / 2 ticks, clipped ("without price
     move").  score = ramp(depletion, 0.2 → 0.7) × (0.5 + 0.5 × consistency) ×
@@ -730,7 +737,9 @@ class LiquidityDepletion(Mechanism):
                 return None
             return (b or 0.0) + (a or 0.0)
 
-        ts = fr.series(touch, self.window_s)
+        window = fr.states(self.window_s)
+        t_states = [s for s in window if touch(s) is not None]
+        ts = [(s.t, touch(s)) for s in t_states]
         ks = fr.series(topk, self.window_s)
         if len(ts) < 2 or (ts[-1][0] - ts[0][0]).total_seconds() < self.min_span_s:
             miss = [k for k in ("bid_qty1", "ask_qty1") if getattr(ms, k) is None and not levels_of(ms, k[:3])] \
@@ -738,20 +747,35 @@ class LiquidityDepletion(Mechanism):
             return missing_reading(self, miss, base, {"points": len(ts)})
         then_t, then_v = ts[0]
         now_v = ts[-1][1]
-        d_touch = (1.0 - now_v / then_v) if then_v > 0 else None
+
+        def same_price(a: MarketState, b: MarketState, sd: str) -> bool:
+            pa_, _ = best_of(a, sd)
+            pb_, _ = best_of(b, sd)
+            if pa_ is None or pb_ is None:
+                return pa_ is None and pb_ is None
+            return abs(pa_ - pb_) < _EPS
+        # touch quantities are only comparable at the same best price: a best that stepped to a fresh
+        # queue (improvement or retreat) is a different queue, not a depleted one — top-K covers it
+        touch_price_changed = {sd: not same_price(t_states[0], ms, sd) for sd in ("bid", "ask")}
+        comparable = not (touch_price_changed["bid"] or touch_price_changed["ask"])
+        d_touch = (1.0 - now_v / then_v) if (then_v > 0 and comparable) else None
         d_topk = (1.0 - ks[-1][1] / ks[0][1]) if (len(ks) >= 2 and ks[0][1] > 0) else None
         per_side: Dict[str, Optional[float]] = {}
         per_side_touch: Dict[str, Optional[float]] = {}
         for side in ("bid", "ask"):
             ser = fr.series(lambda s, sd=side: topk_depth(s, sd), self.window_s)
             per_side[side] = (1.0 - ser[-1][1] / ser[0][1]) if (len(ser) >= 2 and ser[0][1] > 0) else None
-            ser1 = fr.series(lambda s, sd=side: best_of(s, sd)[1], self.window_s)
-            per_side_touch[side] = (1.0 - ser1[-1][1] / ser1[0][1]) if (len(ser1) >= 2 and ser1[0][1] > 0) else None
+            s_states = [s for s in window if best_of(s, side)[1] is not None]
+            if len(s_states) >= 2 and best_of(s_states[0], side)[1] > 0 and same_price(s_states[0], ms, side):
+                per_side_touch[side] = 1.0 - best_of(ms, side)[1] / best_of(s_states[0], side)[1]
+            else:
+                per_side_touch[side] = None
         cands = [x for x in (d_touch, d_topk, ms.liquidity_depletion, *per_side.values(), *per_side_touch.values())
                  if x is not None]
         depl = max(cands) if cands else None
         if depl is None:
-            return missing_reading(self, ["touch depth (zero at window start)"], base)
+            return missing_reading(self, ["touch depth (zero at window start)"], base,
+                                   {"touch_price_changed": touch_price_changed})
         cons = _step_consistency([v for _, v in ts], down=True)
         cons = cons if cons is not None else 0.0
         m_then = mid_of(fr.at_or_before(then_t)) if fr.at_or_before(then_t) is not None else None
@@ -775,7 +799,7 @@ class LiquidityDepletion(Mechanism):
         ev = {"depletion": depl, "depletion_touch": d_touch, "depletion_topk": d_topk,
               "engine_depletion": ms.liquidity_depletion, "consistency": cons, "mid_move_ticks": move,
               "price_factor": pf, "touch_then": then_v, "touch_now": now_v, "span_s": (ts[-1][0] - then_t).total_seconds(),
-              "per_side_topk": per_side, "per_side_touch": per_side_touch, "direction": direction,
-              "window_s": self.window_s}
+              "per_side_topk": per_side, "per_side_touch": per_side_touch,
+              "touch_price_changed": touch_price_changed, "direction": direction, "window_s": self.window_s}
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
                                 note=f"depleted {depl:.2f} with {move} ticks move")
