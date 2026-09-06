@@ -1,5 +1,7 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
+PR #4 (draft) = tower branch → base claude/dse-market-fusion-engine-7w4iju (separate from PR #3). Pushed e62a568 with 186 tower tests green.
+
 Worktree: /home/user/bd-share-market-tower · branch claude/dse-observation-tower (based on claude/dse-market-fusion-engine-7w4iju)
 Main tree: /home/user/bd-share-market (branch claude/dse-market-fusion-engine-7w4iju; PR #3; live seeing capture runner pid ~1725 writing evidence/capture/2026-09-06 until 08:20 UTC)
 Workflow run: wf_48c32822-3e8 (script /root/.claude/projects/-home-user-bd-share-market/5efc8cb5-0f22-5733-a689-82183cceec19/workflows/scripts/tower-build-wf_48c32822-3e8.js; journal in .../subagents/workflows/wf_48c32822-3e8/journal.jsonl)

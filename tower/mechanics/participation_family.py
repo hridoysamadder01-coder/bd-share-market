@@ -37,12 +37,12 @@ from ..state import MarketState
 from ..windows import clamp01, curvature, safe_div, sign, slope
 from .base import Mechanism, MechanismReading, StateHistory, register
 from .queue_family import Frame, _EPS, _cv, baselines, best_of, geo_mean, mid_of, missing_reading, ramp
-from .accumulation_family import classified_rows, flow_summary, tape_missing
+from .accumulation_family import DirectedMechanism, classified_rows, flow_summary, tape_missing, tape_rows
 
 
 # ============================================================================ #8
 @register
-class PeggedRepricing(Mechanism):
+class PeggedRepricing(DirectedMechanism):
     """#8 Pegged / passive repricing.
 
     Rule (window 300 s): per side, consecutive states where the side's best
@@ -140,7 +140,7 @@ def bucket_volumes(fr: Frame, window_s: float, bucket_s: float) -> List[Dict[str
         return []
     t_first = states[0].t
     n = int(window_s // bucket_s)
-    rows = fr.tape_rows(window_s)
+    rows = tape_rows(fr, window_s)
     out = []
     for k in range(n - 1, -1, -1):
         end = fr.ms.t - timedelta(seconds=k * bucket_s)
@@ -167,7 +167,7 @@ def bucket_volumes(fr: Frame, window_s: float, bucket_s: float) -> List[Dict[str
 
 
 @register
-class ParticipationFootprint(Mechanism):
+class ParticipationFootprint(DirectedMechanism):
     """#9 Participation-style footprint.
 
     Rule: 60-s buckets of symbol volume over the last 600 s (``bucket_volumes``).
@@ -262,7 +262,7 @@ def flow_path(fr: Frame, seconds: float, tick: float) -> Dict[str, Any]:
 
 
 @register
-class MetaorderTrajectory(Mechanism):
+class MetaorderTrajectory(DirectedMechanism):
     """#10 Metaorder / participation trajectory.
 
     Rule (window 600 s): classified rows → one_sided = |Σ d·v| / Σ v,
@@ -324,7 +324,7 @@ class MetaorderTrajectory(Mechanism):
 
 
 @register
-class MetaorderImpact(Mechanism):
+class MetaorderImpact(DirectedMechanism):
     """#43 Metaorder impact trajectory.
 
     Rule (window 600 s): points (x_i, y_i) = (cumulative signed flow × dir,

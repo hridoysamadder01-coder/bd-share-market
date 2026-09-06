@@ -59,12 +59,69 @@ from .queue_family import (Frame, _EPS, _cv, _median, baselines, best_of, geo_me
                            missing_reading, queue_counters, ramp, spread_ticks_of, topk_depth, visible_depth)
 
 
+# ============================================================================ lifecycle base
+class DirectedMechanism(Mechanism):
+    """``Mechanism`` that remembers the direction its episode carried.
+
+    Readings report ``direction`` 0 once the score is 0, so at the moment an
+    episode releases the base ``_resolve`` would see no direction and mark
+    every episode "resolved".  Here the last non-zero direction seen while the
+    episode was building / active / confirmed is kept (``episode_direction``
+    in the evidence) and ``outcome_positive`` judges the realised mid move
+    since the episode start against it: (mid − start mid) × direction > 0.
+    None (→ the base rule) when no direction, start mid or mid is known.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._episode_dir = 0
+
+    def outcome_positive(self, ms: MarketState) -> Optional[bool]:
+        if self._episode_dir == 0 or self._start_mid is None or ms.mid is None:
+            return None
+        return (ms.mid - self._start_mid) * self._episode_dir > 0
+
+    def update(self, ms: MarketState, hist: StateHistory):
+        st = super().update(ms, hist)
+        d = st.evidence.get("direction")
+        if st.state in ("building", "active", "confirmed"):
+            if d in (1, -1):
+                self._episode_dir = d
+        elif st.state == "inactive":
+            self._episode_dir = 0
+        st.evidence["episode_direction"] = self._episode_dir
+        return st
+
+
 # ============================================================================ helpers
+def tape_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
+    """``Frame.tape_rows`` with two more rules.  (1) Identity: the tape clock advances when a
+    cumulative feed re-serves unchanged totals, so consecutive rows whose cumulative identity
+    (cum_volume, interval volume, interval trades, vwap) is identical are the same interval
+    polled again and are kept once (only applied when the row carries a cumulative volume).
+    (2) Rows the tape engine flagged as the day's first row (its "interval" is the whole day
+    so far) or as a monotone break (a source-side reset) carry no interval information and
+    are dropped (``session_state.tape.last_first_row`` / ``last_monotone_break``)."""
+    out: List[Dict[str, Any]] = []
+    for r in fr.tape_rows(seconds):
+        st = fr.at_or_before(r["t"])
+        tp = st.session_state.get("tape") if (st is not None and isinstance(st.session_state, dict)) else None
+        if isinstance(tp, dict) and (tp.get("last_first_row") or tp.get("last_monotone_break")):
+            continue
+        if out and r["cum_volume"] is not None:
+            p = out[-1]
+            if (p["cum_volume"], p["volume"], p["trades"], p["vwap"]) == \
+                    (r["cum_volume"], r["volume"], r["trades"], r["vwap"]):
+                continue
+        out.append(r)
+    return out
+
+
 def classified_rows(fr: Frame, seconds: float) -> List[Dict[str, Any]]:
     """Tape rows inside the window that carry a volume > 0 and a direction; each row also
     carries the mid of the state it appeared in (``mid``) and that state (``state``)."""
     out: List[Dict[str, Any]] = []
-    for r in fr.tape_rows(seconds):
+    for r in tape_rows(fr, seconds):
         if not r["volume"] or r["direction"] is None:
             continue
         st = fr.at_or_before(r["t"])
@@ -245,7 +302,7 @@ def _passive(mech: Mechanism, ms: MarketState, hist: StateHistory, side: str) ->
 
 
 @register
-class PassiveAccumulation(Mechanism):
+class PassiveAccumulation(DirectedMechanism):
     """#6 Passive accumulation.
 
     Rule (window 300 s): classified tape rows give sell volume (Σ v·max(0, −d))
@@ -272,7 +329,7 @@ class PassiveAccumulation(Mechanism):
 
 
 @register
-class PassiveDistribution(Mechanism):
+class PassiveDistribution(DirectedMechanism):
     """#7 Passive distribution — the mirror of #6: buy volume absorbed at an ask
     touch that holds its price and refills, flat mid, rising visible-ask share.
     Same windows and ramps as ``PassiveAccumulation``; direction −1.
@@ -289,7 +346,7 @@ class PassiveDistribution(Mechanism):
 
 # ============================================================================ #11
 @register
-class BlockAbsorption(Mechanism):
+class BlockAbsorption(DirectedMechanism):
     """#11 Large-print / block absorption.
 
     Rule: burst = the last 60 s, baseline = [now − 900 s, now − 60 s] (span ≥
@@ -331,7 +388,7 @@ class BlockAbsorption(Mechanism):
             base_vol = float(cum[-1].trade_volume - cum[0].trade_volume)
             base_rate = base_vol / base_span
         elif len(base_states) >= 2 and (base_states[-1].t - base_states[0].t).total_seconds() >= self.min_baseline_span_s:
-            rows = [r for r in fr.tape_rows(self.baseline_s + self.burst_s) if r["t"] <= t_pre and r["volume"] is not None]
+            rows = [r for r in tape_rows(fr, self.baseline_s + self.burst_s) if r["t"] <= t_pre and r["volume"] is not None]
             if rows:
                 base_span = (base_states[-1].t - base_states[0].t).total_seconds()
                 base_vol = float(sum(r["volume"] for r in rows))
@@ -340,7 +397,7 @@ class BlockAbsorption(Mechanism):
         if base_rate is not None and base_rate > 0:
             ratio = burst_vol / (base_rate * self.burst_s)
         # largest interval in the burst against the touch it hit
-        burst_rows = [r for r in fr.tape_rows(self.burst_s) if r["volume"]]
+        burst_rows = [r for r in tape_rows(fr, self.burst_s) if r["volume"]]
         largest = max((r["volume"] for r in burst_rows), default=None)
         vs_touch = None
         hit_side = None
@@ -392,7 +449,7 @@ class BlockAbsorption(Mechanism):
 
 # ============================================================================ #12
 @register
-class InventoryRebalancing(Mechanism):
+class InventoryRebalancing(DirectedMechanism):
     """#12 Inventory rebalancing.
 
     Rule (window 300 s): the classified tape rows with |direction| > 0.1 give
@@ -450,7 +507,7 @@ class InventoryRebalancing(Mechanism):
 
 # ============================================================================ #13
 @register
-class AdverseRetreat(Mechanism):
+class AdverseRetreat(DirectedMechanism):
     """#13 Adverse-selection retreat.
 
     Rule: the last classified tape row (volume > 0, direction ≠ 0) inside 180 s
@@ -545,7 +602,7 @@ def _intensity(fr: Frame, seconds: float, long_s: float) -> Dict[str, Optional[f
     if ints:
         now_i = sum(v for _, v in ints) / len(ints)
     else:
-        rows = [r for r in fr.tape_rows(seconds) if r["trades"] is not None]
+        rows = [r for r in tape_rows(fr, seconds) if r["trades"] is not None]
         span = fr.span_s(seconds)
         if rows and span > 0:
             now_i = float(sum(r["trades"] for r in rows)) / (span / 60.0)
@@ -603,7 +660,7 @@ def _stealth(mech: Mechanism, ms: MarketState, hist: StateHistory, want: int) ->
 
 
 @register
-class StealthAccumulation(Mechanism):
+class StealthAccumulation(DirectedMechanism):
     """#28 Stealth accumulation.
 
     Rule (window 600 s): classified tape rows → net_share = Σ d·v / Σ v (buy
@@ -629,7 +686,7 @@ class StealthAccumulation(Mechanism):
 
 
 @register
-class StealthDistribution(Mechanism):
+class StealthDistribution(DirectedMechanism):
     """#29 Stealth distribution — mirror of #28 (net sell share, sell-row
     persistence, low intensity, flat mid); direction −1."""
 
@@ -645,18 +702,21 @@ class StealthDistribution(Mechanism):
 
 # ============================================================================ #32
 @register
-class Absorption(Mechanism):
+class Absorption(DirectedMechanism):
     """#32 Absorption.
 
     Rule (window 120 s): signed flow over the classified rows names the
     aggressor side (buys hit the ask, sells hit the bid) and one_sided =
-    |signed| / total.  On the hit side the touch series gives touch_pre (first
-    point in the window), touch_now, the replenishment counters (refills =
-    rises after falls at the same best price) and the best-price retreat in
-    ticks.  flow_vs_touch = |signed flow| / touch_pre; refill_ratio = min(1,
-    touch_now / touch_pre); price factor = 1 − retreat (clipped: the hit best
-    price unchanged).  score = ramp(flow_vs_touch, 0.5 → 2) × price factor ×
-    ramp(refill_ratio, 0.4 → 0.9) × (0.5 + 0.5 × ramp(one_sided, 0.3 → 0.8)).
+    |signed| / total.  On the hit side the touch series gives touch_ref = the
+    largest touch qty in the window (the full queue — a reference independent
+    of the poll phase), touch_now, the replenishment counters (consumed /
+    refilled qty, refills = rises after falls at the same best price) and the
+    best-price retreat in ticks (start → now).  flow_vs_touch = |signed flow|
+    / touch_ref; refill_ratio = max(touch_now / touch_ref, min(1, refilled /
+    consumed)) — the queue is back, or has been rebuilt as much as it was
+    eaten; price factor = 1 − retreat (clipped: the hit best price unchanged).
+    score = ramp(flow_vs_touch, 0.5 → 2) × price factor × ramp(refill_ratio,
+    0.4 → 0.9) × (0.5 + 0.5 × ramp(one_sided, 0.3 → 0.8)).
     direction = −sign(signed flow) (the absorbing passive side wins).
     """
 
@@ -685,33 +745,38 @@ class Absorption(Mechanism):
                                    base, {"hit_side": side, "signed_flow": signed})
         p0, q0 = ser[0][1], ser[0][2]
         p1, q1 = ser[-1][1], ser[-1][2]
+        q_ref = max(q for _, _, q in ser)
         rep = side_replenishment(ser, side)
         tick = fr.tick
         retreat = (((p1 - p0) if side == "ask" else (p0 - p1)) / tick) if tick else None
         pf = clamp01(1.0 - retreat) if retreat is not None else 0.5
-        flow_vs_touch = (abs(signed) / q0) if q0 > 0 else None
-        refill_ratio = min(1.0, q1 / q0) if q0 > 0 else None
+        flow_vs_touch = (abs(signed) / q_ref) if q_ref > 0 else None
+        refill_now = (q1 / q_ref) if q_ref > 0 else None
+        refill_window = rep["refill_ratio"]
+        refill_ratio = max(x for x in (refill_now, refill_window) if x is not None) \
+            if (refill_now is not None or refill_window is not None) else None
         s_flow = ramp(flow_vs_touch, 0.5, 2.0)
         s_ref = ramp(refill_ratio, 0.4, 0.9)
         s_one = ramp(fs["one_sided"], 0.3, 0.8)
         score = s_flow * pf * s_ref * (0.5 + 0.5 * s_one)
         direction = -sign(signed) if score > 0 else 0
         ev = {"hit_side": side, "signed_flow": signed, "total_volume": fs["total"], "one_sided": fs["one_sided"],
-              "rows": fs["rows"], "touch_pre": q0, "touch_now": q1, "touch_price_pre": p0, "touch_price_now": p1,
-              "retreat_ticks": retreat, "price_factor": pf, "flow_vs_touch": flow_vs_touch, "refill_ratio": refill_ratio,
+              "rows": fs["rows"], "touch_ref": q_ref, "touch_start": q0, "touch_now": q1, "touch_price_start": p0,
+              "touch_price_now": p1, "retreat_ticks": retreat, "price_factor": pf, "flow_vs_touch": flow_vs_touch,
+              "refill_ratio": refill_ratio, "refill_now": refill_now, "refill_window": refill_window,
               "refills": rep["refills"], "consumed_qty": rep["consumed"], "refilled_qty": rep["refilled"],
               "components": {"flow": s_flow, "refill": s_ref, "one_sided": s_one},
               "direction": direction, "window_s": self.window_s}
-        if q0 <= 0:
-            ev["missing"] = ["touch qty (zero at window start)"]
+        if q_ref <= 0:
+            ev["missing"] = ["touch qty (zero throughout the window)"]
         if retreat is None:
             ev.setdefault("missing", []).append("tick_size")
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
-                                note=f"{side} absorbed flow {abs(signed):.0f} vs touch {q0:.0f}, refill {refill_ratio}")
+                                note=f"{side} absorbed flow {abs(signed):.0f} vs touch {q_ref:.0f}, refill {refill_ratio}")
 
 
 # ============================================================================ #38 / #39
-class _CompositeState(Mechanism):
+class _CompositeState(DirectedMechanism):
     """Shared body of accumulation_like / distribution_like.
 
     The three component mechanisms are evaluated at every update (their
@@ -721,8 +786,9 @@ class _CompositeState(Mechanism):
     (900 s; one point per distinct state time).  mean = mean of the points,
     persistence = share of the points ≥ 0.35 (the build threshold), span =
     time covered by the points.  score = mean × (0.5 + 0.5 × persistence) ×
-    ramp(span, 60 → 300 s).  Net flow share and mid change over the composite
-    window are reported as evidence.
+    ramp(span, 60 → 300 s).  The raw net buy share (Σ d·v / Σ v: negative when
+    sells dominate, as they do when a bid absorbs them) and the mid change over
+    the composite window are reported as evidence.
     """
 
     want: int = 0
@@ -770,10 +836,10 @@ class _CompositeState(Mechanism):
         score = mean * (0.5 + 0.5 * persistence) * s_span
         rows = classified_rows(fr, self.window_s)
         fs = flow_summary(rows)
-        net_share = safe_div((fs["signed"] * self.want) if fs["signed"] is not None else None, fs["total"])
+        net_buy_share = safe_div(fs["signed"], fs["total"])
         direction = self.want if score > 0 else 0
         ev = {"components": subs, "strongest_now": best, "mean_strongest": mean, "persistence": persistence,
-              "points": len(vals), "span_s": span, "span_factor": s_span, "net_flow_share": net_share,
+              "points": len(vals), "span_s": span, "span_factor": s_span, "net_buy_share": net_buy_share,
               "total_volume": fs["total"], "mid_change_ticks": fr.mid_change_ticks(self.window_s),
               "direction": direction, "window_s": self.window_s}
         return MechanismReading(self.name, self.family, clamp01(score), "inactive", ev, base,
