@@ -392,6 +392,72 @@
    "bytes": 359512,
    "epoch": "28052b83d33d473cac130d0ba8a252b2",
    "closed_utc": "2026-09-06T05:55:49.923419+00:00"
+  },
+  {
+   "source": "dsebd_depth",
+   "path": "segments/dsebd_depth__ccr-vm__28052b83__20260906T05__00001165.jsonl",
+   "records": 750,
+   "first_seq": 1165,
+   "last_seq": 1914,
+   "sha256": "7df850f639d1f053cb9510ae37395df021955df7ec74a5617e6c3b7afd03669e",
+   "bytes": 7980019,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:00:00.779690+00:00"
+  },
+  {
+   "source": "lankabd_depth",
+   "path": "segments/lankabd_depth__ccr-vm__28052b83__20260906T05__00001166.jsonl",
+   "records": 750,
+   "first_seq": 1166,
+   "last_seq": 1915,
+   "sha256": "db82f6fd9ef71ee9b4b8b2bc61f4e7b08351e7c586513806477b911662fe9101",
+   "bytes": 4215780,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:00:01.132707+00:00"
+  },
+  {
+   "source": "lankabd_market",
+   "path": "segments/lankabd_market__ccr-vm__28052b83__20260906T05__00000065.jsonl",
+   "records": 47,
+   "first_seq": 65,
+   "last_seq": 111,
+   "sha256": "623dbbbc4a927d2c1ecfc5b32b5fb9f33887ddc8ae59c31924ae7e66937e811f",
+   "bytes": 97924,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:00:02.568093+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__ccr-vm__28052b83__20260906T05__00000499.jsonl",
+   "records": 358,
+   "first_seq": 499,
+   "last_seq": 856,
+   "sha256": "344547eda06dd0d5c9f11960e8e7968a4cc4083465d859aad4e7c1405e99bc50",
+   "bytes": 904276,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:00:04.224120+00:00"
+  },
+  {
+   "source": "lankabd_watch",
+   "path": "segments/lankabd_watch__ccr-vm__28052b83__20260906T05__00000123.jsonl",
+   "records": 90,
+   "first_seq": 123,
+   "last_seq": 212,
+   "sha256": "4593bad0082a7550dc3cabc79fd8ef1d889c9b590a83e2aa811163457a663a03",
+   "bytes": 55157966,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:00:22.514923+00:00"
+  },
+  {
+   "source": "lankabd_tape",
+   "path": "segments/lankabd_tape__ccr-vm__28052b83__20260906T05__00000308.jsonl",
+   "records": 216,
+   "first_seq": 308,
+   "last_seq": 523,
+   "sha256": "8577f097e98f46e27cb4bdfbc3e7933683fd041684468209cbc777e03d11eb3f",
+   "bytes": 1130502,
+   "epoch": "28052b83d33d473cac130d0ba8a252b2",
+   "closed_utc": "2026-09-06T06:01:05.206076+00:00"
   }
  ],
  "previous_epochs": [
