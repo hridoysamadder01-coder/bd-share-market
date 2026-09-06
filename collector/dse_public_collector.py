@@ -258,6 +258,49 @@ def parse_company_page(html: str, symbol: str) -> Dict[str, Any]:
             "problems": problems}
 
 
+# ------------------------------------------------------------------ generic day-end tables
+def parse_page_table(html: str) -> Tuple[List[str], List[List[str]]]:
+    """The main data table of a DSE day-end page, with the page's own column names.
+
+    Nothing about the schema is assumed: the table with the most cells whose rows agree on a
+    column count (≥ 3) wins, its first row (or its ``th`` row) supplies the headers, and the body
+    rows are returned as printed. The site's scrolling ticker (one cell per row) never qualifies.
+    """
+    soup = BeautifulSoup(html, "lxml")
+    best: Tuple[int, List[str], List[List[str]]] = (0, [], [])
+    for t in soup.find_all("table"):
+        rows = [_cells(tr) for tr in t.find_all("tr")]
+        rows = [r for r in rows if any(x.strip() for x in r)]
+        if len(rows) < 3:
+            continue
+        widths = Counter(len(r) for r in rows)
+        width, n = widths.most_common(1)[0]
+        if width < 3 or n < 3:
+            continue
+        body = [r for r in rows if len(r) == width]
+        head_cells = [th.get_text(" ", strip=True) for th in t.find_all("th")]
+        head = head_cells if len(head_cells) == width else body[0]
+        data = body[1:] if head is body[0] else body
+        score = len(data) * width
+        if score > best[0]:
+            best = (score, [h.strip() for h in head], data)
+    return best[1], best[2]
+
+
+EXTRA_PAGES = {
+    "circuit_breaker_official": "/cbul.php",
+    "pe_at_a_glance": "/latest_PE.php",
+    "company_listing": "/company_listing.php",
+    "sector_wise_company_list": "/by_industrylisting.php",
+    "market_statistics": "/market-statistics.php",
+    "top_ten_gainer": "/top_ten_gainer.php",
+    "top_ten_loser": "/top_ten_loser.php",
+    "marginable_securities": "/marginable-securities.php",
+    "close_price": "/dse_close_price.php",
+    "recent_market_information": "/recent_market_information.php",
+}
+
+
 # ------------------------------------------------------------------ collector
 class Collector:
     def __init__(self, out: Path, min_gap: float = 0.4, timeout: float = 45.0):
@@ -326,15 +369,46 @@ class Collector:
                             headers={"Accept": "text/html"})
         return f, self.record("dse" if not symbol else name.split("_")[0], name, f, "html", symbol)
 
-    def get_retry(self, url: str, params: Dict[str, str], attempts: int = 3) -> Fetched:
+    empty_month_stop: int = 12          # consecutive served-empty months that end the archive walk
+
+    def archive_range(self, a: date, b: date, out: List[Dict[str, Any]], depth: int = 0) -> int:
+        """One archive range for every instrument. Two different outcomes are told apart and
+        never confused: a 200 that carries no data table (the archive does not serve that range)
+        is accepted as an empty answer, while a transfer that dies mid-body is retried and then
+        split in half down to a single day before it is given up on and recorded as a failure."""
+        f = self.get_retry(f"{DSE}/day_end_archive.php",
+                           {"startDate": a.isoformat(), "endDate": b.isoformat(),
+                            "inst": "All Instrument", "archive": "data"},
+                           headers={"Referer": f"{DSE}/data_archive.php"})
+        row = self.record("dse_history", f"archive_{a}_{b}", f, "html")
+        if not f.ok or not f.body:
+            if a < b and depth < 5:                       # split: half a range at a time
+                mid = a + (b - a) / 2
+                n = self.archive_range(a, mid, out, depth + 1)
+                return n + self.archive_range(mid + timedelta(days=1), b, out, depth + 1)
+            self.failures.append({**row, "error": f"archive transfer failed for {a}..{b}: {f.error}"})
+            return 0
+        try:
+            rows = dsebd.parse_archive(f.body.decode("utf-8", "replace"))
+        except Exception as e:                            # noqa: BLE001
+            self.failures.append({**row, "error": f"archive parse: {type(e).__name__}: {e}"})
+            return 0
+        p = self.prov(row)
+        out += [{**r, "symbol": (r.get("symbol") or "").upper(), **p} for r in rows]
+        print(f"[{utcnow()[11:19]}] archive {a}..{b}: {len(rows)} rows", file=sys.stderr, flush=True)
+        return len(rows)
+
+    def get_retry(self, url: str, params: Dict[str, str], attempts: int = 4,
+                  headers: Optional[Dict[str, str]] = None) -> Fetched:
         """A multi-megabyte page (the all-instrument archive) can be cut mid-transfer; retry the
         whole request, never a partial body. Every attempt, including the failures, is recorded."""
         f = None
         for i in range(attempts):
-            f = self.client.get(url, params=params, allow_tls_fallback=True, headers={"Accept": "text/html"})
+            f = self.client.get(url, params=params, allow_tls_fallback=True,
+                                headers={"Accept": "text/html", **(headers or {})})
             if f.ok and f.body:
                 return f
-            time.sleep(min(8.0, 2.0 ** i))
+            time.sleep(min(20.0, 3.0 * (i + 1)))
         return f                                                     # type: ignore[return-value]
 
     def adapter_pull(self, source: str, adapter: Any, key: Optional[str], ext: str) -> Tuple[Any, Dict[str, Any]]:
@@ -352,9 +426,29 @@ class Collector:
         return parsed, row
 
     # ---------------------------------------------------------- acquisition
+    def extras(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Official DSE day-end pages, each stored raw and normalized with the page's own columns."""
+        out: Dict[str, List[Dict[str, Any]]] = {}
+        for name, path in EXTRA_PAGES.items():
+            f = self.client.get(f"{DSE}{path}", allow_tls_fallback=True, headers={"Accept": "text/html"})
+            row = self.record("dse_extras", name, f, "html")
+            if not f.ok:
+                continue
+            head, data = parse_page_table(f.body.decode("utf-8", "replace"))
+            if not head or not data:
+                self.failures.append({**row, "error": f"{name}: no data table recognised"})
+                continue
+            p = self.prov(row)
+            cols = [slug(h).lower() or f"col{i}" for i, h in enumerate(head)]
+            rows = [{**{c: v for c, v in zip(cols, r)}, "page": name, "column_names": head, **p} for r in data]
+            out[name] = rows
+            print(f"[{utcnow()[11:19]}] extras {name}: {len(rows)} rows x {len(cols)} cols",
+                  file=sys.stderr, flush=True)
+        return out
+
     def run(self, all_depth: bool, all_tape: bool, company: bool,
             history_start: Optional[str], history_end: Optional[str],
-            max_symbols: Optional[int]) -> Dict[str, Any]:
+            max_symbols: Optional[int], extras: bool = False) -> Dict[str, Any]:
         watch: List[Dict[str, Any]] = []
         grid: List[Dict[str, Any]] = []
         circuit: List[Dict[str, Any]] = []
@@ -518,29 +612,26 @@ class Collector:
                         "truth": "INFERRED_FROM_CUMULATIVE"})
                 prev = r
 
-        # ---- official historical archive, all instruments, month chunks
+        # ---- official historical archive, all instruments, newest month first
         if history_start:
             start = date.fromisoformat(history_start)
             end = date.fromisoformat(history_end) if history_end else date.today()
+            months: List[Tuple[date, date]] = []
             cur = start.replace(day=1)
             while cur <= end:
                 nxt = (cur.replace(day=28) + timedelta(days=4)).replace(day=1)
-                chunk_end = min(end, nxt - timedelta(days=1))
-                f = self.get_retry(f"{DSE}/day_end_archive.php",
-                                   {"startDate": cur.isoformat(), "endDate": chunk_end.isoformat(),
-                                    "inst": "All Instrument", "archive": "data"})
-                row = self.record("dse_history", f"archive_{cur}_{chunk_end}", f, "html")
-                if f.ok:
-                    try:
-                        rows = dsebd.parse_archive(f.body.decode("utf-8", "replace"))
-                        p = self.prov(row)
-                        history += [{**r, "symbol": (r.get("symbol") or "").upper(), **p} for r in rows]
-                        print(f"[{utcnow()[11:19]}] archive {cur}..{chunk_end}: {len(rows)} rows",
-                              file=sys.stderr, flush=True)
-                    except Exception as e:                            # noqa: BLE001
-                        self.failures.append({**row, "error": f"archive parse: {type(e).__name__}: {e}"})
+                months.append((cur, min(end, nxt - timedelta(days=1))))
                 cur = nxt
+            empty_streak = 0
+            for a, b in reversed(months):                 # newest first: the served window is recent
+                rows = self.archive_range(a, b, history)
+                empty_streak = 0 if rows else empty_streak + 1
+                if empty_streak >= self.empty_month_stop:
+                    print(f"[{utcnow()[11:19]}] archive: {empty_streak} consecutive months served no data "
+                          f"(back to {a}); the public archive window ends here", file=sys.stderr, flush=True)
+                    break
 
+        extra_tables: Dict[str, List[Dict[str, Any]]] = self.extras() if extras else {}
         tables = {
             "symbols.csv": list(universe.values()),
             "market_watch.parquet": watch,
@@ -559,6 +650,7 @@ class Collector:
             "company_shareholding.parquet": comp_hold,
             "historical_prices.parquet": history,
         }
+        tables.update({f"dse_{k}.parquet": v for k, v in extra_tables.items()})
         for name, rows in tables.items():
             write_table(self.norm / name, rows)
         return self.finish(tables, symbols, universe, depth, depth_sum)
@@ -685,7 +777,12 @@ def json_dump(path: Path, obj: Any) -> None:
 
 
 def write_table(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
+    """Write a normalized table. An empty result never overwrites an existing file: a run that
+    collects only part of the surface (``--extras``, ``--history-start`` alone) leaves the tables
+    it did not touch as they were, so the output directory can be filled incrementally."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    if not rows and (path.exists() or path.with_suffix(".csv").exists()):
+        return
     df = pd.DataFrame(list(rows))
     for c in df.columns:
         if df[c].map(lambda x: isinstance(x, (dict, list, tuple))).any():
@@ -706,6 +803,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--all-depth", action="store_true", help="displayed depth for every symbol, both sensors")
     ap.add_argument("--all-tape", action="store_true", help="cumulative intraday tape for every symbol with a cid")
     ap.add_argument("--company", action="store_true", help="dsebd company page fundamentals for every symbol")
+    ap.add_argument("--extras", action="store_true",
+                    help="official DSE day-end pages (circuit breaker, P/E at a glance, company and sector "
+                         "listings, market statistics, top gainers/losers, marginable securities, close price)")
     ap.add_argument("--history-start", default=None, help="YYYY-MM-DD, official archive (all instruments)")
     ap.add_argument("--history-end", default=None)
     ap.add_argument("--min-gap", type=float, default=0.4)
@@ -713,7 +813,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-symbols", type=int, default=None, help="debug only; omit for every symbol")
     a = ap.parse_args(argv)
     c = Collector(Path(a.out), min_gap=a.min_gap, timeout=a.timeout)
-    c.run(a.all_depth, a.all_tape, a.company, a.history_start, a.history_end, a.max_symbols)
+    c.run(a.all_depth, a.all_tape, a.company, a.history_start, a.history_end, a.max_symbols, a.extras)
     return 0
 
 
