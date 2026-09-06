@@ -1,5 +1,11 @@
 # tower build — progress ledger (kept current; read this first after any context reset)
 
+13:35 UTC: DONE. Final gate on 2d46692 (results/tower/gate/GATE.json): 653 tests / 0 failed / 0 skipped; fixture replay
+deterministic; full-day replay 326,588 events → 17,429 states / 14 symbols, 0 reconstruction failures, 43/49 mechanisms
+varying, 0 placeholders, go clean, 417 events/s. Tower experiment on the full-day store: 3,913 eligible rows, KEEP 0 /
+KILL 3 (book_trade_divergence, cross_lead_lag, queue_pull_stack vs imb_l1) / BLOCKED 46, FDR 0 pass. Phone page republished
+(full session), UI screenshot inspected, zip built. Receipt delivered.
+
 10:40 UTC: BOTH verify rounds complete (28 agents, 0 errors; last suite count 604 passed / 0 failed). Round-2 fixes committed
 b2f9ed2. My cross-module follow-ups (uncommitted, under test task byq1ifl0j): engine day-roll also resets tape/queue and
 copies sector_id/sector into the quote memory; store.py writes allow_nan=False; export_static.py self-contained (no Google

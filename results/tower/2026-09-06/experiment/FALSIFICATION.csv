@@ -1,0 +1,1422 @@
+mechanism,test,variant,split,h,outcome,n_rows,n_signal,episodes,lift_vs_base,incremental_vs_best_baseline,passed,note
+absorption,real,holdout,holdout,180,up,914,33,17,-0.07824414827,-0.1847680343,,best simple baseline = imb_l1; outcome = up; direction = 1
+absorption,baseline_comparison,state - imb_l1,holdout,180,up,914,33,17,-0.07824414827,-0.1847680343,False,"block bootstrap 95% CI [-0.3540, 0.0056] (blocks of 20 rows, 500 resamples)"
+absorption,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+absorption,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+absorption,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+absorption,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+absorption,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+absorption,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+absorption,graded_score,score_ge_0.6,holdout,180,up,914,31,17,-0.1007270417,-0.2072509278,,
+absorption,timestamp_permutation,circular shift within symbol,holdout,180,up,914,33,17,-0.07824414827,,False,"p = 0.8571 over 300 permutations; null mean 0.0264, null p95 0.2248; BH-FDR q=None pass=None"
+absorption,side_flip,mirror → P(down),holdout,180,down,914,30,16,-0.06754194019,,False,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+absorption,anchor_shift,placebo_shift_-h,holdout,180,up,914,36,13,-0.1464259664,-0.2529498525,False,placebo must show |lift| < ½ real lift
+absorption,anchor_shift,leak_control_shift_+h,holdout,180,up,914,18,14,-0.06309263311,-0.1696165192,,future-shifted signal: expected to inflate (sensitivity)
+absorption,removal,largest_wall_removed,holdout,180,up,914,33,17,-0.07824414827,-0.1887147335,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+absorption,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,32,16,-0.08496212121,-0.19625,False,
+absorption,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,33,17,-0.08646561772,-0.1993620415,False,
+absorption,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,32,16,-0.06093377088,-0.1565578818,False,
+absorption,leave_one_symbol_out,without GP,holdout,180,up,847,32,16,-0.07515495868,-0.1802655131,False,
+absorption,leave_one_symbol_out,without IPDC,holdout,180,up,847,29,16,-0.1792126369,-0.2814376394,False,
+absorption,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,25,13,-0.06716346154,-0.1791089109,False,
+absorption,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,26,14,-0.0333825838,-0.1319553462,False,
+absorption,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,31,15,-0.07708177044,-0.1926289173,False,
+absorption,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,30,15,-0.06742424242,-0.1704374057,False,
+absorption,leave_one_symbol_out,without PTL,holdout,180,up,833,33,17,-0.08257848594,-0.1833905089,False,
+absorption,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,33,17,-0.07971971531,-0.191410508,False,
+absorption,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,33,17,-0.0775097918,-0.1865130175,False,
+absorption,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,27,15,-0.04050509093,-0.1481481481,False,
+absorption,liquidity_split,top,holdout,180,up,453,16,8,-0.1494205298,-0.2475,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+absorption,liquidity_split,mid,holdout,180,up,461,17,9,-0.01199438561,-0.1218487395,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+accumulation_like,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+accumulation_like,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+accumulation_like,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+accumulation_like,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+accumulation_like,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+accumulation_like,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+accumulation_like,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+accumulation_like,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+accumulation_like,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+accumulation_like,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+accumulation_like,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+accumulation_like,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+accumulation_like,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+accumulation_like,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+accumulation_like,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+accumulation_like,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+accumulation_like,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+accumulation_like,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+accumulation_like,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+accumulation_like,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+accumulation_like,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+accumulation_like,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+accumulation_like,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+accumulation_like,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+accumulation_like,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+accumulation_like,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+accumulation_like,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+accumulation_like,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+accumulation_like,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+adverse_retreat,real,holdout,holdout,180,down,914,1,1,0.6991247265,0.5441696113,,best simple baseline = imb_l1; outcome = down; direction = -1
+adverse_retreat,baseline_comparison,state - imb_l1,holdout,180,down,914,1,1,0.6991247265,0.5441696113,True,"block bootstrap 95% CI [0.4461, 0.6301] (blocks of 20 rows, 354 resamples)"
+adverse_retreat,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+adverse_retreat,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+adverse_retreat,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+adverse_retreat,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+adverse_retreat,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+adverse_retreat,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+adverse_retreat,graded_score,score_ge_0.6,holdout,180,down,914,1,1,0.6991247265,0.5441696113,,
+adverse_retreat,timestamp_permutation,circular shift within symbol,holdout,180,down,914,1,1,0.6991247265,,False,"p = 0.1296 over 300 permutations; null mean -0.1742, null p95 0.6991; BH-FDR q=None pass=None"
+adverse_retreat,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+adverse_retreat,anchor_shift,placebo_shift_-h,holdout,180,down,914,2,2,-0.3008752735,-0.4558303887,True,placebo must show |lift| < ½ real lift
+adverse_retreat,anchor_shift,leak_control_shift_+h,holdout,180,down,914,2,2,-0.3008752735,-0.4558303887,,future-shifted signal: expected to inflate (sensitivity)
+adverse_retreat,removal,largest_wall_removed,holdout,180,down,914,1,1,0.6991247265,0.5649122807,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+adverse_retreat,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,1,1,0.6848484848,0.5267175573,True,
+adverse_retreat,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,1,1,0.6850961538,0.5171102662,True,
+adverse_retreat,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,1,1,0.7088305489,0.5563909774,True,
+adverse_retreat,leave_one_symbol_out,without GP,holdout,180,down,847,1,1,0.6953955136,0.5433962264,True,
+adverse_retreat,leave_one_symbol_out,without IPDC,holdout,180,down,847,0,0,,,,
+adverse_retreat,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,1,1,0.7091346154,0.5612648221,True,
+adverse_retreat,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,1,1,0.7226890756,0.6044444444,True,
+adverse_retreat,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,1,1,0.6976744186,0.5373134328,True,
+adverse_retreat,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,1,1,0.6909090909,0.526119403,True,
+adverse_retreat,leave_one_symbol_out,without PTL,holdout,180,down,833,1,1,0.6818727491,0.5187969925,True,
+adverse_retreat,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,1,1,0.7070217918,0.5511811024,True,
+adverse_retreat,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,1,1,0.701814059,0.5342960289,True,
+adverse_retreat,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,1,1,0.7106842737,0.56640625,True,
+adverse_retreat,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+adverse_retreat,liquidity_split,mid,holdout,180,down,461,1,1,0.7223427332,0.5901639344,True,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+auction_imbalance,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+auction_imbalance,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+auction_imbalance,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+auction_imbalance,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+auction_imbalance,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+auction_imbalance,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+auction_imbalance,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+auction_imbalance,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+auction_imbalance,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+auction_imbalance,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+auction_imbalance,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+auction_imbalance,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+auction_imbalance,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+auction_imbalance,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+auction_imbalance,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+auction_imbalance,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+auction_imbalance,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+auction_imbalance,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+basket_rebalance,real,holdout,holdout,180,down,914,2,1,-0.3008752735,-0.4558303887,,best simple baseline = imb_l1; outcome = down; direction = -1
+basket_rebalance,baseline_comparison,state - imb_l1,holdout,180,down,914,2,1,-0.3008752735,-0.4558303887,False,"block bootstrap 95% CI [-0.5520, -0.3655] (blocks of 20 rows, 369 resamples)"
+basket_rebalance,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+basket_rebalance,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+basket_rebalance,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+basket_rebalance,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+basket_rebalance,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+basket_rebalance,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+basket_rebalance,graded_score,score_ge_0.6,holdout,180,down,914,1,1,-0.3008752735,-0.4558303887,,
+basket_rebalance,timestamp_permutation,circular shift within symbol,holdout,180,down,914,2,1,-0.3008752735,,False,"p = 1.0000 over 300 permutations; null mean -0.2225, null p95 0.1991; BH-FDR q=None pass=None"
+basket_rebalance,side_flip,mirror → P(up),holdout,180,up,914,4,1,0.02024070022,,True,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+basket_rebalance,anchor_shift,placebo_shift_-h,holdout,180,down,914,1,1,-0.3008752735,-0.4558303887,False,placebo must show |lift| < ½ real lift
+basket_rebalance,anchor_shift,leak_control_shift_+h,holdout,180,down,914,10,2,-0.3008752735,-0.4558303887,,future-shifted signal: expected to inflate (sensitivity)
+basket_rebalance,removal,largest_wall_removed,holdout,180,down,914,2,1,-0.3008752735,-0.4350877193,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+basket_rebalance,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,2,1,-0.3151515152,-0.4732824427,False,
+basket_rebalance,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,2,1,-0.3149038462,-0.4828897338,False,
+basket_rebalance,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,2,1,-0.2911694511,-0.4436090226,False,
+basket_rebalance,leave_one_symbol_out,without GP,holdout,180,down,847,2,1,-0.3046044864,-0.4566037736,False,
+basket_rebalance,leave_one_symbol_out,without IPDC,holdout,180,down,847,2,1,-0.3069657615,-0.4578754579,False,
+basket_rebalance,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,2,1,-0.2908653846,-0.4387351779,False,
+basket_rebalance,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,2,1,-0.2773109244,-0.3955555556,False,
+basket_rebalance,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,2,1,-0.3023255814,-0.4626865672,False,
+basket_rebalance,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,0,0,,,,
+basket_rebalance,leave_one_symbol_out,without PTL,holdout,180,down,833,2,1,-0.3181272509,-0.4812030075,False,
+basket_rebalance,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,2,1,-0.2929782082,-0.4488188976,False,
+basket_rebalance,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,2,1,-0.298185941,-0.4657039711,False,
+basket_rebalance,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,2,1,-0.2893157263,-0.43359375,False,
+basket_rebalance,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+basket_rebalance,liquidity_split,mid,holdout,180,down,461,2,1,-0.2776572668,-0.4098360656,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+block_absorption,real,holdout,holdout,180,up,914,9,8,-0.007537077559,-0.1140609636,,best simple baseline = imb_l1; outcome = up; direction = 1
+block_absorption,baseline_comparison,state - imb_l1,holdout,180,up,914,9,8,-0.007537077559,-0.1140609636,False,"block bootstrap 95% CI [-0.3396, 0.0729] (blocks of 20 rows, 500 resamples)"
+block_absorption,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+block_absorption,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+block_absorption,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+block_absorption,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+block_absorption,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+block_absorption,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+block_absorption,graded_score,score_ge_0.6,holdout,180,up,914,8,7,0.02024070022,-0.08628318584,,
+block_absorption,timestamp_permutation,circular shift within symbol,holdout,180,up,914,9,8,-0.007537077559,,False,"p = 0.2525 over 300 permutations; null mean -0.1209, null p95 0.1036; BH-FDR q=None pass=None"
+block_absorption,side_flip,mirror → P(down),holdout,180,down,914,14,7,-0.1580181307,,False,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+block_absorption,anchor_shift,placebo_shift_-h,holdout,180,up,914,15,11,-0.02975929978,-0.1362831858,False,placebo must show |lift| < ½ real lift
+block_absorption,anchor_shift,leak_control_shift_+h,holdout,180,up,914,7,7,-0.2297592998,-0.3362831858,,future-shifted signal: expected to inflate (sensitivity)
+block_absorption,removal,largest_wall_removed,holdout,180,up,914,9,8,-0.007537077559,-0.1180076628,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+block_absorption,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,9,8,-0.01898989899,-0.1302777778,False,
+block_absorption,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,7,6,-0.2379807692,-0.350877193,False,
+block_absorption,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,9,8,0.005038451339,-0.09058565955,False,
+block_absorption,leave_one_symbol_out,without GP,holdout,180,up,847,9,8,-0.009182736455,-0.1142932909,False,
+block_absorption,leave_one_symbol_out,without IPDC,holdout,180,up,847,9,8,0.008526826709,-0.09369817579,False,
+block_absorption,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,9,8,-0.004941239316,-0.1168866887,False,
+block_absorption,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,9,8,-0.003468053888,-0.1020408163,False,
+block_absorption,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,5,5,0.161627907,0.0460807601,True,
+block_absorption,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,6,5,0.09924242424,-0.003770739065,False,
+block_absorption,leave_one_symbol_out,without PTL,holdout,180,up,833,9,8,-0.01187141523,-0.1126834382,False,
+block_absorption,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,9,8,-0.009012644606,-0.1207034373,False,
+block_absorption,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,9,8,-0.006802721088,-0.1158059468,False,
+block_absorption,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,9,8,-0.003468053888,-0.1111111111,False,
+block_absorption,liquidity_split,top,holdout,180,up,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+block_absorption,liquidity_split,mid,holdout,180,up,461,9,8,-0.02506628103,-0.1349206349,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+book_trade_divergence,real,holdout,holdout,180,down,914,271,40,-0.0647129119,-0.2196680271,,best simple baseline = imb_l1; outcome = down; direction = -1
+book_trade_divergence,baseline_comparison,state - imb_l1,holdout,180,down,914,271,40,-0.0647129119,-0.2196680271,False,"block bootstrap 95% CI [-0.3342, -0.1249] (blocks of 20 rows, 500 resamples)"
+book_trade_divergence,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+book_trade_divergence,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+book_trade_divergence,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+book_trade_divergence,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+book_trade_divergence,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+book_trade_divergence,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+book_trade_divergence,graded_score,score_ge_0.6,holdout,180,down,914,223,44,-0.07666002689,-0.2316151421,,
+book_trade_divergence,timestamp_permutation,circular shift within symbol,holdout,180,down,914,271,40,-0.0647129119,,False,"p = 1.0000 over 300 permutations; null mean 0.0249, null p95 0.0794; BH-FDR q=1.0 pass=False"
+book_trade_divergence,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+book_trade_divergence,anchor_shift,placebo_shift_-h,holdout,180,down,914,272,44,-0.03984586176,-0.1948009769,False,placebo must show |lift| < ½ real lift
+book_trade_divergence,anchor_shift,leak_control_shift_+h,holdout,180,down,914,244,38,0.09666571008,-0.05828940509,,future-shifted signal: expected to inflate (sensitivity)
+book_trade_divergence,removal,largest_wall_removed,holdout,180,down,914,271,40,-0.0647129119,-0.1989253577,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+book_trade_divergence,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,256,38,-0.08077651515,-0.2389074427,False,
+book_trade_divergence,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,254,36,-0.06293534222,-0.2309212299,False,
+book_trade_divergence,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,231,34,-0.06173222164,-0.2141717931,False,
+book_trade_divergence,leave_one_symbol_out,without GP,holdout,180,down,847,266,38,-0.06400298266,-0.2160022698,False,
+book_trade_divergence,leave_one_symbol_out,without IPDC,holdout,180,down,847,242,36,-0.0507674144,-0.2016771108,False,
+book_trade_divergence,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,241,36,-0.0502014842,-0.1980712775,False,
+book_trade_divergence,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,266,39,-0.03670942061,-0.1549540518,False,
+book_trade_divergence,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,235,35,-0.07253834735,-0.2328993331,False,
+book_trade_divergence,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,270,39,-0.07205387205,-0.23684356,False,
+book_trade_divergence,leave_one_symbol_out,without PTL,holdout,180,down,833,262,38,-0.07385244174,-0.2369281984,False,
+book_trade_divergence,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,209,36,-0.09680595943,-0.2526466488,False,
+book_trade_divergence,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,263,39,-0.07004905891,-0.237567089,False,
+book_trade_divergence,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,257,36,-0.05585269127,-0.200130715,False,
+book_trade_divergence,liquidity_split,top,holdout,180,down,453,129,14,-0.03768160583,-0.2038615244,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+book_trade_divergence,liquidity_split,mid,holdout,180,down,461,142,26,-0.08751642174,-0.2196952205,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+churn_anomaly,real,holdout,holdout,180,move,914,100,24,0.0193654267,-0.04282700422,,best simple baseline = price_only_response; outcome = move; direction = 0
+churn_anomaly,baseline_comparison,state - price_only_response,holdout,180,move,914,100,24,0.0193654267,-0.04282700422,False,"block bootstrap 95% CI [-0.1750, 0.1052] (blocks of 20 rows, 500 resamples)"
+churn_anomaly,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+churn_anomaly,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+churn_anomaly,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+churn_anomaly,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+churn_anomaly,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+churn_anomaly,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+churn_anomaly,graded_score,score_ge_0.6,holdout,180,move,914,74,23,-0.07117511384,-0.1333675448,,
+churn_anomaly,timestamp_permutation,circular shift within symbol,holdout,180,move,914,100,24,0.0193654267,,False,"p = 0.1827 over 300 permutations; null mean -0.0480, null p95 0.0794; BH-FDR q=None pass=None"
+churn_anomaly,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+churn_anomaly,anchor_shift,placebo_shift_-h,holdout,180,move,914,105,22,-0.06396790664,-0.1261603376,False,placebo must show |lift| < ½ real lift
+churn_anomaly,anchor_shift,leak_control_shift_+h,holdout,180,move,914,106,24,-0.1061062714,-0.1682987023,,future-shifted signal: expected to inflate (sensitivity)
+churn_anomaly,removal,largest_wall_removed,holdout,180,move,914,100,24,0.0193654267,-0.04282700422,True,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+churn_anomaly,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,96,23,-0.0146969697,-0.07303266518,False,
+churn_anomaly,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,95,23,0.01553643725,-0.04396426847,False,
+churn_anomaly,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,95,22,0.02848888331,-0.03696741855,False,
+churn_anomaly,leave_one_symbol_out,without GP,holdout,180,move,847,83,21,0.01820742237,-0.05640260156,False,
+churn_anomaly,leave_one_symbol_out,without IPDC,holdout,180,move,847,88,21,-0.02066115702,-0.08139534884,False,
+churn_anomaly,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,89,21,0.0325329516,-0.03572661832,False,
+churn_anomaly,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,96,23,0.02824879952,-0.03007075472,False,
+churn_anomaly,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,86,22,0.02906976744,-0.02583695374,False,
+churn_anomaly,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,95,22,0.03576555024,-0.02842790273,False,
+churn_anomaly,leave_one_symbol_out,without PTL,holdout,180,move,833,84,22,0.04301720688,-0.005658765748,False,
+churn_anomaly,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,95,22,0.002102714413,-0.06470075899,False,
+churn_anomaly,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,100,24,0.02278911565,-0.04049773756,False,
+churn_anomaly,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,98,22,0.03601440576,-0.02509200401,False,
+churn_anomaly,liquidity_split,top,holdout,180,move,453,40,9,0.03857615894,-0.03681434599,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+churn_anomaly,liquidity_split,mid,holdout,180,move,461,60,15,0.008387563268,-0.04050632911,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+circuit_break_weakness,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+circuit_break_weakness,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+circuit_break_weakness,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+circuit_break_weakness,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+circuit_break_weakness,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+circuit_break_weakness,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+circuit_break_weakness,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+circuit_break_weakness,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+circuit_break_weakness,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+circuit_break_weakness,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+circuit_break_weakness,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+circuit_break_weakness,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+circuit_break_weakness,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+circuit_break_weakness,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+circuit_break_weakness,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+circuit_break_weakness,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+circuit_break_weakness,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+circuit_break_weakness,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+circuit_lock_strength,real,holdout,holdout,180,down,914,0,0,,,,best simple baseline = imb_l1; outcome = down; direction = -1
+circuit_lock_strength,baseline_comparison,state - imb_l1,holdout,180,down,914,0,0,,,False,no valid bootstrap resamples
+circuit_lock_strength,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+circuit_lock_strength,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+circuit_lock_strength,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+circuit_lock_strength,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+circuit_lock_strength,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+circuit_lock_strength,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+circuit_lock_strength,graded_score,score_ge_0.6,holdout,180,down,914,0,0,,,,
+circuit_lock_strength,timestamp_permutation,circular shift within symbol,holdout,180,down,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+circuit_lock_strength,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+circuit_lock_strength,anchor_shift,placebo_shift_-h,holdout,180,down,914,0,0,,,,placebo must show |lift| < ½ real lift
+circuit_lock_strength,anchor_shift,leak_control_shift_+h,holdout,180,down,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+circuit_lock_strength,removal,largest_wall_removed,holdout,180,down,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+circuit_lock_strength,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without GP,holdout,180,down,847,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without IPDC,holdout,180,down,847,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without PTL,holdout,180,down,833,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,0,0,,,,
+circuit_lock_strength,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,0,0,,,,
+circuit_lock_strength,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+circuit_lock_strength,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+circuit_next_session,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+circuit_next_session,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+circuit_next_session,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+circuit_next_session,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+circuit_next_session,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+circuit_next_session,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+circuit_next_session,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+circuit_next_session,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+circuit_next_session,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+circuit_next_session,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+circuit_next_session,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+circuit_next_session,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+circuit_next_session,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+circuit_next_session,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+circuit_next_session,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+circuit_next_session,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+circuit_next_session,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+circuit_next_session,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+circuit_prehit_pressure,real,holdout,holdout,180,down,914,0,0,,,,best simple baseline = imb_l1; outcome = down; direction = -1
+circuit_prehit_pressure,baseline_comparison,state - imb_l1,holdout,180,down,914,0,0,,,False,no valid bootstrap resamples
+circuit_prehit_pressure,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+circuit_prehit_pressure,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+circuit_prehit_pressure,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+circuit_prehit_pressure,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+circuit_prehit_pressure,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+circuit_prehit_pressure,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+circuit_prehit_pressure,graded_score,score_ge_0.6,holdout,180,down,914,0,0,,,,
+circuit_prehit_pressure,timestamp_permutation,circular shift within symbol,holdout,180,down,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+circuit_prehit_pressure,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+circuit_prehit_pressure,anchor_shift,placebo_shift_-h,holdout,180,down,914,0,0,,,,placebo must show |lift| < ½ real lift
+circuit_prehit_pressure,anchor_shift,leak_control_shift_+h,holdout,180,down,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+circuit_prehit_pressure,removal,largest_wall_removed,holdout,180,down,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+circuit_prehit_pressure,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without GP,holdout,180,down,847,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without IPDC,holdout,180,down,847,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without PTL,holdout,180,down,833,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,0,0,,,,
+circuit_prehit_pressure,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,0,0,,,,
+circuit_prehit_pressure,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+circuit_prehit_pressure,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+circuit_regime,real,holdout,holdout,180,down,914,4,1,-0.3008752735,-0.4558303887,,best simple baseline = imb_l1; outcome = down; direction = -1
+circuit_regime,baseline_comparison,state - imb_l1,holdout,180,down,914,4,1,-0.3008752735,-0.4558303887,False,"block bootstrap 95% CI [-0.5409, -0.3506] (blocks of 20 rows, 378 resamples)"
+circuit_regime,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+circuit_regime,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+circuit_regime,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+circuit_regime,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+circuit_regime,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+circuit_regime,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+circuit_regime,graded_score,score_ge_0.6,holdout,180,down,914,4,1,-0.3008752735,-0.4558303887,,
+circuit_regime,timestamp_permutation,circular shift within symbol,holdout,180,down,914,4,1,-0.3008752735,,False,"p = 1.0000 over 300 permutations; null mean 0.1008, null p95 0.6991; BH-FDR q=None pass=None"
+circuit_regime,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+circuit_regime,anchor_shift,placebo_shift_-h,holdout,180,down,914,4,1,-0.3008752735,-0.4558303887,False,placebo must show |lift| < ½ real lift
+circuit_regime,anchor_shift,leak_control_shift_+h,holdout,180,down,914,10,1,-0.3008752735,-0.4558303887,,future-shifted signal: expected to inflate (sensitivity)
+circuit_regime,removal,largest_wall_removed,holdout,180,down,914,4,1,-0.3008752735,-0.4350877193,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+circuit_regime,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,4,1,-0.3151515152,-0.4732824427,False,
+circuit_regime,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,4,1,-0.3149038462,-0.4828897338,False,
+circuit_regime,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,4,1,-0.2911694511,-0.4436090226,False,
+circuit_regime,leave_one_symbol_out,without GP,holdout,180,down,847,4,1,-0.3046044864,-0.4566037736,False,
+circuit_regime,leave_one_symbol_out,without IPDC,holdout,180,down,847,4,1,-0.3069657615,-0.4578754579,False,
+circuit_regime,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,4,1,-0.2908653846,-0.4387351779,False,
+circuit_regime,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,4,1,-0.2773109244,-0.3955555556,False,
+circuit_regime,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,4,1,-0.3023255814,-0.4626865672,False,
+circuit_regime,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,4,1,-0.3090909091,-0.473880597,False,
+circuit_regime,leave_one_symbol_out,without PTL,holdout,180,down,833,4,1,-0.3181272509,-0.4812030075,False,
+circuit_regime,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,4,1,-0.2929782082,-0.4488188976,False,
+circuit_regime,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,0,0,,,,
+circuit_regime,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,4,1,-0.2893157263,-0.43359375,False,
+circuit_regime,liquidity_split,top,holdout,180,down,453,4,1,-0.3245033113,-0.4906832298,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+circuit_regime,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+circuit_streak,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+circuit_streak,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+circuit_streak,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+circuit_streak,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+circuit_streak,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+circuit_streak,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+circuit_streak,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+circuit_streak,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+circuit_streak,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+circuit_streak,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+circuit_streak,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+circuit_streak,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+circuit_streak,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+circuit_streak,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+circuit_streak,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+circuit_streak,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+circuit_streak,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+circuit_streak,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+circuit_streak,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+circuit_streak,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+circuit_streak,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+circuit_streak,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+circuit_streak,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+circuit_streak,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+circuit_streak,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+circuit_streak,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+circuit_streak,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+circuit_streak,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+circuit_streak,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+close_session_pressure,real,holdout,holdout,180,up,914,52,10,0.001009930988,-0.1055139551,,best simple baseline = imb_l1; outcome = up; direction = 1
+close_session_pressure,baseline_comparison,state - imb_l1,holdout,180,up,914,52,10,0.001009930988,-0.1055139551,False,"block bootstrap 95% CI [-0.2746, 0.0563] (blocks of 20 rows, 500 resamples)"
+close_session_pressure,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+close_session_pressure,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+close_session_pressure,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+close_session_pressure,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+close_session_pressure,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+close_session_pressure,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+close_session_pressure,graded_score,score_ge_0.6,holdout,180,up,914,23,6,0.03111026544,-0.07541362062,,
+close_session_pressure,timestamp_permutation,circular shift within symbol,holdout,180,up,914,52,10,0.001009930988,,False,"p = 0.7342 over 300 permutations; null mean 0.0408, null p95 0.1750; BH-FDR q=None pass=None"
+close_session_pressure,side_flip,mirror → P(down),holdout,180,down,914,9,3,-0.3008752735,,False,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+close_session_pressure,anchor_shift,placebo_shift_-h,holdout,180,up,914,53,11,-0.07881590355,-0.1853397896,False,placebo must show |lift| < ½ real lift
+close_session_pressure,anchor_shift,leak_control_shift_+h,holdout,180,up,914,56,11,0.1095264145,0.003002528445,,future-shifted signal: expected to inflate (sensitivity)
+close_session_pressure,removal,largest_wall_removed,holdout,180,up,914,52,10,0.001009930988,-0.1094606543,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+close_session_pressure,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,52,10,-0.01044289044,-0.1217307692,False,
+close_session_pressure,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,28,7,-0.02369505495,-0.1365914787,False,
+close_session_pressure,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,42,8,0.02091146721,-0.07471264368,False,
+close_session_pressure,leave_one_symbol_out,without GP,holdout,180,up,847,52,10,-0.0006357279085,-0.1057462824,False,
+close_session_pressure,leave_one_symbol_out,without IPDC,holdout,180,up,847,38,8,-0.003169079724,-0.1053940822,False,
+close_session_pressure,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,51,9,0.008130656109,-0.1038147932,False,
+close_session_pressure,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,52,10,0.005078954659,-0.09349380778,False,
+close_session_pressure,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,52,10,-0.007602862254,-0.1231500091,False,
+close_session_pressure,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,52,10,-0.003321678322,-0.1063348416,False,
+close_session_pressure,leave_one_symbol_out,without PTL,holdout,180,up,833,50,9,0.005906362545,-0.09490566038,False,
+close_session_pressure,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,51,9,0.004059250819,-0.1076315418,False,
+close_session_pressure,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,52,10,0.001744287459,-0.1072589382,False,
+close_session_pressure,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,52,10,0.005078954659,-0.1025641026,False,
+close_session_pressure,liquidity_split,top,holdout,180,up,453,4,3,-0.2119205298,-0.31,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+close_session_pressure,liquidity_split,mid,holdout,180,up,461,48,7,0.002711496746,-0.1071428571,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+compression_expansion,real,holdout,holdout,180,down,914,2,2,0.1991247265,0.04416961131,,best simple baseline = imb_l1; outcome = down; direction = -1
+compression_expansion,baseline_comparison,state - imb_l1,holdout,180,down,914,2,2,0.1991247265,0.04416961131,False,"block bootstrap 95% CI [-0.5076, 0.6158] (blocks of 20 rows, 454 resamples)"
+compression_expansion,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+compression_expansion,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+compression_expansion,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+compression_expansion,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+compression_expansion,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+compression_expansion,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+compression_expansion,graded_score,score_ge_0.6,holdout,180,down,914,2,2,0.1991247265,0.04416961131,,
+compression_expansion,timestamp_permutation,circular shift within symbol,holdout,180,down,914,2,2,0.1991247265,,False,"p = 0.9003 over 300 permutations; null mean 0.2458, null p95 0.6991; BH-FDR q=None pass=None"
+compression_expansion,side_flip,mirror → P(up),holdout,180,up,914,5,2,-0.2297592998,,False,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+compression_expansion,anchor_shift,placebo_shift_-h,holdout,180,down,914,1,1,0.6991247265,0.5441696113,False,placebo must show |lift| < ½ real lift
+compression_expansion,anchor_shift,leak_control_shift_+h,holdout,180,down,914,1,1,0.6991247265,0.5441696113,,future-shifted signal: expected to inflate (sensitivity)
+compression_expansion,removal,largest_wall_removed,holdout,180,down,914,2,2,0.1991247265,0.0649122807,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+compression_expansion,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,2,2,0.1848484848,0.02671755725,True,
+compression_expansion,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,2,2,0.1850961538,0.01711026616,True,
+compression_expansion,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,2,2,0.2088305489,0.05639097744,True,
+compression_expansion,leave_one_symbol_out,without GP,holdout,180,down,847,2,2,0.1953955136,0.04339622642,True,
+compression_expansion,leave_one_symbol_out,without IPDC,holdout,180,down,847,2,2,0.1930342385,0.04212454212,True,
+compression_expansion,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,2,2,0.2091346154,0.06126482213,True,
+compression_expansion,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+compression_expansion,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,2,2,0.1976744186,0.03731343284,True,
+compression_expansion,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,2,2,0.1909090909,0.02611940299,True,
+compression_expansion,leave_one_symbol_out,without PTL,holdout,180,down,833,2,2,0.1818727491,0.01879699248,True,
+compression_expansion,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,2,2,0.2070217918,0.05118110236,True,
+compression_expansion,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,2,2,0.201814059,0.03429602888,True,
+compression_expansion,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,2,2,0.2106842737,0.06640625,True,
+compression_expansion,liquidity_split,top,holdout,180,down,453,2,2,0.1754966887,0.009316770186,True,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+compression_expansion,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+cross_lead_lag,real,holdout,holdout,180,up,914,83,43,0.04734913395,-0.05917475211,,best simple baseline = imb_l1; outcome = up; direction = 1
+cross_lead_lag,baseline_comparison,state - imb_l1,holdout,180,up,914,83,43,0.04734913395,-0.05917475211,False,"block bootstrap 95% CI [-0.1896, 0.0759] (blocks of 20 rows, 500 resamples)"
+cross_lead_lag,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+cross_lead_lag,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+cross_lead_lag,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+cross_lead_lag,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+cross_lead_lag,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+cross_lead_lag,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+cross_lead_lag,graded_score,score_ge_0.6,holdout,180,up,914,61,30,-0.01664454568,-0.1231684317,,
+cross_lead_lag,timestamp_permutation,circular shift within symbol,holdout,180,up,914,83,43,0.04734913395,,False,"p = 0.2658 over 300 permutations; null mean 0.0055, null p95 0.1196; BH-FDR q=0.398671096345515 pass=False"
+cross_lead_lag,side_flip,mirror → P(down),holdout,180,down,914,75,34,0.09912472648,,True,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+cross_lead_lag,anchor_shift,placebo_shift_-h,holdout,180,up,914,72,28,-0.03531485534,-0.1418387414,False,placebo must show |lift| < ½ real lift
+cross_lead_lag,anchor_shift,leak_control_shift_+h,holdout,180,up,914,70,30,-0.2154735855,-0.3219974716,,future-shifted signal: expected to inflate (sensitivity)
+cross_lead_lag,removal,largest_wall_removed,holdout,180,up,914,83,43,0.04734913395,-0.06312145132,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+cross_lead_lag,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,82,42,0.03927568367,-0.07201219512,False,
+cross_lead_lag,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,82,42,0.04250703565,-0.0703893881,False,
+cross_lead_lag,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,77,41,0.06853051483,-0.02709359606,False,
+cross_lead_lag,leave_one_symbol_out,without GP,holdout,180,up,847,69,38,0.0004790992933,-0.1046314552,False,
+cross_lead_lag,leave_one_symbol_out,without IPDC,holdout,180,up,847,83,43,0.06341303822,-0.03881196428,False,
+cross_lead_lag,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,61,35,0.1007053909,-0.01124005843,False,
+cross_lead_lag,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,78,38,0.0307199803,-0.06785278214,False,
+cross_lead_lag,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,80,40,0.04912790698,-0.0664192399,False,
+cross_lead_lag,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,79,41,0.05704833142,-0.04596483189,False,
+cross_lead_lag,leave_one_symbol_out,without PTL,holdout,180,up,833,82,42,0.04639416742,-0.0544178555,False,
+cross_lead_lag,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,67,35,0.007571103321,-0.1041196893,False,
+cross_lead_lag,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,78,41,0.06584685156,-0.04315637414,False,
+cross_lead_lag,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,78,38,0.04354049312,-0.0641025641,False,
+cross_lead_lag,liquidity_split,top,holdout,180,up,453,50,25,0.0480794702,-0.05,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+cross_lead_lag,liquidity_split,mid,holdout,180,up,461,33,18,0.05574179978,-0.05411255411,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+deep_book_shape,real,holdout,holdout,180,up,914,33,2,-0.1691532392,-0.2756771252,,best simple baseline = imb_l1; outcome = up; direction = 1
+deep_book_shape,baseline_comparison,state - imb_l1,holdout,180,up,914,33,2,-0.1691532392,-0.2756771252,False,"block bootstrap 95% CI [-0.3755, -0.1804] (blocks of 20 rows, 500 resamples)"
+deep_book_shape,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+deep_book_shape,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+deep_book_shape,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+deep_book_shape,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+deep_book_shape,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+deep_book_shape,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+deep_book_shape,graded_score,score_ge_0.6,holdout,180,up,914,20,4,-0.1797592998,-0.2862831858,,
+deep_book_shape,timestamp_permutation,circular shift within symbol,holdout,180,up,914,33,2,-0.1691532392,,False,"p = 0.9269 over 300 permutations; null mean -0.1415, null p95 -0.0782; BH-FDR q=None pass=None"
+deep_book_shape,side_flip,mirror → P(down),holdout,180,down,914,0,0,,,,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+deep_book_shape,anchor_shift,placebo_shift_-h,holdout,180,up,914,31,3,-0.1652431707,-0.2717670568,False,placebo must show |lift| < ½ real lift
+deep_book_shape,anchor_shift,leak_control_shift_+h,holdout,180,up,914,33,3,-0.1691532392,-0.2756771252,,future-shifted signal: expected to inflate (sensitivity)
+deep_book_shape,removal,largest_wall_removed,holdout,180,up,914,33,2,-0.1691532392,-0.2796238245,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+deep_book_shape,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,33,2,-0.1806060606,-0.2918939394,False,
+deep_book_shape,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,33,2,-0.1773747086,-0.2902711324,False,
+deep_book_shape,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,33,2,-0.1565777103,-0.2522018212,False,
+deep_book_shape,leave_one_symbol_out,without GP,holdout,180,up,847,33,2,-0.1707988981,-0.2759094525,False,
+deep_book_shape,leave_one_symbol_out,without IPDC,holdout,180,up,847,33,2,-0.1530893349,-0.2553143374,False,
+deep_book_shape,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,33,2,-0.1665574009,-0.2785028503,False,
+deep_book_shape,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,33,2,-0.1650842155,-0.2636569779,False,
+deep_book_shape,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,0,0,,,,
+deep_book_shape,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,33,2,-0.1734848485,-0.2764980118,False,
+deep_book_shape,leave_one_symbol_out,without PTL,holdout,180,up,833,33,2,-0.1734875768,-0.2742995998,False,
+deep_book_shape,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,33,2,-0.1706288062,-0.2823195989,False,
+deep_book_shape,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,33,2,-0.1684188827,-0.2774221084,False,
+deep_book_shape,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,33,2,-0.1650842155,-0.2727272727,False,
+deep_book_shape,liquidity_split,top,holdout,180,up,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+deep_book_shape,liquidity_split,mid,holdout,180,up,461,33,2,-0.1866824426,-0.2965367965,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+depth_price_divergence,real,holdout,holdout,180,up,914,0,0,,,,best simple baseline = imb_l1; outcome = up; direction = 1
+depth_price_divergence,baseline_comparison,state - imb_l1,holdout,180,up,914,0,0,,,False,no valid bootstrap resamples
+depth_price_divergence,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+depth_price_divergence,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+depth_price_divergence,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+depth_price_divergence,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+depth_price_divergence,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+depth_price_divergence,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+depth_price_divergence,graded_score,score_ge_0.6,holdout,180,up,914,0,0,,,,
+depth_price_divergence,timestamp_permutation,circular shift within symbol,holdout,180,up,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+depth_price_divergence,side_flip,mirror → P(down),holdout,180,down,914,2,2,0.6991247265,,True,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+depth_price_divergence,anchor_shift,placebo_shift_-h,holdout,180,up,914,0,0,,,,placebo must show |lift| < ½ real lift
+depth_price_divergence,anchor_shift,leak_control_shift_+h,holdout,180,up,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+depth_price_divergence,removal,largest_wall_removed,holdout,180,up,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+depth_price_divergence,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without GP,holdout,180,up,847,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without IPDC,holdout,180,up,847,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without PTL,holdout,180,up,833,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,0,0,,,,
+depth_price_divergence,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,0,0,,,,
+depth_price_divergence,liquidity_split,top,holdout,180,up,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+depth_price_divergence,liquidity_split,mid,holdout,180,up,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+distribution_like,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+distribution_like,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+distribution_like,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+distribution_like,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+distribution_like,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+distribution_like,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+distribution_like,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+distribution_like,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+distribution_like,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+distribution_like,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+distribution_like,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+distribution_like,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+distribution_like,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+distribution_like,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+distribution_like,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+distribution_like,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+distribution_like,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+distribution_like,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+distribution_like,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+distribution_like,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+distribution_like,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+distribution_like,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+distribution_like,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+distribution_like,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+distribution_like,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+distribution_like,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+distribution_like,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+distribution_like,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+distribution_like,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+exhaustion,real,holdout,holdout,180,down,914,2,2,0.1991247265,0.04416961131,,best simple baseline = imb_l1; outcome = down; direction = -1
+exhaustion,baseline_comparison,state - imb_l1,holdout,180,down,914,2,2,0.1991247265,0.04416961131,False,"block bootstrap 95% CI [-0.5084, 0.6158] (blocks of 20 rows, 451 resamples)"
+exhaustion,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+exhaustion,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+exhaustion,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+exhaustion,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+exhaustion,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+exhaustion,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+exhaustion,graded_score,score_ge_0.6,holdout,180,down,914,2,2,0.1991247265,0.04416961131,,
+exhaustion,timestamp_permutation,circular shift within symbol,holdout,180,down,914,2,2,0.1991247265,,False,"p = 0.5050 over 300 permutations; null mean -0.0009, null p95 0.6991; BH-FDR q=None pass=None"
+exhaustion,side_flip,mirror → P(up),holdout,180,up,914,5,3,-0.02975929978,,False,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+exhaustion,anchor_shift,placebo_shift_-h,holdout,180,down,914,5,5,0.09912472648,-0.05583038869,True,placebo must show |lift| < ½ real lift
+exhaustion,anchor_shift,leak_control_shift_+h,holdout,180,down,914,7,3,0.4134104408,0.2584553256,,future-shifted signal: expected to inflate (sensitivity)
+exhaustion,removal,largest_wall_removed,holdout,180,down,914,2,2,0.1991247265,0.0649122807,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+exhaustion,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,1,1,0.6848484848,0.5267175573,True,
+exhaustion,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,2,2,0.1850961538,0.01711026616,True,
+exhaustion,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,1,1,-0.2911694511,-0.4436090226,False,
+exhaustion,leave_one_symbol_out,without GP,holdout,180,down,847,2,2,0.1953955136,0.04339622642,True,
+exhaustion,leave_one_symbol_out,without IPDC,holdout,180,down,847,2,2,0.1930342385,0.04212454212,True,
+exhaustion,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,2,2,0.2091346154,0.06126482213,True,
+exhaustion,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,2,2,0.2226890756,0.1044444444,True,
+exhaustion,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,2,2,0.1976744186,0.03731343284,True,
+exhaustion,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,2,2,0.1909090909,0.02611940299,True,
+exhaustion,leave_one_symbol_out,without PTL,holdout,180,down,833,2,2,0.1818727491,0.01879699248,True,
+exhaustion,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,2,2,0.2070217918,0.05118110236,True,
+exhaustion,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,2,2,0.201814059,0.03429602888,True,
+exhaustion,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,2,2,0.2106842737,0.06640625,True,
+exhaustion,liquidity_split,top,holdout,180,down,453,1,1,-0.3245033113,-0.4906832298,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+exhaustion,liquidity_split,mid,holdout,180,down,461,1,1,0.7223427332,0.5901639344,True,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+failed_sweep,real,holdout,holdout,180,up,914,1,1,-0.2297592998,-0.3362831858,,best simple baseline = imb_l1; outcome = up; direction = 1
+failed_sweep,baseline_comparison,state - imb_l1,holdout,180,up,914,1,1,-0.2297592998,-0.3362831858,False,"block bootstrap 95% CI [-0.4163, -0.2730] (blocks of 20 rows, 335 resamples)"
+failed_sweep,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+failed_sweep,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+failed_sweep,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+failed_sweep,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+failed_sweep,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+failed_sweep,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+failed_sweep,graded_score,score_ge_0.6,holdout,180,up,914,1,1,-0.2297592998,-0.3362831858,,
+failed_sweep,timestamp_permutation,circular shift within symbol,holdout,180,up,914,1,1,-0.2297592998,,False,"p = 1.0000 over 300 permutations; null mean 0.1269, null p95 0.7702; BH-FDR q=None pass=None"
+failed_sweep,side_flip,mirror → P(down),holdout,180,down,914,0,0,,,,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+failed_sweep,anchor_shift,placebo_shift_-h,holdout,180,up,914,1,1,-0.2297592998,-0.3362831858,False,placebo must show |lift| < ½ real lift
+failed_sweep,anchor_shift,leak_control_shift_+h,holdout,180,up,914,4,1,0.02024070022,-0.08628318584,,future-shifted signal: expected to inflate (sensitivity)
+failed_sweep,removal,largest_wall_removed,holdout,180,up,914,1,1,-0.2297592998,-0.3402298851,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+failed_sweep,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,1,1,-0.2412121212,-0.3525,False,
+failed_sweep,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,1,1,-0.2379807692,-0.350877193,False,
+failed_sweep,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,0,0,,,,
+failed_sweep,leave_one_symbol_out,without GP,holdout,180,up,847,1,1,-0.2314049587,-0.3365155131,False,
+failed_sweep,leave_one_symbol_out,without IPDC,holdout,180,up,847,1,1,-0.2136953955,-0.315920398,False,
+failed_sweep,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,1,1,-0.2271634615,-0.3391089109,False,
+failed_sweep,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,1,1,-0.2256902761,-0.3242630385,False,
+failed_sweep,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,1,1,-0.238372093,-0.3539192399,False,
+failed_sweep,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,1,1,-0.2340909091,-0.3371040724,False,
+failed_sweep,leave_one_symbol_out,without PTL,holdout,180,up,833,1,1,-0.2340936375,-0.3349056604,False,
+failed_sweep,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,1,1,-0.2312348668,-0.3429256595,False,
+failed_sweep,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,1,1,-0.2290249433,-0.338028169,False,
+failed_sweep,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,1,1,-0.2256902761,-0.3333333333,False,
+failed_sweep,liquidity_split,top,holdout,180,up,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+failed_sweep,liquidity_split,mid,holdout,180,up,461,1,1,-0.2472885033,-0.3571428571,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+false_breakout,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+false_breakout,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+false_breakout,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+false_breakout,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+false_breakout,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+false_breakout,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+false_breakout,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+false_breakout,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+false_breakout,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+false_breakout,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+false_breakout,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+false_breakout,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+false_breakout,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+false_breakout,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+false_breakout,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+false_breakout,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+false_breakout,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+false_breakout,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+false_breakout,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+false_breakout,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+false_breakout,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+false_breakout,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+false_breakout,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+false_breakout,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+false_breakout,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+false_breakout,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+false_breakout,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+false_breakout,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+false_breakout,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+flow_impact_divergence,real,holdout,holdout,180,up,914,63,16,0.1035740336,-0.002949852507,,best simple baseline = imb_l1; outcome = up; direction = 1
+flow_impact_divergence,baseline_comparison,state - imb_l1,holdout,180,up,914,63,16,0.1035740336,-0.002949852507,False,"block bootstrap 95% CI [-0.1795, 0.1725] (blocks of 20 rows, 500 resamples)"
+flow_impact_divergence,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+flow_impact_divergence,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+flow_impact_divergence,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+flow_impact_divergence,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+flow_impact_divergence,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+flow_impact_divergence,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+flow_impact_divergence,graded_score,score_ge_0.6,holdout,180,up,914,58,15,0.1323096657,0.02578577968,,
+flow_impact_divergence,timestamp_permutation,circular shift within symbol,holdout,180,up,914,63,16,0.1035740336,,False,"p = 0.1628 over 300 permutations; null mean 0.0070, null p95 0.1671; BH-FDR q=None pass=None"
+flow_impact_divergence,side_flip,mirror → P(down),holdout,180,down,914,39,11,0.08374011109,,True,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+flow_impact_divergence,anchor_shift,placebo_shift_-h,holdout,180,up,914,60,18,0.03690736689,-0.06961651917,True,placebo must show |lift| < ½ real lift
+flow_impact_divergence,anchor_shift,leak_control_shift_+h,holdout,180,up,914,85,18,-0.02975929978,-0.1362831858,,future-shifted signal: expected to inflate (sensitivity)
+flow_impact_divergence,removal,largest_wall_removed,holdout,180,up,914,63,16,0.1035740336,-0.006896551724,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+flow_impact_divergence,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,63,16,0.09212121212,-0.01916666667,False,
+flow_impact_divergence,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,63,16,0.0953525641,-0.01754385965,False,
+flow_impact_divergence,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,63,16,0.1161495625,0.02052545156,True,
+flow_impact_divergence,leave_one_symbol_out,without GP,holdout,180,up,847,54,14,0.1019283747,-0.003182179793,False,
+flow_impact_divergence,leave_one_symbol_out,without IPDC,holdout,180,up,847,57,14,0.08455021852,-0.01767478397,False,
+flow_impact_divergence,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,51,15,0.08656202866,-0.0253834207,False,
+flow_impact_divergence,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,59,14,0.1302419273,0.03166916484,True,
+flow_impact_divergence,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,55,13,0.1434460888,0.02789894191,True,
+flow_impact_divergence,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,61,15,0.110171386,0.007158222684,True,
+flow_impact_divergence,leave_one_symbol_out,without PTL,holdout,180,up,833,59,15,0.1218385659,0.02102654301,True,
+flow_impact_divergence,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,58,15,0.1308340987,0.01914330604,True,
+flow_impact_divergence,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,60,15,0.1209750567,0.01197183099,True,
+flow_impact_divergence,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,53,14,0.0007248182292,-0.106918239,False,
+flow_impact_divergence,liquidity_split,top,holdout,180,up,453,28,6,-0.03334910123,-0.1314285714,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+flow_impact_divergence,liquidity_split,mid,holdout,180,up,461,35,10,0.2098543539,0.1,True,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+hidden_replenishment,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+hidden_replenishment,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+hidden_replenishment,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+hidden_replenishment,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+hidden_replenishment,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+hidden_replenishment,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+hidden_replenishment,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+hidden_replenishment,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+hidden_replenishment,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+hidden_replenishment,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+hidden_replenishment,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+hidden_replenishment,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+hidden_replenishment,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+hidden_replenishment,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+hidden_replenishment,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+hidden_replenishment,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+hidden_replenishment,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+hidden_replenishment,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+ignition,real,holdout,holdout,180,down,914,2,2,0.1991247265,0.04416961131,,best simple baseline = imb_l1; outcome = down; direction = -1
+ignition,baseline_comparison,state - imb_l1,holdout,180,down,914,2,2,0.1991247265,0.04416961131,False,"block bootstrap 95% CI [-0.5122, 0.6046] (blocks of 20 rows, 456 resamples)"
+ignition,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+ignition,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+ignition,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+ignition,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+ignition,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+ignition,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+ignition,graded_score,score_ge_0.6,holdout,180,down,914,2,2,0.1991247265,0.04416961131,,
+ignition,timestamp_permutation,circular shift within symbol,holdout,180,down,914,2,2,0.1991247265,,False,"p = 0.6777 over 300 permutations; null mean 0.1675, null p95 0.6991; BH-FDR q=None pass=None"
+ignition,side_flip,mirror → P(up),holdout,180,up,914,3,2,-0.2297592998,,False,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+ignition,anchor_shift,placebo_shift_-h,holdout,180,down,914,3,3,0.3657913931,0.210836278,False,placebo must show |lift| < ½ real lift
+ignition,anchor_shift,leak_control_shift_+h,holdout,180,down,914,2,2,0.6991247265,0.5441696113,,future-shifted signal: expected to inflate (sensitivity)
+ignition,removal,largest_wall_removed,holdout,180,down,914,2,2,0.1991247265,0.0649122807,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+ignition,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,2,2,0.1848484848,0.02671755725,True,
+ignition,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,2,2,0.1850961538,0.01711026616,True,
+ignition,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,1,1,-0.2911694511,-0.4436090226,False,
+ignition,leave_one_symbol_out,without GP,holdout,180,down,847,2,2,0.1953955136,0.04339622642,True,
+ignition,leave_one_symbol_out,without IPDC,holdout,180,down,847,2,2,0.1930342385,0.04212454212,True,
+ignition,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,2,2,0.2091346154,0.06126482213,True,
+ignition,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,1,1,0.7226890756,0.6044444444,True,
+ignition,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,2,2,0.1976744186,0.03731343284,True,
+ignition,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,2,2,0.1909090909,0.02611940299,True,
+ignition,leave_one_symbol_out,without PTL,holdout,180,down,833,2,2,0.1818727491,0.01879699248,True,
+ignition,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,2,2,0.2070217918,0.05118110236,True,
+ignition,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,2,2,0.201814059,0.03429602888,True,
+ignition,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,2,2,0.2106842737,0.06640625,True,
+ignition,liquidity_split,top,holdout,180,down,453,1,1,-0.3245033113,-0.4906832298,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+ignition,liquidity_split,mid,holdout,180,down,461,1,1,0.7223427332,0.5901639344,True,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+inventory_rebalancing,real,holdout,holdout,180,move,914,2,2,-0.5306345733,-0.5928270042,,best simple baseline = price_only_response; outcome = move; direction = 0
+inventory_rebalancing,baseline_comparison,state - price_only_response,holdout,180,move,914,2,2,-0.5306345733,-0.5928270042,False,"block bootstrap 95% CI [-0.6636, -0.5179] (blocks of 20 rows, 442 resamples)"
+inventory_rebalancing,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+inventory_rebalancing,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+inventory_rebalancing,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+inventory_rebalancing,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+inventory_rebalancing,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+inventory_rebalancing,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+inventory_rebalancing,graded_score,score_ge_0.6,holdout,180,move,914,2,2,-0.5306345733,-0.5928270042,,
+inventory_rebalancing,timestamp_permutation,circular shift within symbol,holdout,180,move,914,2,2,-0.5306345733,,False,"p = 1.0000 over 300 permutations; null mean -0.2223, null p95 0.4694; BH-FDR q=None pass=None"
+inventory_rebalancing,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+inventory_rebalancing,anchor_shift,placebo_shift_-h,holdout,180,move,914,5,1,0.2693654267,0.2071729958,False,placebo must show |lift| < ½ real lift
+inventory_rebalancing,anchor_shift,leak_control_shift_+h,holdout,180,move,914,2,2,-0.5306345733,-0.5928270042,,future-shifted signal: expected to inflate (sensitivity)
+inventory_rebalancing,removal,largest_wall_removed,holdout,180,move,914,2,2,-0.5306345733,-0.5928270042,True,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+inventory_rebalancing,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,1,1,-0.5563636364,-0.6146993318,False,
+inventory_rebalancing,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,2,2,-0.5528846154,-0.6123853211,False,
+inventory_rebalancing,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,2,2,-0.508353222,-0.5738095238,False,
+inventory_rebalancing,leave_one_symbol_out,without GP,holdout,180,move,847,2,2,-0.5360094451,-0.610619469,False,
+inventory_rebalancing,leave_one_symbol_out,without IPDC,holdout,180,move,847,2,2,-0.520661157,-0.5813953488,False,
+inventory_rebalancing,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,2,2,-0.5180288462,-0.5862884161,False,
+inventory_rebalancing,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,2,2,-0.5030012005,-0.5613207547,False,
+inventory_rebalancing,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,2,2,-0.5406976744,-0.5956043956,False,
+inventory_rebalancing,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,2,2,-0.5431818182,-0.6073752711,False,
+inventory_rebalancing,leave_one_symbol_out,without PTL,holdout,180,move,833,1,1,-0.5522208884,-0.600896861,False,
+inventory_rebalancing,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,2,2,-0.5242130751,-0.5910165485,False,
+inventory_rebalancing,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,2,2,-0.5272108844,-0.5904977376,False,
+inventory_rebalancing,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,2,2,-0.5150060024,-0.5761124122,False,
+inventory_rebalancing,liquidity_split,top,holdout,180,move,453,2,2,-0.5364238411,-0.611814346,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+inventory_rebalancing,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+layering_like,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+layering_like,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+layering_like,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+layering_like,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+layering_like,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+layering_like,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+layering_like,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+layering_like,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+layering_like,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+layering_like,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+layering_like,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+layering_like,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+layering_like,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+layering_like,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+layering_like,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+layering_like,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+layering_like,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+layering_like,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+layering_like,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+layering_like,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+layering_like,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+layering_like,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+layering_like,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+layering_like,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+layering_like,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+layering_like,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+layering_like,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+layering_like,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+layering_like,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+liquidity_depletion,real,holdout,holdout,180,down,914,11,5,0.4263974537,0.2714423386,,best simple baseline = imb_l1; outcome = down; direction = -1
+liquidity_depletion,baseline_comparison,state - imb_l1,holdout,180,down,914,11,5,0.4263974537,0.2714423386,False,"block bootstrap 95% CI [-0.3885, 0.3871] (blocks of 20 rows, 500 resamples)"
+liquidity_depletion,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+liquidity_depletion,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+liquidity_depletion,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+liquidity_depletion,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+liquidity_depletion,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+liquidity_depletion,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+liquidity_depletion,graded_score,score_ge_0.6,holdout,180,down,914,11,5,0.4263974537,0.2714423386,,
+liquidity_depletion,timestamp_permutation,circular shift within symbol,holdout,180,down,914,11,5,0.4263974537,,False,"p = 0.1030 over 300 permutations; null mean 0.0409, null p95 0.4264; BH-FDR q=None pass=None"
+liquidity_depletion,side_flip,mirror → P(up),holdout,180,up,914,13,8,-0.07591314594,,False,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+liquidity_depletion,anchor_shift,placebo_shift_-h,holdout,180,down,914,15,8,0.1657913931,0.01083627797,True,placebo must show |lift| < ½ real lift
+liquidity_depletion,anchor_shift,leak_control_shift_+h,holdout,180,down,914,15,7,-0.1008752735,-0.2558303887,,future-shifted signal: expected to inflate (sensitivity)
+liquidity_depletion,removal,largest_wall_removed,holdout,180,down,914,11,5,0.4263974537,0.292185008,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+liquidity_depletion,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,11,5,0.4121212121,0.2539902845,True,
+liquidity_depletion,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,11,5,0.4123688811,0.2443829934,True,
+liquidity_depletion,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,10,4,0.4088305489,0.2563909774,True,
+liquidity_depletion,leave_one_symbol_out,without GP,holdout,180,down,847,11,5,0.4226682409,0.2706689537,True,
+liquidity_depletion,leave_one_symbol_out,without IPDC,holdout,180,down,847,11,5,0.4203069658,0.2693972694,True,
+liquidity_depletion,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,7,4,0.4234203297,0.2755505364,True,
+liquidity_depletion,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,11,5,0.4499618029,0.3317171717,True,
+liquidity_depletion,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,11,5,0.4249471459,0.2645861601,True,
+liquidity_depletion,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,9,3,0.5797979798,0.4150082919,True,
+liquidity_depletion,leave_one_symbol_out,without PTL,holdout,180,down,833,11,5,0.4091454764,0.2460697198,True,
+liquidity_depletion,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,11,5,0.434294519,0.2784538296,True,
+liquidity_depletion,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,11,5,0.4290867862,0.2615687562,True,
+liquidity_depletion,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,7,4,0.2821128451,0.1378348214,True,
+liquidity_depletion,liquidity_split,top,holdout,180,down,453,4,1,0.4254966887,0.2593167702,True,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+liquidity_depletion,liquidity_split,mid,holdout,180,down,461,7,4,0.4366284475,0.3044496487,True,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+liquidity_run,real,holdout,holdout,180,up,914,0,0,,,,best simple baseline = imb_l1; outcome = up; direction = 1
+liquidity_run,baseline_comparison,state - imb_l1,holdout,180,up,914,0,0,,,False,no valid bootstrap resamples
+liquidity_run,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+liquidity_run,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+liquidity_run,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+liquidity_run,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+liquidity_run,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+liquidity_run,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+liquidity_run,graded_score,score_ge_0.6,holdout,180,up,914,0,0,,,,
+liquidity_run,timestamp_permutation,circular shift within symbol,holdout,180,up,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+liquidity_run,side_flip,mirror → P(down),holdout,180,down,914,1,1,-0.3008752735,,False,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+liquidity_run,anchor_shift,placebo_shift_-h,holdout,180,up,914,0,0,,,,placebo must show |lift| < ½ real lift
+liquidity_run,anchor_shift,leak_control_shift_+h,holdout,180,up,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+liquidity_run,removal,largest_wall_removed,holdout,180,up,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+liquidity_run,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,0,0,,,,
+liquidity_run,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,0,0,,,,
+liquidity_run,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,0,0,,,,
+liquidity_run,leave_one_symbol_out,without GP,holdout,180,up,847,0,0,,,,
+liquidity_run,leave_one_symbol_out,without IPDC,holdout,180,up,847,0,0,,,,
+liquidity_run,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,0,0,,,,
+liquidity_run,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,0,0,,,,
+liquidity_run,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,0,0,,,,
+liquidity_run,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,0,0,,,,
+liquidity_run,leave_one_symbol_out,without PTL,holdout,180,up,833,0,0,,,,
+liquidity_run,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,0,0,,,,
+liquidity_run,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,0,0,,,,
+liquidity_run,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,0,0,,,,
+liquidity_run,liquidity_split,top,holdout,180,up,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+liquidity_run,liquidity_split,mid,holdout,180,up,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+liquidity_sweep,real,holdout,holdout,180,down,914,4,4,-0.05087527352,-0.2058303887,,best simple baseline = imb_l1; outcome = down; direction = -1
+liquidity_sweep,baseline_comparison,state - imb_l1,holdout,180,down,914,4,4,-0.05087527352,-0.2058303887,False,"block bootstrap 95% CI [-0.5214, 0.2406] (blocks of 20 rows, 495 resamples)"
+liquidity_sweep,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+liquidity_sweep,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+liquidity_sweep,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+liquidity_sweep,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+liquidity_sweep,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+liquidity_sweep,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+liquidity_sweep,graded_score,score_ge_0.6,holdout,180,down,914,4,4,-0.05087527352,-0.2058303887,,
+liquidity_sweep,timestamp_permutation,circular shift within symbol,holdout,180,down,914,4,4,-0.05087527352,,False,"p = 0.9003 over 300 permutations; null mean 0.1475, null p95 0.6991; BH-FDR q=None pass=None"
+liquidity_sweep,side_flip,mirror → P(up),holdout,180,up,914,8,5,0.02024070022,,True,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+liquidity_sweep,anchor_shift,placebo_shift_-h,holdout,180,down,914,11,5,-0.1190570917,-0.2740122069,False,placebo must show |lift| < ½ real lift
+liquidity_sweep,anchor_shift,leak_control_shift_+h,holdout,180,down,914,1,1,0.6991247265,0.5441696113,,future-shifted signal: expected to inflate (sensitivity)
+liquidity_sweep,removal,largest_wall_removed,holdout,180,down,914,4,4,-0.05087527352,-0.1850877193,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+liquidity_sweep,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,4,4,-0.06515151515,-0.2232824427,False,
+liquidity_sweep,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,4,4,-0.06490384615,-0.2328897338,False,
+liquidity_sweep,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,2,2,0.2088305489,0.05639097744,True,
+liquidity_sweep,leave_one_symbol_out,without GP,holdout,180,down,847,4,4,-0.05460448642,-0.2066037736,False,
+liquidity_sweep,leave_one_symbol_out,without IPDC,holdout,180,down,847,4,4,-0.05696576151,-0.2078754579,False,
+liquidity_sweep,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,4,4,-0.04086538462,-0.1887351779,False,
+liquidity_sweep,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,3,3,-0.2773109244,-0.3955555556,False,
+liquidity_sweep,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,4,4,-0.0523255814,-0.2126865672,False,
+liquidity_sweep,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,4,4,-0.05909090909,-0.223880597,False,
+liquidity_sweep,leave_one_symbol_out,without PTL,holdout,180,down,833,4,4,-0.0681272509,-0.2312030075,False,
+liquidity_sweep,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,3,3,0.0403551251,-0.1154855643,False,
+liquidity_sweep,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,4,4,-0.04818594104,-0.2157039711,False,
+liquidity_sweep,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,4,4,-0.03931572629,-0.18359375,False,
+liquidity_sweep,liquidity_split,top,holdout,180,down,453,2,2,0.1754966887,0.009316770186,True,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+liquidity_sweep,liquidity_split,mid,holdout,180,down,461,2,2,-0.2776572668,-0.4098360656,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+liquidity_vacuum,real,holdout,holdout,180,down,914,0,0,,,,best simple baseline = imb_l1; outcome = down; direction = -1
+liquidity_vacuum,baseline_comparison,state - imb_l1,holdout,180,down,914,0,0,,,False,no valid bootstrap resamples
+liquidity_vacuum,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+liquidity_vacuum,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+liquidity_vacuum,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+liquidity_vacuum,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+liquidity_vacuum,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+liquidity_vacuum,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+liquidity_vacuum,graded_score,score_ge_0.6,holdout,180,down,914,0,0,,,,
+liquidity_vacuum,timestamp_permutation,circular shift within symbol,holdout,180,down,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+liquidity_vacuum,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+liquidity_vacuum,anchor_shift,placebo_shift_-h,holdout,180,down,914,4,1,-0.3008752735,-0.4558303887,,placebo must show |lift| < ½ real lift
+liquidity_vacuum,anchor_shift,leak_control_shift_+h,holdout,180,down,914,9,2,-0.3008752735,-0.4558303887,,future-shifted signal: expected to inflate (sensitivity)
+liquidity_vacuum,removal,largest_wall_removed,holdout,180,down,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+liquidity_vacuum,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without GP,holdout,180,down,847,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without IPDC,holdout,180,down,847,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without PTL,holdout,180,down,833,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,0,0,,,,
+liquidity_vacuum,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,0,0,,,,
+liquidity_vacuum,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+liquidity_vacuum,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+metaorder_impact,real,holdout,holdout,180,down,914,1,1,-0.3008752735,-0.4558303887,,best simple baseline = imb_l1; outcome = down; direction = -1
+metaorder_impact,baseline_comparison,state - imb_l1,holdout,180,down,914,1,1,-0.3008752735,-0.4558303887,False,"block bootstrap 95% CI [-0.5495, -0.3710] (blocks of 20 rows, 351 resamples)"
+metaorder_impact,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+metaorder_impact,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+metaorder_impact,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+metaorder_impact,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+metaorder_impact,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+metaorder_impact,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+metaorder_impact,graded_score,score_ge_0.6,holdout,180,down,914,1,1,-0.3008752735,-0.4558303887,,
+metaorder_impact,timestamp_permutation,circular shift within symbol,holdout,180,down,914,1,1,-0.3008752735,,False,"p = 1.0000 over 300 permutations; null mean 0.2891, null p95 0.6991; BH-FDR q=None pass=None"
+metaorder_impact,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+metaorder_impact,anchor_shift,placebo_shift_-h,holdout,180,down,914,7,4,0.4134104408,0.2584553256,False,placebo must show |lift| < ½ real lift
+metaorder_impact,anchor_shift,leak_control_shift_+h,holdout,180,down,914,1,1,0.6991247265,0.5441696113,,future-shifted signal: expected to inflate (sensitivity)
+metaorder_impact,removal,largest_wall_removed,holdout,180,down,914,1,1,-0.3008752735,-0.4350877193,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+metaorder_impact,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,1,1,-0.3151515152,-0.4732824427,False,
+metaorder_impact,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,1,1,-0.3149038462,-0.4828897338,False,
+metaorder_impact,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,1,1,-0.2911694511,-0.4436090226,False,
+metaorder_impact,leave_one_symbol_out,without GP,holdout,180,down,847,1,1,-0.3046044864,-0.4566037736,False,
+metaorder_impact,leave_one_symbol_out,without IPDC,holdout,180,down,847,1,1,-0.3069657615,-0.4578754579,False,
+metaorder_impact,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,1,1,-0.2908653846,-0.4387351779,False,
+metaorder_impact,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+metaorder_impact,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,1,1,-0.3023255814,-0.4626865672,False,
+metaorder_impact,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,1,1,-0.3090909091,-0.473880597,False,
+metaorder_impact,leave_one_symbol_out,without PTL,holdout,180,down,833,1,1,-0.3181272509,-0.4812030075,False,
+metaorder_impact,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,1,1,-0.2929782082,-0.4488188976,False,
+metaorder_impact,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,1,1,-0.298185941,-0.4657039711,False,
+metaorder_impact,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,1,1,-0.2893157263,-0.43359375,False,
+metaorder_impact,liquidity_split,top,holdout,180,down,453,1,1,-0.3245033113,-0.4906832298,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+metaorder_impact,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+metaorder_trajectory,real,holdout,holdout,180,down,914,21,4,0.3181723455,0.1632172304,,best simple baseline = imb_l1; outcome = down; direction = -1
+metaorder_trajectory,baseline_comparison,state - imb_l1,holdout,180,down,914,21,4,0.3181723455,0.1632172304,False,"block bootstrap 95% CI [-0.4830, 0.5965] (blocks of 20 rows, 484 resamples)"
+metaorder_trajectory,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+metaorder_trajectory,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+metaorder_trajectory,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+metaorder_trajectory,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+metaorder_trajectory,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+metaorder_trajectory,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+metaorder_trajectory,graded_score,score_ge_0.6,holdout,180,down,914,20,4,0.2991247265,0.1441696113,,
+metaorder_trajectory,timestamp_permutation,circular shift within symbol,holdout,180,down,914,21,4,0.3181723455,,False,"p = 0.3854 over 300 permutations; null mean 0.2150, null p95 0.5086; BH-FDR q=None pass=None"
+metaorder_trajectory,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+metaorder_trajectory,anchor_shift,placebo_shift_-h,holdout,180,down,914,26,4,0.4298939572,0.2749388421,False,placebo must show |lift| < ½ real lift
+metaorder_trajectory,anchor_shift,leak_control_shift_+h,holdout,180,down,914,14,2,0.6991247265,0.5441696113,,future-shifted signal: expected to inflate (sensitivity)
+metaorder_trajectory,removal,largest_wall_removed,holdout,180,down,914,21,4,0.3181723455,0.1839598997,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+metaorder_trajectory,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,21,4,0.3038961039,0.1457651763,True,
+metaorder_trajectory,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,21,4,0.3041437729,0.1361578852,True,
+metaorder_trajectory,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,21,4,0.327878168,0.1754385965,True,
+metaorder_trajectory,leave_one_symbol_out,without GP,holdout,180,down,847,21,4,0.3144431326,0.1624438455,True,
+metaorder_trajectory,leave_one_symbol_out,without IPDC,holdout,180,down,847,21,4,0.3120818575,0.1611721612,True,
+metaorder_trajectory,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,21,4,0.3281822344,0.1803124412,True,
+metaorder_trajectory,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,4,1,0.7226890756,0.6044444444,True,
+metaorder_trajectory,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,21,4,0.3167220377,0.1563610519,True,
+metaorder_trajectory,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,21,4,0.30995671,0.145167022,True,
+metaorder_trajectory,leave_one_symbol_out,without PTL,holdout,180,down,833,21,4,0.3009203681,0.1378446115,True,
+metaorder_trajectory,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,17,3,0.2364335565,0.08059286707,True,
+metaorder_trajectory,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,21,4,0.320861678,0.1533436479,True,
+metaorder_trajectory,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,21,4,0.3297318928,0.185453869,True,
+metaorder_trajectory,liquidity_split,top,holdout,180,down,453,21,4,0.2945443078,0.1283643892,True,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+metaorder_trajectory,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+ofi_state,real,holdout,holdout,180,down,914,66,18,0.07791260526,-0.0770425099,,best simple baseline = imb_l1; outcome = down; direction = -1
+ofi_state,baseline_comparison,state - imb_l1,holdout,180,down,914,66,18,0.07791260526,-0.0770425099,False,"block bootstrap 95% CI [-0.2481, 0.1276] (blocks of 20 rows, 500 resamples)"
+ofi_state,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+ofi_state,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+ofi_state,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+ofi_state,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+ofi_state,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+ofi_state,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+ofi_state,graded_score,score_ge_0.6,holdout,180,down,914,59,17,0.1059043875,-0.04905072768,,
+ofi_state,timestamp_permutation,circular shift within symbol,holdout,180,down,914,66,18,0.07791260526,,False,"p = 0.2326 over 300 permutations; null mean 0.0039, null p95 0.1688; BH-FDR q=None pass=None"
+ofi_state,side_flip,mirror → P(up),holdout,180,up,914,43,15,0.09582209557,,True,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+ofi_state,anchor_shift,placebo_shift_-h,holdout,180,down,914,60,17,-0.000875273523,-0.1558303887,True,placebo must show |lift| < ½ real lift
+ofi_state,anchor_shift,leak_control_shift_+h,holdout,180,down,914,54,16,0.5139395413,0.3589844261,,future-shifted signal: expected to inflate (sensitivity)
+ofi_state,removal,largest_wall_removed,holdout,180,down,914,66,18,0.07791260526,-0.05629984051,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+ofi_state,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,64,16,0.07547348485,-0.08265744275,False,
+ofi_state,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,61,16,0.09493221942,-0.07305366827,False,
+ofi_state,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,66,18,0.08761842771,-0.06482114377,False,
+ofi_state,leave_one_symbol_out,without GP,holdout,180,down,847,66,18,0.07418339237,-0.0778158948,False,
+ofi_state,leave_one_symbol_out,without IPDC,holdout,180,down,847,60,16,0.1097009052,-0.04120879121,False,
+ofi_state,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,56,16,0.04842032967,-0.09944946358,False,
+ofi_state,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,61,16,0.05055792809,-0.0676867031,False,
+ofi_state,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,57,16,0.06609547124,-0.09426551453,False,
+ofi_state,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,64,17,0.08153409091,-0.08325559701,False,
+ofi_state,leave_one_symbol_out,without PTL,holdout,180,down,833,58,16,0.1129072319,-0.05016852476,False,
+ofi_state,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,52,16,-0.004516669771,-0.1603573592,False,
+ofi_state,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,61,17,0.1116501245,-0.05586790555,False,
+ofi_state,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,66,18,0.0894721525,-0.05480587121,False,
+ofi_state,liquidity_split,top,holdout,180,down,453,44,11,0.152769416,-0.01341050254,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+ofi_state,liquidity_split,mid,holdout,180,down,461,22,7,-0.09583908499,-0.2280178838,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+order_splitting,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+order_splitting,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+order_splitting,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+order_splitting,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+order_splitting,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+order_splitting,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+order_splitting,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+order_splitting,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+order_splitting,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+order_splitting,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+order_splitting,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+order_splitting,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+order_splitting,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+order_splitting,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+order_splitting,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+order_splitting,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+order_splitting,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+order_splitting,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+order_splitting,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+order_splitting,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+order_splitting,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+order_splitting,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+order_splitting,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+order_splitting,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+order_splitting,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+order_splitting,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+order_splitting,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+order_splitting,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+order_splitting,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+participation_footprint,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+participation_footprint,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+participation_footprint,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+participation_footprint,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+participation_footprint,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+participation_footprint,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+participation_footprint,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+participation_footprint,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+participation_footprint,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+participation_footprint,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+participation_footprint,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+participation_footprint,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+participation_footprint,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+participation_footprint,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+participation_footprint,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+participation_footprint,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+participation_footprint,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+participation_footprint,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+participation_footprint,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+participation_footprint,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+participation_footprint,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+participation_footprint,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+participation_footprint,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+participation_footprint,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+participation_footprint,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+participation_footprint,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+participation_footprint,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+participation_footprint,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+participation_footprint,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+passive_accumulation,real,holdout,holdout,180,up,914,10,1,-0.2297592998,-0.3362831858,,best simple baseline = imb_l1; outcome = up; direction = 1
+passive_accumulation,baseline_comparison,state - imb_l1,holdout,180,up,914,10,1,-0.2297592998,-0.3362831858,False,"block bootstrap 95% CI [-0.4061, -0.2649] (blocks of 20 rows, 349 resamples)"
+passive_accumulation,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+passive_accumulation,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+passive_accumulation,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+passive_accumulation,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+passive_accumulation,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+passive_accumulation,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+passive_accumulation,graded_score,score_ge_0.6,holdout,180,up,914,6,1,-0.2297592998,-0.3362831858,,
+passive_accumulation,timestamp_permutation,circular shift within symbol,holdout,180,up,914,10,1,-0.2297592998,,False,"p = 1.0000 over 300 permutations; null mean 0.0579, null p95 0.5702; BH-FDR q=None pass=None"
+passive_accumulation,side_flip,mirror → P(down),holdout,180,down,914,0,0,,,,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+passive_accumulation,anchor_shift,placebo_shift_-h,holdout,180,up,914,13,2,-0.2297592998,-0.3362831858,False,placebo must show |lift| < ½ real lift
+passive_accumulation,anchor_shift,leak_control_shift_+h,holdout,180,up,914,14,2,-0.2297592998,-0.3362831858,,future-shifted signal: expected to inflate (sensitivity)
+passive_accumulation,removal,largest_wall_removed,holdout,180,up,914,10,1,-0.2297592998,-0.3402298851,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+passive_accumulation,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,10,1,-0.2412121212,-0.3525,False,
+passive_accumulation,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,10,1,-0.2379807692,-0.350877193,False,
+passive_accumulation,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,10,1,-0.2171837709,-0.3128078818,False,
+passive_accumulation,leave_one_symbol_out,without GP,holdout,180,up,847,10,1,-0.2314049587,-0.3365155131,False,
+passive_accumulation,leave_one_symbol_out,without IPDC,holdout,180,up,847,10,1,-0.2136953955,-0.315920398,False,
+passive_accumulation,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,10,1,-0.2271634615,-0.3391089109,False,
+passive_accumulation,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,10,1,-0.2256902761,-0.3242630385,False,
+passive_accumulation,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,10,1,-0.238372093,-0.3539192399,False,
+passive_accumulation,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,10,1,-0.2340909091,-0.3371040724,False,
+passive_accumulation,leave_one_symbol_out,without PTL,holdout,180,up,833,10,1,-0.2340936375,-0.3349056604,False,
+passive_accumulation,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,10,1,-0.2312348668,-0.3429256595,False,
+passive_accumulation,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,10,1,-0.2290249433,-0.338028169,False,
+passive_accumulation,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,0,0,,,,
+passive_accumulation,liquidity_split,top,holdout,180,up,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+passive_accumulation,liquidity_split,mid,holdout,180,up,461,10,1,-0.2472885033,-0.3571428571,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+passive_distribution,real,holdout,holdout,180,down,914,6,1,-0.3008752735,-0.4558303887,,best simple baseline = imb_l1; outcome = down; direction = -1
+passive_distribution,baseline_comparison,state - imb_l1,holdout,180,down,914,6,1,-0.3008752735,-0.4558303887,False,"block bootstrap 95% CI [-0.5521, -0.3597] (blocks of 20 rows, 341 resamples)"
+passive_distribution,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+passive_distribution,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+passive_distribution,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+passive_distribution,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+passive_distribution,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+passive_distribution,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+passive_distribution,graded_score,score_ge_0.6,holdout,180,down,914,0,0,,,,
+passive_distribution,timestamp_permutation,circular shift within symbol,holdout,180,down,914,6,1,-0.3008752735,,False,"p = 1.0000 over 300 permutations; null mean -0.0359, null p95 0.5325; BH-FDR q=None pass=None"
+passive_distribution,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+passive_distribution,anchor_shift,placebo_shift_-h,holdout,180,down,914,0,0,,,,placebo must show |lift| < ½ real lift
+passive_distribution,anchor_shift,leak_control_shift_+h,holdout,180,down,914,5,1,-0.3008752735,-0.4558303887,,future-shifted signal: expected to inflate (sensitivity)
+passive_distribution,removal,largest_wall_removed,holdout,180,down,914,6,1,-0.3008752735,-0.4350877193,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+passive_distribution,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,6,1,-0.3151515152,-0.4732824427,False,
+passive_distribution,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,6,1,-0.3149038462,-0.4828897338,False,
+passive_distribution,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,6,1,-0.2911694511,-0.4436090226,False,
+passive_distribution,leave_one_symbol_out,without GP,holdout,180,down,847,0,0,,,,
+passive_distribution,leave_one_symbol_out,without IPDC,holdout,180,down,847,6,1,-0.3069657615,-0.4578754579,False,
+passive_distribution,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,6,1,-0.2908653846,-0.4387351779,False,
+passive_distribution,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,6,1,-0.2773109244,-0.3955555556,False,
+passive_distribution,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,6,1,-0.3023255814,-0.4626865672,False,
+passive_distribution,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,6,1,-0.3090909091,-0.473880597,False,
+passive_distribution,leave_one_symbol_out,without PTL,holdout,180,down,833,6,1,-0.3181272509,-0.4812030075,False,
+passive_distribution,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,6,1,-0.2929782082,-0.4488188976,False,
+passive_distribution,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,6,1,-0.298185941,-0.4657039711,False,
+passive_distribution,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,6,1,-0.2893157263,-0.43359375,False,
+passive_distribution,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+passive_distribution,liquidity_split,mid,holdout,180,down,461,6,1,-0.2776572668,-0.4098360656,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+pegged_repricing,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+pegged_repricing,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+pegged_repricing,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+pegged_repricing,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+pegged_repricing,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+pegged_repricing,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+pegged_repricing,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+pegged_repricing,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+pegged_repricing,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+pegged_repricing,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+pegged_repricing,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+pegged_repricing,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+pegged_repricing,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+pegged_repricing,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+pegged_repricing,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+pegged_repricing,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+pegged_repricing,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+pegged_repricing,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+queue_pull_stack,real,holdout,holdout,180,down,914,97,37,0.08056802545,-0.07438708972,,best simple baseline = imb_l1; outcome = down; direction = -1
+queue_pull_stack,baseline_comparison,state - imb_l1,holdout,180,down,914,97,37,0.08056802545,-0.07438708972,False,"block bootstrap 95% CI [-0.2326, 0.0739] (blocks of 20 rows, 500 resamples)"
+queue_pull_stack,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+queue_pull_stack,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+queue_pull_stack,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+queue_pull_stack,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+queue_pull_stack,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+queue_pull_stack,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+queue_pull_stack,graded_score,score_ge_0.6,holdout,180,down,914,90,35,0.07690250425,-0.07805261091,,
+queue_pull_stack,timestamp_permutation,circular shift within symbol,holdout,180,down,914,97,37,0.08056802545,,False,"p = 0.1395 over 300 permutations; null mean -0.0031, null p95 0.1223; BH-FDR q=0.398671096345515 pass=False"
+queue_pull_stack,side_flip,mirror → P(up),holdout,180,up,914,94,34,-0.08082312957,,False,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+queue_pull_stack,anchor_shift,placebo_shift_-h,holdout,180,down,914,110,40,0.09912472648,-0.05583038869,False,placebo must show |lift| < ½ real lift
+queue_pull_stack,anchor_shift,leak_control_shift_+h,holdout,180,down,914,114,41,-0.07280509808,-0.2277602133,,future-shifted signal: expected to inflate (sensitivity)
+queue_pull_stack,removal,largest_wall_removed,holdout,180,down,914,97,37,0.08056802545,-0.05364442033,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+queue_pull_stack,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,92,35,0.08702239789,-0.0711085297,False,
+queue_pull_stack,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,80,31,0.1350961538,-0.03288973384,False,
+queue_pull_stack,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,91,33,0.06047890057,-0.09196067091,False,
+queue_pull_stack,leave_one_symbol_out,without GP,holdout,180,down,847,93,35,0.09324497594,-0.05875431122,False,
+queue_pull_stack,leave_one_symbol_out,without IPDC,holdout,180,down,847,97,37,0.07447753746,-0.07643215891,False,
+queue_pull_stack,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,89,34,0.09115708729,-0.05671270596,False,
+queue_pull_stack,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,86,34,0.08315419191,-0.03509043928,False,
+queue_pull_stack,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,91,35,0.07130079223,-0.08906019354,False,
+queue_pull_stack,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,93,33,0.08875855327,-0.07603113465,False,
+queue_pull_stack,leave_one_symbol_out,without PTL,holdout,180,down,833,87,34,0.1071601054,-0.0559156512,False,
+queue_pull_stack,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,85,33,0.07172767412,-0.08411301528,False,
+queue_pull_stack,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,93,36,0.05665276863,-0.1108652614,False,
+queue_pull_stack,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,87,34,0.03252335417,-0.1117546695,False,
+queue_pull_stack,liquidity_split,top,holdout,180,down,453,50,16,0.05549668874,-0.1106832298,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+queue_pull_stack,liquidity_split,mid,holdout,180,down,461,47,21,0.1053214566,-0.02685734217,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+quote_refresh_churn,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+quote_refresh_churn,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+quote_refresh_churn,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+quote_refresh_churn,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+quote_refresh_churn,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+quote_refresh_churn,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+quote_refresh_churn,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+quote_refresh_churn,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+quote_refresh_churn,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+quote_refresh_churn,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+quote_refresh_churn,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+quote_refresh_churn,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+quote_refresh_churn,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+quote_refresh_churn,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+quote_refresh_churn,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+quote_refresh_churn,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+quote_refresh_churn,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+quote_refresh_churn,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+recovery_curve_state,real,holdout,holdout,180,down,914,68,9,-0.1096988029,-0.2646539181,,best simple baseline = imb_l1; outcome = down; direction = -1
+recovery_curve_state,baseline_comparison,state - imb_l1,holdout,180,down,914,68,9,-0.1096988029,-0.2646539181,False,"block bootstrap 95% CI [-0.4607, -0.0517] (blocks of 20 rows, 500 resamples)"
+recovery_curve_state,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+recovery_curve_state,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+recovery_curve_state,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+recovery_curve_state,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+recovery_curve_state,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+recovery_curve_state,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+recovery_curve_state,graded_score,score_ge_0.6,holdout,180,down,914,63,9,-0.110399083,-0.2653541982,,
+recovery_curve_state,timestamp_permutation,circular shift within symbol,holdout,180,down,914,68,9,-0.1096988029,,False,"p = 0.8272 over 300 permutations; null mean -0.0457, null p95 0.0668; BH-FDR q=None pass=None"
+recovery_curve_state,side_flip,mirror → P(up),holdout,180,up,914,26,5,-0.1143746844,,False,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+recovery_curve_state,anchor_shift,placebo_shift_-h,holdout,180,down,914,56,8,-0.08658955924,-0.2415446744,False,placebo must show |lift| < ½ real lift
+recovery_curve_state,anchor_shift,leak_control_shift_+h,holdout,180,down,914,72,10,-0.03698638463,-0.1919414998,,future-shifted signal: expected to inflate (sensitivity)
+recovery_curve_state,removal,largest_wall_removed,holdout,180,down,914,68,9,-0.1096988029,-0.2439112487,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+recovery_curve_state,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,40,7,0.009848484848,-0.1482824427,False,
+recovery_curve_state,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,61,8,-0.1017890921,-0.2697749797,False,
+recovery_curve_state,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,64,8,-0.08804445107,-0.2404840226,False,
+recovery_curve_state,leave_one_symbol_out,without GP,holdout,180,down,847,63,8,-0.09825528007,-0.2502545672,False,
+recovery_curve_state,leave_one_symbol_out,without IPDC,holdout,180,down,847,62,8,-0.1456754389,-0.2965851353,False,
+recovery_curve_state,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,68,9,-0.09968891403,-0.2475587073,False,
+recovery_curve_state,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,64,8,-0.07418592437,-0.1924305556,False,
+recovery_curve_state,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,68,9,-0.1111491108,-0.2715100966,False,
+recovery_curve_state,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,65,8,-0.1090909091,-0.273880597,False,
+recovery_curve_state,leave_one_symbol_out,without PTL,holdout,180,down,833,68,9,-0.1269507803,-0.2900265369,False,
+recovery_curve_state,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,68,9,-0.1018017376,-0.257642427,False,
+recovery_curve_state,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,68,9,-0.1070094705,-0.2745275005,False,
+recovery_curve_state,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,57,8,-0.2366841473,-0.3809621711,False,
+recovery_curve_state,liquidity_split,top,holdout,180,down,453,32,3,-0.3245033113,-0.4906832298,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+recovery_curve_state,liquidity_split,mid,holdout,180,down,461,36,6,0.0834538443,-0.04872495446,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+resilience_asymmetry,real,holdout,holdout,180,up,914,159,16,-0.01592282179,-0.1224467079,,best simple baseline = imb_l1; outcome = up; direction = 1
+resilience_asymmetry,baseline_comparison,state - imb_l1,holdout,180,up,914,159,16,-0.01592282179,-0.1224467079,False,"block bootstrap 95% CI [-0.2203, -0.0213] (blocks of 20 rows, 500 resamples)"
+resilience_asymmetry,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+resilience_asymmetry,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+resilience_asymmetry,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+resilience_asymmetry,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+resilience_asymmetry,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+resilience_asymmetry,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+resilience_asymmetry,graded_score,score_ge_0.6,holdout,180,up,914,155,16,-0.03621091268,-0.1427347987,,
+resilience_asymmetry,timestamp_permutation,circular shift within symbol,holdout,180,up,914,159,16,-0.01592282179,,False,"p = 0.7176 over 300 permutations; null mean 0.0079, null p95 0.0784; BH-FDR q=None pass=None"
+resilience_asymmetry,side_flip,mirror → P(down),holdout,180,down,914,196,17,-0.04577323271,,False,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+resilience_asymmetry,anchor_shift,placebo_shift_-h,holdout,180,up,914,150,14,-0.009759299781,-0.1162831858,False,placebo must show |lift| < ½ real lift
+resilience_asymmetry,anchor_shift,leak_control_shift_+h,holdout,180,up,914,169,15,-0.1173332643,-0.2238571503,,future-shifted signal: expected to inflate (sensitivity)
+resilience_asymmetry,removal,largest_wall_removed,holdout,180,up,914,159,16,-0.01592282179,-0.1263934071,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+resilience_asymmetry,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,155,15,-0.04766373412,-0.1589516129,False,
+resilience_asymmetry,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,151,14,-0.01943772287,-0.1323341466,False,
+resilience_asymmetry,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,135,15,-0.01718377088,-0.1128078818,False,
+resilience_asymmetry,leave_one_symbol_out,without GP,holdout,180,up,847,131,13,-0.01003091288,-0.1151414673,False,
+resilience_asymmetry,leave_one_symbol_out,without IPDC,holdout,180,up,847,159,16,0.0001410824738,-0.10208392,False,
+resilience_asymmetry,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,156,14,-0.00921474359,-0.1211601929,False,
+resilience_asymmetry,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,144,14,-0.02430138722,-0.1228741497,False,
+resilience_asymmetry,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,158,15,-0.02951133353,-0.1450584804,False,
+resilience_asymmetry,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,146,15,-0.02176214197,-0.1247753053,False,
+resilience_asymmetry,leave_one_symbol_out,without PTL,holdout,180,up,833,136,15,0.01590636255,-0.08490566038,False,
+resilience_asymmetry,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,149,15,-0.03660399434,-0.148294787,False,
+resilience_asymmetry,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,159,16,-0.01518846532,-0.124191691,False,
+resilience_asymmetry,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,129,15,0.01461980141,-0.09302325581,False,
+resilience_asymmetry,liquidity_split,top,holdout,180,up,453,55,7,0.04262492474,-0.05545454545,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+resilience_asymmetry,liquidity_split,mid,holdout,180,up,461,104,9,-0.05498081095,-0.1648351648,False,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+stealth_accumulation,real,holdout,holdout,180,up,914,15,2,-0.2297592998,-0.3362831858,,best simple baseline = imb_l1; outcome = up; direction = 1
+stealth_accumulation,baseline_comparison,state - imb_l1,holdout,180,up,914,15,2,-0.2297592998,-0.3362831858,False,"block bootstrap 95% CI [-0.4038, -0.2660] (blocks of 20 rows, 500 resamples)"
+stealth_accumulation,baseline,imb_l1,holdout,180,up,914,452,64,0.1065238861,,,
+stealth_accumulation,baseline,imb_topk,holdout,180,up,914,707,30,0.02483758848,,,
+stealth_accumulation,baseline,imb_weighted,holdout,180,up,914,651,37,0.04059400283,,,
+stealth_accumulation,baseline,depth_ratio,holdout,180,up,914,542,18,0.02300822789,,,
+stealth_accumulation,baseline,price_only_response,holdout,180,up,914,208,54,0.0106253156,,,
+stealth_accumulation,baseline,volume_only_response,holdout,180,up,914,629,75,0.0166635937,,,
+stealth_accumulation,graded_score,score_ge_0.6,holdout,180,up,914,4,1,-0.2297592998,-0.3362831858,,
+stealth_accumulation,timestamp_permutation,circular shift within symbol,holdout,180,up,914,15,2,-0.2297592998,,False,"p = 1.0000 over 300 permutations; null mean -0.0138, null p95 0.3069; BH-FDR q=None pass=None"
+stealth_accumulation,side_flip,mirror → P(down),holdout,180,down,914,0,0,,,,lift of the mirrored signal on P(down) (must be > 0 for a symmetric mechanism)
+stealth_accumulation,anchor_shift,placebo_shift_-h,holdout,180,up,914,17,2,-0.2297592998,-0.3362831858,False,placebo must show |lift| < ½ real lift
+stealth_accumulation,anchor_shift,leak_control_shift_+h,holdout,180,up,914,15,2,-0.2297592998,-0.3362831858,,future-shifted signal: expected to inflate (sensitivity)
+stealth_accumulation,removal,largest_wall_removed,holdout,180,up,914,15,2,-0.2297592998,-0.3402298851,True,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+stealth_accumulation,leave_one_symbol_out,without BEXIMCO,holdout,180,up,825,15,2,-0.2412121212,-0.3525,False,
+stealth_accumulation,leave_one_symbol_out,without BRACBANK,holdout,180,up,832,15,2,-0.2379807692,-0.350877193,False,
+stealth_accumulation,leave_one_symbol_out,without BXPHARMA,holdout,180,up,838,15,2,-0.2171837709,-0.3128078818,False,
+stealth_accumulation,leave_one_symbol_out,without GP,holdout,180,up,847,15,2,-0.2314049587,-0.3365155131,False,
+stealth_accumulation,leave_one_symbol_out,without IPDC,holdout,180,up,847,15,2,-0.2136953955,-0.315920398,False,
+stealth_accumulation,leave_one_symbol_out,without LOVELLO,holdout,180,up,832,15,2,-0.2271634615,-0.3391089109,False,
+stealth_accumulation,leave_one_symbol_out,without MALEKSPIN,holdout,180,up,833,15,2,-0.2256902761,-0.3242630385,False,
+stealth_accumulation,leave_one_symbol_out,without ORIONPHARM,holdout,180,up,860,15,2,-0.238372093,-0.3539192399,False,
+stealth_accumulation,leave_one_symbol_out,without POWERGRID,holdout,180,up,880,15,2,-0.2340909091,-0.3371040724,False,
+stealth_accumulation,leave_one_symbol_out,without PTL,holdout,180,up,833,4,1,-0.2340936375,-0.3349056604,False,
+stealth_accumulation,leave_one_symbol_out,without SAIHAMCOT,holdout,180,up,826,15,2,-0.2312348668,-0.3429256595,False,
+stealth_accumulation,leave_one_symbol_out,without SHARPIND,holdout,180,up,882,11,1,-0.2290249433,-0.338028169,False,
+stealth_accumulation,leave_one_symbol_out,without SQURPHARMA,holdout,180,up,833,15,2,-0.2256902761,-0.3333333333,False,
+stealth_accumulation,liquidity_split,top,holdout,180,up,453,15,2,-0.2119205298,-0.31,False,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+stealth_accumulation,liquidity_split,mid,holdout,180,up,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+stealth_distribution,real,holdout,holdout,180,down,914,0,0,,,,best simple baseline = imb_l1; outcome = down; direction = -1
+stealth_distribution,baseline_comparison,state - imb_l1,holdout,180,down,914,0,0,,,False,no valid bootstrap resamples
+stealth_distribution,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+stealth_distribution,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+stealth_distribution,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+stealth_distribution,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+stealth_distribution,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+stealth_distribution,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+stealth_distribution,graded_score,score_ge_0.6,holdout,180,down,914,0,0,,,,
+stealth_distribution,timestamp_permutation,circular shift within symbol,holdout,180,down,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+stealth_distribution,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+stealth_distribution,anchor_shift,placebo_shift_-h,holdout,180,down,914,0,0,,,,placebo must show |lift| < ½ real lift
+stealth_distribution,anchor_shift,leak_control_shift_+h,holdout,180,down,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+stealth_distribution,removal,largest_wall_removed,holdout,180,down,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+stealth_distribution,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without GP,holdout,180,down,847,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without IPDC,holdout,180,down,847,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without PTL,holdout,180,down,833,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,0,0,,,,
+stealth_distribution,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,0,0,,,,
+stealth_distribution,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+stealth_distribution,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+trade_churn_repetition,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+trade_churn_repetition,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+trade_churn_repetition,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+trade_churn_repetition,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+trade_churn_repetition,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+trade_churn_repetition,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+trade_churn_repetition,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+trade_churn_repetition,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+trade_churn_repetition,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+trade_churn_repetition,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+trade_churn_repetition,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+trade_churn_repetition,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+trade_churn_repetition,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+trade_churn_repetition,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+trade_churn_repetition,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+trade_churn_repetition,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+trade_churn_repetition,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+trade_churn_repetition,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+trap_pressure,real,holdout,holdout,180,down,914,0,0,,,,best simple baseline = imb_l1; outcome = down; direction = -1
+trap_pressure,baseline_comparison,state - imb_l1,holdout,180,down,914,0,0,,,False,no valid bootstrap resamples
+trap_pressure,baseline,imb_l1,holdout,180,down,914,283,56,0.1549551152,,,
+trap_pressure,baseline,imb_topk,holdout,180,down,914,25,7,0.01912472648,,,
+trap_pressure,baseline,imb_weighted,holdout,180,down,914,22,6,-0.07360254625,,,
+trap_pressure,baseline,depth_ratio,holdout,180,down,914,51,5,-0.1636203716,,,
+trap_pressure,baseline,price_only_response,holdout,180,down,914,266,65,0.02619239565,,,
+trap_pressure,baseline,volume_only_response,holdout,180,down,914,629,75,-0.01947622742,,,
+trap_pressure,graded_score,score_ge_0.6,holdout,180,down,914,0,0,,,,
+trap_pressure,timestamp_permutation,circular shift within symbol,holdout,180,down,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+trap_pressure,side_flip,mirror → P(up),holdout,180,up,914,0,0,,,,lift of the mirrored signal on P(up) (must be > 0 for a symmetric mechanism)
+trap_pressure,anchor_shift,placebo_shift_-h,holdout,180,down,914,0,0,,,,placebo must show |lift| < ½ real lift
+trap_pressure,anchor_shift,leak_control_shift_+h,holdout,180,down,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+trap_pressure,removal,largest_wall_removed,holdout,180,down,914,0,0,,,,imbalance baselines recomputed without the largest displayed level; best baseline imb_l1 re-derived
+trap_pressure,leave_one_symbol_out,without BEXIMCO,holdout,180,down,825,0,0,,,,
+trap_pressure,leave_one_symbol_out,without BRACBANK,holdout,180,down,832,0,0,,,,
+trap_pressure,leave_one_symbol_out,without BXPHARMA,holdout,180,down,838,0,0,,,,
+trap_pressure,leave_one_symbol_out,without GP,holdout,180,down,847,0,0,,,,
+trap_pressure,leave_one_symbol_out,without IPDC,holdout,180,down,847,0,0,,,,
+trap_pressure,leave_one_symbol_out,without LOVELLO,holdout,180,down,832,0,0,,,,
+trap_pressure,leave_one_symbol_out,without MALEKSPIN,holdout,180,down,833,0,0,,,,
+trap_pressure,leave_one_symbol_out,without ORIONPHARM,holdout,180,down,860,0,0,,,,
+trap_pressure,leave_one_symbol_out,without POWERGRID,holdout,180,down,880,0,0,,,,
+trap_pressure,leave_one_symbol_out,without PTL,holdout,180,down,833,0,0,,,,
+trap_pressure,leave_one_symbol_out,without SAIHAMCOT,holdout,180,down,826,0,0,,,,
+trap_pressure,leave_one_symbol_out,without SHARPIND,holdout,180,down,882,0,0,,,,
+trap_pressure,leave_one_symbol_out,without SQURPHARMA,holdout,180,down,833,0,0,,,,
+trap_pressure,liquidity_split,top,holdout,180,down,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+trap_pressure,liquidity_split,mid,holdout,180,down,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"
+vacuum_snapback,real,holdout,holdout,180,move,914,0,0,,,,best simple baseline = price_only_response; outcome = move; direction = 0
+vacuum_snapback,baseline_comparison,state - price_only_response,holdout,180,move,914,0,0,,,False,no valid bootstrap resamples
+vacuum_snapback,baseline,imb_l1,holdout,180,move,914,735,51,0.04351508656,,,
+vacuum_snapback,baseline,imb_topk,holdout,180,move,914,732,36,0.01308127369,,,
+vacuum_snapback,baseline,imb_weighted,holdout,180,move,914,673,41,0.01022723947,,,
+vacuum_snapback,baseline,depth_ratio,holdout,180,move,914,593,22,-0.002809952731,,,
+vacuum_snapback,baseline,price_only_response,holdout,180,move,914,474,85,0.06219243092,,,
+vacuum_snapback,baseline,volume_only_response,holdout,180,move,914,629,75,-0.002812633718,,,
+vacuum_snapback,graded_score,score_ge_0.6,holdout,180,move,914,0,0,,,,
+vacuum_snapback,timestamp_permutation,circular shift within symbol,holdout,180,move,914,0,0,,,False,no signal rows; BH-FDR q=None pass=None
+vacuum_snapback,side_flip,not_applicable,holdout,180,move,914,0,0,,,,mechanism carries no direction: side flip not applicable
+vacuum_snapback,anchor_shift,placebo_shift_-h,holdout,180,move,914,0,0,,,,placebo must show |lift| < ½ real lift
+vacuum_snapback,anchor_shift,leak_control_shift_+h,holdout,180,move,914,0,0,,,,future-shifted signal: expected to inflate (sensitivity)
+vacuum_snapback,removal,largest_wall_removed,holdout,180,move,914,0,0,,,,best baseline price_only_response is not an imbalance baseline: unaffected by wall removal
+vacuum_snapback,leave_one_symbol_out,without BEXIMCO,holdout,180,move,825,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without BRACBANK,holdout,180,move,832,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without BXPHARMA,holdout,180,move,838,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without GP,holdout,180,move,847,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without IPDC,holdout,180,move,847,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without LOVELLO,holdout,180,move,832,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without MALEKSPIN,holdout,180,move,833,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without ORIONPHARM,holdout,180,move,860,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without POWERGRID,holdout,180,move,880,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without PTL,holdout,180,move,833,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without SAIHAMCOT,holdout,180,move,826,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without SHARPIND,holdout,180,move,882,0,0,,,,
+vacuum_snapback,leave_one_symbol_out,without SQURPHARMA,holdout,180,move,833,0,0,,,,
+vacuum_snapback,liquidity_split,top,holdout,180,move,453,0,0,,,,"symbols: BEXIMCO, LOVELLO, MALEKSPIN, PTL, SAIHAMCOT, SAIHAMTEX, SHARPIND; basis: day_volume"
+vacuum_snapback,liquidity_split,mid,holdout,180,move,461,0,0,,,,"symbols: BRACBANK, BXPHARMA, GP, IPDC, ORIONPHARM, POWERGRID, SQURPHARMA; basis: day_volume"

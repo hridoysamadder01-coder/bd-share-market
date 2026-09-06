@@ -1,0 +1,2555 @@
+{
+ "config": {
+  "alpha": 0.05,
+  "block_len": 20,
+  "dev_frac": 0.4,
+  "fdr_q": 0.1,
+  "horizons": [
+   60,
+   180,
+   600
+  ],
+  "n_boot": 500,
+  "n_min_episodes": 30,
+  "n_min_rows": 500,
+  "n_perm": 300,
+  "n_tod_buckets": 5,
+  "primary_h": 180,
+  "score_threshold": 0.6,
+  "seed": 7,
+  "stale_age_s": 120.0,
+  "theta_imb": 0.2,
+  "topk": 5,
+  "val_frac": 0.3
+ },
+ "counts": {
+  "BLOCKED": 46,
+  "KEEP": 0,
+  "KILL": 3
+ },
+ "fdr": {
+  "cutoff": null,
+  "n_pass": 0,
+  "n_tested": 3,
+  "p_values": {
+   "absorption": 0.8571428571428571,
+   "accumulation_like": null,
+   "adverse_retreat": 0.12956810631229235,
+   "auction_imbalance": null,
+   "basket_rebalance": 1.0,
+   "block_absorption": 0.25249169435215946,
+   "book_trade_divergence": 1.0,
+   "churn_anomaly": 0.18272425249169436,
+   "circuit_break_weakness": null,
+   "circuit_lock_strength": null,
+   "circuit_next_session": null,
+   "circuit_prehit_pressure": null,
+   "circuit_regime": 1.0,
+   "circuit_streak": null,
+   "close_session_pressure": 0.7342192691029901,
+   "compression_expansion": 0.9003322259136213,
+   "cross_lead_lag": 0.26578073089701,
+   "deep_book_shape": 0.9269102990033222,
+   "depth_price_divergence": null,
+   "distribution_like": null,
+   "exhaustion": 0.5049833887043189,
+   "failed_sweep": 1.0,
+   "false_breakout": null,
+   "flow_impact_divergence": 0.16279069767441862,
+   "hidden_replenishment": null,
+   "ignition": 0.6777408637873754,
+   "inventory_rebalancing": 1.0,
+   "layering_like": null,
+   "liquidity_depletion": 0.10299003322259136,
+   "liquidity_run": null,
+   "liquidity_sweep": 0.9003322259136213,
+   "liquidity_vacuum": null,
+   "metaorder_impact": 1.0,
+   "metaorder_trajectory": 0.3853820598006645,
+   "ofi_state": 0.23255813953488372,
+   "order_splitting": null,
+   "participation_footprint": null,
+   "passive_accumulation": 1.0,
+   "passive_distribution": 1.0,
+   "pegged_repricing": null,
+   "queue_pull_stack": 0.13953488372093023,
+   "quote_refresh_churn": null,
+   "recovery_curve_state": 0.8272425249169435,
+   "resilience_asymmetry": 0.717607973421927,
+   "stealth_accumulation": 1.0,
+   "stealth_distribution": null,
+   "trade_churn_repetition": null,
+   "trap_pressure": null,
+   "vacuum_snapback": null
+  },
+  "q": 0.1,
+  "q_values": {
+   "absorption": null,
+   "accumulation_like": null,
+   "adverse_retreat": null,
+   "auction_imbalance": null,
+   "basket_rebalance": null,
+   "block_absorption": null,
+   "book_trade_divergence": 1.0,
+   "churn_anomaly": null,
+   "circuit_break_weakness": null,
+   "circuit_lock_strength": null,
+   "circuit_next_session": null,
+   "circuit_prehit_pressure": null,
+   "circuit_regime": null,
+   "circuit_streak": null,
+   "close_session_pressure": null,
+   "compression_expansion": null,
+   "cross_lead_lag": 0.398671096345515,
+   "deep_book_shape": null,
+   "depth_price_divergence": null,
+   "distribution_like": null,
+   "exhaustion": null,
+   "failed_sweep": null,
+   "false_breakout": null,
+   "flow_impact_divergence": null,
+   "hidden_replenishment": null,
+   "ignition": null,
+   "inventory_rebalancing": null,
+   "layering_like": null,
+   "liquidity_depletion": null,
+   "liquidity_run": null,
+   "liquidity_sweep": null,
+   "liquidity_vacuum": null,
+   "metaorder_impact": null,
+   "metaorder_trajectory": null,
+   "ofi_state": null,
+   "order_splitting": null,
+   "participation_footprint": null,
+   "passive_accumulation": null,
+   "passive_distribution": null,
+   "pegged_repricing": null,
+   "queue_pull_stack": 0.398671096345515,
+   "quote_refresh_churn": null,
+   "recovery_curve_state": null,
+   "resilience_asymmetry": null,
+   "stealth_accumulation": null,
+   "stealth_distribution": null,
+   "trade_churn_repetition": null,
+   "trap_pressure": null,
+   "vacuum_snapback": null
+  },
+  "tested": [
+   "book_trade_divergence",
+   "cross_lead_lag",
+   "queue_pull_stack"
+  ]
+ },
+ "mechanisms": {
+  "absorption": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 17 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.005633208233925,
+    "ci_lo": -0.35401720605843934,
+    "n_boot_valid": 500,
+    "point": -0.18476803432555647
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 17,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 33,
+   "incremental_vs_best_baseline": -0.18476803432555647,
+   "lift_vs_base": -0.0782441482660301,
+   "mechanism": "absorption",
+   "n_dir_neg_active": 596,
+   "n_dir_pos_active": 811,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.026402316380434544,
+    "null_p95": 0.2247861547642729,
+    "observed": -0.0782441482660301,
+    "p_value": 0.8571428571428571
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 17 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "accumulation_like": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "accumulation_like",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "adverse_retreat": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.6301093936136212,
+    "ci_lo": 0.44612570356472797,
+    "n_boot_valid": 354,
+    "point": 0.5441696113074205
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": true,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": true,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 1,
+   "incremental_vs_best_baseline": 0.5441696113074205,
+   "lift_vs_base": 0.6991247264770241,
+   "mechanism": "adverse_retreat",
+   "n_dir_neg_active": 45,
+   "n_dir_pos_active": 22,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.17420860685630926,
+    "null_p95": 0.6991247264770241,
+    "observed": 0.6991247264770241,
+    "p_value": 0.12956810631229235
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "auction_imbalance": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "session",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "auction_imbalance",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "basket_rebalance": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.36549622614973504,
+    "ci_lo": -0.552008107499437,
+    "n_boot_valid": 369,
+    "point": -0.4558303886925795
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": true,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "cross",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 2,
+   "incremental_vs_best_baseline": -0.4558303886925795,
+   "lift_vs_base": -0.30087527352297594,
+   "mechanism": "basket_rebalance",
+   "n_dir_neg_active": 93,
+   "n_dir_pos_active": 24,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.22254194018964257,
+    "null_p95": 0.19912472647702406,
+    "observed": -0.30087527352297594,
+    "p_value": 1.0
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "block_absorption": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 8 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.07291830254041566,
+    "ci_lo": -0.3395740828809146,
+    "n_boot_valid": 500,
+    "point": -0.11406096361848578
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 8,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 9,
+   "incremental_vs_best_baseline": -0.11406096361848578,
+   "lift_vs_base": -0.00753707755895941,
+   "mechanism": "block_absorption",
+   "n_dir_neg_active": 115,
+   "n_dir_pos_active": 356,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.12087041089229274,
+    "null_p95": 0.1035740335521517,
+    "observed": -0.00753707755895941,
+    "p_value": 0.25249169435215946
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 8 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "book_trade_divergence": {
+   "best_baseline": "imb_l1",
+   "blocked": false,
+   "blocked_reasons": [],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.12488488431285524,
+    "ci_lo": -0.33424016565420095,
+    "n_boot_valid": 500,
+    "point": -0.2196680270689633
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": false,
+   "fdr_q_value": 1.0,
+   "holdout_episodes": 40,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 271,
+   "incremental_vs_best_baseline": -0.2196680270689633,
+   "lift_vs_base": -0.06471291189935971,
+   "mechanism": "book_trade_divergence",
+   "n_dir_neg_active": 3582,
+   "n_dir_pos_active": 791,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.024856583795597246,
+    "null_p95": 0.07938302906004994,
+    "observed": -0.06471291189935971,
+    "p_value": 1.0
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "a_beats_best_baseline_ci: FAILED",
+    "b_permutation: FAILED",
+    "c_side_flip: not evaluable",
+    "d_placebo: FAILED",
+    "f_loso: FAILED",
+    "g_liquidity: FAILED"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "KILL"
+  },
+  "churn_anomaly": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 24 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.1052383945090855,
+    "ci_lo": -0.17498158486529422,
+    "n_boot_valid": 500,
+    "point": -0.042827004219409215
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 24,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 100,
+   "incremental_vs_best_baseline": -0.042827004219409215,
+   "lift_vs_base": 0.019365426695842514,
+   "mechanism": "churn_anomaly",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.04796790663749087,
+    "null_p95": 0.07936542669584246,
+    "observed": 0.019365426695842514,
+    "p_value": 0.18272425249169436
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 24 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "circuit_break_weakness": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "circuit",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "circuit_break_weakness",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "circuit_lock_strength": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "circuit",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "circuit_lock_strength",
+   "n_dir_neg_active": 490,
+   "n_dir_pos_active": 0,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "circuit_next_session": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "circuit",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "circuit_next_session",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "circuit_prehit_pressure": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "circuit",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "circuit_prehit_pressure",
+   "n_dir_neg_active": 17,
+   "n_dir_pos_active": 0,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "circuit_regime": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.35057170982886576,
+    "ci_lo": -0.5409105339105339,
+    "n_boot_valid": 378,
+    "point": -0.4558303886925795
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "circuit",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 4,
+   "incremental_vs_best_baseline": -0.4558303886925795,
+   "lift_vs_base": -0.30087527352297594,
+   "mechanism": "circuit_regime",
+   "n_dir_neg_active": 813,
+   "n_dir_pos_active": 0,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.10079139314369073,
+    "null_p95": 0.6991247264770241,
+    "observed": -0.30087527352297594,
+    "p_value": 1.0
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "circuit_streak": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "circuit",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "circuit_streak",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "close_session_pressure": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 10 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.056327890059167614,
+    "ci_lo": -0.27456347678805143,
+    "n_boot_valid": 500,
+    "point": -0.1055139550714772
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "session",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 10,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 52,
+   "incremental_vs_best_baseline": -0.1055139550714772,
+   "lift_vs_base": 0.0010099309880491625,
+   "mechanism": "close_session_pressure",
+   "n_dir_neg_active": 55,
+   "n_dir_pos_active": 209,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.040817623295741456,
+    "null_p95": 0.17504839252651092,
+    "observed": 0.0010099309880491625,
+    "p_value": 0.7342192691029901
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 10 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "compression_expansion": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.6157773818454614,
+    "ci_lo": -0.5076272017574831,
+    "n_boot_valid": 454,
+    "point": 0.044169611307420475
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 2,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 2,
+   "incremental_vs_best_baseline": 0.044169611307420475,
+   "lift_vs_base": 0.19912472647702406,
+   "mechanism": "compression_expansion",
+   "n_dir_neg_active": 58,
+   "n_dir_pos_active": 42,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.24579139314369078,
+    "null_p95": 0.6991247264770241,
+    "observed": 0.19912472647702406,
+    "p_value": 0.9003322259136213
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "cross_lead_lag": {
+   "best_baseline": "imb_l1",
+   "blocked": false,
+   "blocked_reasons": [],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.07587353345155011,
+    "ci_lo": -0.18962817951721542,
+    "n_boot_valid": 500,
+    "point": -0.059174752105768225
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": true,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "cross",
+   "fdr_pass": false,
+   "fdr_q_value": 0.398671096345515,
+   "holdout_episodes": 43,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 83,
+   "incremental_vs_best_baseline": -0.059174752105768225,
+   "lift_vs_base": 0.047349133953758143,
+   "mechanism": "cross_lead_lag",
+   "n_dir_neg_active": 894,
+   "n_dir_pos_active": 1031,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.0055419050380954874,
+    "null_p95": 0.11963829058026418,
+    "observed": 0.047349133953758143,
+    "p_value": 0.26578073089701
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "a_beats_best_baseline_ci: FAILED",
+    "b_permutation: FAILED",
+    "d_placebo: FAILED",
+    "f_loso: FAILED",
+    "g_liquidity: FAILED"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "KILL"
+  },
+  "deep_book_shape": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.18039897374879157,
+    "ci_lo": -0.37545568926025097,
+    "n_boot_valid": 500,
+    "point": -0.2756771252346474
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "ofi_shape",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 2,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 33,
+   "incremental_vs_best_baseline": -0.2756771252346474,
+   "lift_vs_base": -0.169153239175121,
+   "mechanism": "deep_book_shape",
+   "n_dir_neg_active": 93,
+   "n_dir_pos_active": 300,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.14147647149835332,
+    "null_p95": -0.0782441482660301,
+    "observed": -0.169153239175121,
+    "p_value": 0.9269102990033222
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "depth_price_divergence": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": true,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "depth_price_divergence",
+   "n_dir_neg_active": 55,
+   "n_dir_pos_active": 72,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "distribution_like": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "distribution_like",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "exhaustion": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.6157520455811163,
+    "ci_lo": -0.5083720612356479,
+    "n_boot_valid": 451,
+    "point": 0.044169611307420475
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": true,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 2,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 2,
+   "incremental_vs_best_baseline": 0.044169611307420475,
+   "lift_vs_base": 0.19912472647702406,
+   "mechanism": "exhaustion",
+   "n_dir_neg_active": 81,
+   "n_dir_pos_active": 76,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.0008752735229759271,
+    "null_p95": 0.6991247264770241,
+    "observed": 0.19912472647702406,
+    "p_value": 0.5049833887043189
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "failed_sweep": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.2730165952890793,
+    "ci_lo": -0.41634208744074047,
+    "n_boot_valid": 335,
+    "point": -0.336283185840708
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 1,
+   "incremental_vs_best_baseline": -0.336283185840708,
+   "lift_vs_base": -0.22975929978118162,
+   "mechanism": "failed_sweep",
+   "n_dir_neg_active": 29,
+   "n_dir_pos_active": 31,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.12690736688548504,
+    "null_p95": 0.7702407002188184,
+    "observed": -0.22975929978118162,
+    "p_value": 1.0
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "false_breakout": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "false_breakout",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "flow_impact_divergence": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 16 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.1725120296939722,
+    "ci_lo": -0.17954221464784506,
+    "n_boot_valid": 500,
+    "point": -0.002949852507374673
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": true,
+    "d_placebo": true,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 16,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 63,
+   "incremental_vs_best_baseline": -0.002949852507374673,
+   "lift_vs_base": 0.1035740335521517,
+   "mechanism": "flow_impact_divergence",
+   "n_dir_neg_active": 404,
+   "n_dir_pos_active": 1278,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.007013186991305139,
+    "null_p95": 0.16706609704421518,
+    "observed": 0.1035740335521517,
+    "p_value": 0.16279069767441862
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 16 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "hidden_replenishment": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "queue",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "hidden_replenishment",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "ignition": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.6045831319134416,
+    "ci_lo": -0.512200545540797,
+    "n_boot_valid": 456,
+    "point": 0.044169611307420475
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 2,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 2,
+   "incremental_vs_best_baseline": 0.044169611307420475,
+   "lift_vs_base": 0.19912472647702406,
+   "mechanism": "ignition",
+   "n_dir_neg_active": 46,
+   "n_dir_pos_active": 44,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.1674580598103574,
+    "null_p95": 0.6991247264770241,
+    "observed": 0.19912472647702406,
+    "p_value": 0.6777408637873754
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "inventory_rebalancing": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.5179152302660656,
+    "ci_lo": -0.6636168831168832,
+    "n_boot_valid": 442,
+    "point": -0.5928270042194093
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 2,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 2,
+   "incremental_vs_best_baseline": -0.5928270042194093,
+   "lift_vs_base": -0.5306345733041575,
+   "mechanism": "inventory_rebalancing",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.22230123997082424,
+    "null_p95": 0.46936542669584247,
+    "observed": -0.5306345733041575,
+    "p_value": 1.0
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "layering_like": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "queue",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "layering_like",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "liquidity_depletion": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 5 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.3870614427342809,
+    "ci_lo": -0.38851063829787236,
+    "n_boot_valid": 500,
+    "point": 0.27144233858014777
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": true,
+    "e_wall_removal": true,
+    "f_loso": true,
+    "g_liquidity": true
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 5,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 11,
+   "incremental_vs_best_baseline": 0.27144233858014777,
+   "lift_vs_base": 0.42639745374975135,
+   "mechanism": "liquidity_depletion",
+   "n_dir_neg_active": 248,
+   "n_dir_pos_active": 185,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.04094290829520587,
+    "null_p95": 0.42639745374975135,
+    "observed": 0.42639745374975135,
+    "p_value": 0.10299003322259136
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 5 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "liquidity_run": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "liquidity_run",
+   "n_dir_neg_active": 35,
+   "n_dir_pos_active": 52,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "liquidity_sweep": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 4 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.24059175269363084,
+    "ci_lo": -0.5213516746411483,
+    "n_boot_valid": 495,
+    "point": -0.20583038869257952
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": true,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 4,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 4,
+   "incremental_vs_best_baseline": -0.20583038869257952,
+   "lift_vs_base": -0.05087527352297594,
+   "mechanism": "liquidity_sweep",
+   "n_dir_neg_active": 92,
+   "n_dir_pos_active": 61,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.14745805981035742,
+    "null_p95": 0.6991247264770241,
+    "observed": -0.05087527352297594,
+    "p_value": 0.9003322259136213
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 4 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "liquidity_vacuum": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "liquidity_vacuum",
+   "n_dir_neg_active": 115,
+   "n_dir_pos_active": 33,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "metaorder_impact": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.370998516005936,
+    "ci_lo": -0.5494919660820755,
+    "n_boot_valid": 351,
+    "point": -0.4558303886925795
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "participation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 1,
+   "incremental_vs_best_baseline": -0.4558303886925795,
+   "lift_vs_base": -0.30087527352297594,
+   "mechanism": "metaorder_impact",
+   "n_dir_neg_active": 135,
+   "n_dir_pos_active": 13,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.2891247264770241,
+    "null_p95": 0.6991247264770241,
+    "observed": -0.30087527352297594,
+    "p_value": 1.0
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "metaorder_trajectory": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 4 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.5964928732183046,
+    "ci_lo": -0.4829881674152428,
+    "n_boot_valid": 484,
+    "point": 0.16321723035503954
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": true,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "participation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 4,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 21,
+   "incremental_vs_best_baseline": 0.16321723035503954,
+   "lift_vs_base": 0.31817234552464313,
+   "mechanism": "metaorder_trajectory",
+   "n_dir_neg_active": 290,
+   "n_dir_pos_active": 13,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.21499774235003993,
+    "null_p95": 0.5086485360008336,
+    "observed": 0.31817234552464313,
+    "p_value": 0.3853820598006645
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 4 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "ofi_state": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 18 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.1275819322821294,
+    "ci_lo": -0.24812286007164913,
+    "n_boot_valid": 500,
+    "point": -0.07704250990470074
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": true,
+    "d_placebo": true,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "ofi_shape",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 18,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 66,
+   "incremental_vs_best_baseline": -0.07704250990470074,
+   "lift_vs_base": 0.07791260526490285,
+   "mechanism": "ofi_state",
+   "n_dir_neg_active": 853,
+   "n_dir_pos_active": 569,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.003872201224498807,
+    "null_p95": 0.16882169617399378,
+    "observed": 0.07791260526490285,
+    "p_value": 0.23255813953488372
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 18 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "order_splitting": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "queue",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "order_splitting",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "participation_footprint": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "participation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "participation_footprint",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "passive_accumulation": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.2648915104276385,
+    "ci_lo": -0.40607546941047445,
+    "n_boot_valid": 349,
+    "point": -0.336283185840708
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 10,
+   "incremental_vs_best_baseline": -0.336283185840708,
+   "lift_vs_base": -0.22975929978118162,
+   "mechanism": "passive_accumulation",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 104,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.05790736688548506,
+    "null_p95": 0.5702407002188185,
+    "observed": -0.22975929978118162,
+    "p_value": 1.0
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "passive_distribution": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.35965488008313506,
+    "ci_lo": -0.5520682747511462,
+    "n_boot_valid": 341,
+    "point": -0.4558303886925795
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": true,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 1,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 6,
+   "incremental_vs_best_baseline": -0.4558303886925795,
+   "lift_vs_base": -0.30087527352297594,
+   "mechanism": "passive_distribution",
+   "n_dir_neg_active": 62,
+   "n_dir_pos_active": 0,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.03587527352297594,
+    "null_p95": 0.5324580598103574,
+    "observed": -0.30087527352297594,
+    "p_value": 1.0
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 1 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "pegged_repricing": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "participation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "pegged_repricing",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "queue_pull_stack": {
+   "best_baseline": "imb_l1",
+   "blocked": false,
+   "blocked_reasons": [],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": 0.07388989783167847,
+    "ci_lo": -0.23255653541801521,
+    "n_boot_valid": 500,
+    "point": -0.07438708972350738
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "queue",
+   "fdr_pass": false,
+   "fdr_q_value": 0.398671096345515,
+   "holdout_episodes": 37,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 97,
+   "incremental_vs_best_baseline": -0.07438708972350738,
+   "lift_vs_base": 0.0805680254460962,
+   "mechanism": "queue_pull_stack",
+   "n_dir_neg_active": 1635,
+   "n_dir_pos_active": 1349,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.003143314760089348,
+    "null_p95": 0.12232060276568398,
+    "observed": 0.0805680254460962,
+    "p_value": 0.13953488372093023
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "a_beats_best_baseline_ci: FAILED",
+    "b_permutation: FAILED",
+    "c_side_flip: FAILED",
+    "d_placebo: FAILED",
+    "f_loso: FAILED",
+    "g_liquidity: FAILED"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "KILL"
+  },
+  "quote_refresh_churn": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "queue",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "quote_refresh_churn",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "recovery_curve_state": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 9 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.051660338756124954,
+    "ci_lo": -0.46068096681628373,
+    "n_boot_valid": 500,
+    "point": -0.26465391810434424
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "ofi_shape",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 9,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 68,
+   "incremental_vs_best_baseline": -0.26465391810434424,
+   "lift_vs_base": -0.10969880293474066,
+   "mechanism": "recovery_curve_state",
+   "n_dir_neg_active": 803,
+   "n_dir_pos_active": 367,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.04567919509160338,
+    "null_p95": 0.0667717853005535,
+    "observed": -0.10969880293474066,
+    "p_value": 0.8272425249169435
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 9 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "resilience_asymmetry": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 16 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.021334964048394644,
+    "ci_lo": -0.22028563874783547,
+    "n_boot_valid": 500,
+    "point": -0.1224467078532866
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": false,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": false
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 16,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 159,
+   "incremental_vs_best_baseline": -0.1224467078532866,
+   "lift_vs_base": -0.015922821793760228,
+   "mechanism": "resilience_asymmetry",
+   "n_dir_neg_active": 2786,
+   "n_dir_pos_active": 3403,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": 0.007913656193661148,
+    "null_p95": 0.07841680084774919,
+    "observed": -0.015922821793760228,
+    "p_value": 0.717607973421927
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 16 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "stealth_accumulation": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": -0.265978705978706,
+    "ci_lo": -0.40378658876396545,
+    "n_boot_valid": 500,
+    "point": -0.336283185840708
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": false,
+    "e_wall_removal": true,
+    "f_loso": false,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 2,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 15,
+   "incremental_vs_best_baseline": -0.336283185840708,
+   "lift_vs_base": -0.22975929978118162,
+   "mechanism": "stealth_accumulation",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 74,
+   "outcome": "up",
+   "permutation": {
+    "n_perm": 300,
+    "null_mean": -0.013759299781181617,
+    "null_p95": 0.3069073668854858,
+    "observed": -0.22975929978118162,
+    "p_value": 1.0
+   },
+   "primary_direction": 1,
+   "reasons": [
+    "only 2 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "stealth_distribution": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "accumulation",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "stealth_distribution",
+   "n_dir_neg_active": 106,
+   "n_dir_pos_active": 0,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "trade_churn_repetition": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "trade_churn_repetition",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  },
+  "trap_pressure": {
+   "best_baseline": "imb_l1",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "divergence",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "trap_pressure",
+   "n_dir_neg_active": 1,
+   "n_dir_pos_active": 0,
+   "outcome": "down",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": -1,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": false,
+   "verdict": "BLOCKED"
+  },
+  "vacuum_snapback": {
+   "best_baseline": "price_only_response",
+   "blocked": true,
+   "blocked_reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "bootstrap": {
+    "block_len": 20,
+    "ci_hi": null,
+    "ci_lo": null,
+    "n_boot_valid": 0,
+    "point": null
+   },
+   "checks": {
+    "a_beats_best_baseline_ci": false,
+    "b_permutation": false,
+    "c_side_flip": null,
+    "d_placebo": null,
+    "e_wall_removal": null,
+    "f_loso": null,
+    "g_liquidity": null
+   },
+   "eligible_rows": 3913,
+   "family": "sweep",
+   "fdr_pass": null,
+   "fdr_q_value": null,
+   "holdout_episodes": 0,
+   "holdout_rows": 914,
+   "holdout_signal_rows": 0,
+   "incremental_vs_best_baseline": null,
+   "lift_vs_base": null,
+   "mechanism": "vacuum_snapback",
+   "n_dir_neg_active": 0,
+   "n_dir_pos_active": 0,
+   "outcome": "move",
+   "permutation": {
+    "n_perm": 0,
+    "null_mean": null,
+    "null_p95": null,
+    "observed": null,
+    "p_value": null
+   },
+   "primary_direction": 0,
+   "reasons": [
+    "only 0 distinct holdout episodes < n_min_episodes 30"
+   ],
+   "side_flip_not_applicable": true,
+   "verdict": "BLOCKED"
+  }
+ },
+ "rule": "\nPer mechanism, on the HOLDOUT split of the ELIGIBLE rows at the primary horizon h:\nBLOCKED  if the eligible table has fewer than n_min_rows rows, or the holdout has fewer than\n         n_min_episodes distinct signal episodes (the denominator is too small to decide).\nKEEP     if all of the following hold:\n           (a) lift(mechanism) \u2212 lift(best simple baseline) > 0 with block-bootstrap 95 % CI lower bound > 0;\n           (b) timestamp-permutation p < alpha AND the mechanism survives Benjamini\u2013Hochberg FDR (q) across\n               all mechanisms tested in the same run;\n           (c) side flip: the mirrored signal (opposite evidence direction) predicts the opposite outcome\n               (its lift > 0) \u2014 not applicable (skipped) for a mechanism that never carries a direction;\n           (d) anchor-shift placebo (signal taken from t \u2212 h) shows |lift| < \u00bd of the real lift;\n           (e) the sign of the incremental lift is preserved after largest-wall removal (imbalance baselines\n               recomputed without the largest displayed level);\n           (f) leave-one-symbol-out: the incremental lift stays > 0 for every left-out symbol;\n           (g) the incremental lift is > 0 in both liquidity halves (symbol day_volume median).\nKILL     otherwise. The hypothesis is not protected: failing (a) alone kills it; a check that cannot be\n         evaluated (no rows) counts as failed, except the not-applicable case in (c).\n"
+}
