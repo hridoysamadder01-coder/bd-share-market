@@ -1,4 +1,4 @@
-/* DSE Observation Tower — front end (vanilla JS, no build step, no CDN).
+/* DSE Observation Tower — front end (vanilla JS, no build step, nothing loaded from outside this server).
  *
  * Every number on screen comes from the API; a null field is rendered as '—'
  * (NOT_OBSERVABLE), never as 0. All panels render from one state dict, so the
@@ -14,7 +14,7 @@
 
   const S = {
     symbol: null, range: null, cur: null, cross: null, history: null, timeline: null, metrics: null,
-    live: true, playing: false, virt: null, busy: false, pollTimer: null, playTimer: null,
+    live: true, playing: false, virt: null, busy: false, pollTimer: null, playTimer: null, gen: 0,
     expanded: new Set(), showAllMech: false, tlSegments: [],
   };
 
@@ -51,9 +51,40 @@
       if (Math.abs(v) >= 1000) return v.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d });
       return v.toFixed(d);
     }
-    if (Array.isArray(v)) return v.length ? v.map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x))).join(", ") : NA;
-    if (typeof v === "object") return JSON.stringify(v);
+    if (Array.isArray(v)) return v.length ? v.map((x) => (x && typeof x === "object" ? compact(x) : String(x))).join(", ") : NA;
+    if (typeof v === "object") return compact(v);
     return String(v);
+  }
+  /* compact "k:v k:v" rendering of a small dict (nested dicts are summarised, never invented) */
+  function compact(o) {
+    const parts = [];
+    for (const [k, x] of Object.entries(o)) {
+      let s;
+      if (x === null || x === undefined) s = NA;
+      else if (typeof x === "number") s = Number.isInteger(x) ? String(x) : x.toFixed(3);
+      else if (Array.isArray(x)) s = `[${x.length}]`;
+      else if (typeof x === "object") s = `{${Object.keys(x).length}}`;
+      else s = String(x);
+      parts.push(`${k}:${s}`);
+    }
+    return parts.length ? parts.join(" ") : "{}";
+  }
+  /* robust y-range: median ± 8·MAD of the values (2nd–98th percentile when MAD is 0),
+   * widened to include the newest value; values outside are drawn clipped at the edge and the
+   * chart label says so — outliers (e.g. a source publishing 0 pre-open) stay visible but do not
+   * flatten the rest of the session */
+  function robustRange(vals, latest) {
+    const s = vals.slice().sort((a, b) => a - b);
+    const q = (arr, p) => arr[Math.min(arr.length - 1, Math.max(0, Math.floor(p * (arr.length - 1))))];
+    const med = q(s, 0.5);
+    const dev = s.map((v) => Math.abs(v - med)).sort((a, b) => a - b);
+    const mad = q(dev, 0.5);
+    let lo, hi;
+    if (mad > 0) { lo = Math.max(s[0], med - 8 * mad); hi = Math.min(s[s.length - 1], med + 8 * mad); }
+    else { lo = q(s, 0.02); hi = q(s, 0.98); }
+    if (isNum(latest)) { lo = Math.min(lo, latest); hi = Math.max(hi, latest); }
+    const clipped = s[0] < lo || s[s.length - 1] > hi;
+    return { lo, hi, clipped };
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function cls(v, kind) {
@@ -68,7 +99,8 @@
     el.innerHTML = rows.map(([k, v, o]) => {
       o = o || {};
       const txt = o.text !== undefined ? o.text : f(v, o.d);
-      return `<div class="row"><span class="k">${esc(k)}</span><span class="v ${cls(v, o.kind)}">${esc(txt)}</span></div>`;
+      const wide = v && typeof v === "object" && !Array.isArray(v) && o.text === undefined ? " wide" : "";
+      return `<div class="row${wide}"><span class="k">${esc(k)}</span><span class="v ${cls(v, o.kind)}">${esc(txt)}</span></div>`;
     }).join("");
   }
   /* gauge: -1..1 centred (bipolar) or 0..1 */
@@ -139,11 +171,13 @@
 
   async function showAt(t) {                     // t: epoch ms or null (latest)
     if (!S.symbol) return;
+    const gen = S.gen;                           // a newer navigation (scrub, symbol change) discards this answer
     S.busy = true;
     try {
       const q = t === null ? "latest" : encodeURIComponent(iso(t));
       const sym = encodeURIComponent(S.symbol);
       const [st, cr] = await Promise.all([api(`/api/state/${sym}?at=${q}`), api(`/api/cross/${sym}?at=${q}`).catch(() => null)]);
+      if (gen !== S.gen) return;
       S.cur = st; S.cross = cr;
       if (t !== null) { try { fetch(`/api/replay/seek?symbol=${sym}&at=${q}`, { method: "POST" }); } catch (_) { /* cursor is advisory */ } }
       render();
@@ -185,11 +219,11 @@
     const tb = $("#ladder tbody");
     if (!st) { tb.innerHTML = ""; $("#book-l1").innerHTML = ""; $("#book-geometry").innerHTML = ""; return; }
     $("#book-sub").textContent = `${st.book_source || "no book source"} · age ${f(st.book_age_s, 1)}s` + (st.empty_book ? " · EMPTY" : st.one_sided ? " · ONE-SIDED" : "") + (st.crossed ? " · CROSSED" : "") + (st.locked ? " · LOCKED" : "");
-    $("#book-l1").innerHTML =
-      `<span>BID <b class="bidpx">${f(st.best_bid)}</b> × ${f(st.bid_qty1, 0)}</span>` +
-      `<span>SPREAD <b>${f(st.spread)}</b> (${f(st.spread_ticks, 1)} t)</span>` +
-      `<span>ASK <b class="askpx">${f(st.best_ask)}</b> × ${f(st.ask_qty1, 0)}</span>` +
-      `<span>MID <b>${f(st.mid, 3)}</b></span><span>µP <b>${f(st.microprice, 3)}</b></span><span>LTP <b>${f(st.ltp)}</b></span><span>TICK <b>${f(st.tick_size)}</b></span>`;
+    $("#book-l1").innerHTML = [
+      ["BID", `<b class="bidpx">${f(st.best_bid)}</b><small>×${f(st.bid_qty1, 0)}</small>`], ["SPREAD", `<b>${f(st.spread)}</b><small>${f(st.spread_ticks, 1)}t</small>`],
+      ["ASK", `<b class="askpx">${f(st.best_ask)}</b><small>×${f(st.ask_qty1, 0)}</small>`], ["MID", `<b>${f(st.mid, 3)}</b>`], ["µPRICE", `<b>${f(st.microprice, 3)}</b>`],
+      ["LTP", `<b>${f(st.ltp)}</b>`], ["TICK", `<b>${f(st.tick_size)}</b>`],
+    ].map(([k, v]) => `<div class="l1c"><span class="k">${k}</span>${v}</div>`).join("");
     const bids = st.bids || [], asks = st.asks || [];
     const maxQ = Math.max(1, ...bids.map((l) => l[1] || 0), ...asks.map((l) => l[1] || 0));
     const wb = st.wall_bid && st.wall_bid.price, wa = st.wall_ask && st.wall_ask.price;
@@ -287,7 +321,7 @@
     ctx.font = "10px monospace"; ctx.fillStyle = "#7f8ea0";
     const tcur = S.cur ? ms(S.cur.t) : null;
     const pts = ((S.history && S.history.points) || []).filter((p) => isNum(p.signed_flow_window) && isNum(p.price_only_response) && ms(p.t) <= tcur);
-    if (!pts.length) { ctx.fillText("flow-impact — (signed flow or price response not observable)", 4, 12); return; }
+    if (!pts.length) { ctx.fillText("— (signed flow / price response not observable)", 4, 12); return; }
     const xs = pts.map((p) => p.signed_flow_window), ys = pts.map((p) => p.price_only_response);
     const ax = Math.max(1e-9, ...xs.map(Math.abs)), ay = Math.max(1e-9, ...ys.map(Math.abs));
     const X = (x) => w / 2 + (x / ax) * (w / 2 - 6), Y = (y) => h / 2 - (y / ay) * (h / 2 - 6);
@@ -325,7 +359,9 @@
     if (!st) { $("#circuit-band").innerHTML = ""; $("#circuit-kv").innerHTML = ""; return; }
     const c = st.circuit || {};
     const lockTxt = c.locked_up ? '<span class="lock">LOCKED UP</span>' : c.locked_down ? '<span class="lock">LOCKED DOWN</span>' : c.hit_up ? "HIT UP" : c.hit_down ? "HIT DOWN" : (c.locked_up === null || c.locked_up === undefined) ? NA : "free";
-    $("#circuit-band").innerHTML = `<span>LOWER <b>${f(c.lower_limit)}</b> ◄ ${f(c.dist_down_ticks, 0)}t / ${f(c.dist_down_pct, 2)}%</span><span>${esc(c.price_basis || "price")} <b>${f(c.price)}</b> · ${lockTxt}</span><span>${f(c.dist_up_ticks, 0)}t / ${f(c.dist_up_pct, 2)}% ► UPPER <b>${f(c.upper_limit)}</b></span>`;
+    $("#circuit-band").innerHTML = `<div><span class="k">LOWER</span><b>${f(c.lower_limit)}</b><small>◄ ${f(c.dist_down_ticks, 0)}t · ${f(c.dist_down_pct, 2)}%</small></div>` +
+      `<div class="c"><span class="k">${esc(c.price_basis || "price")}</span><b>${f(c.price)}</b><small>${lockTxt}</small></div>` +
+      `<div class="r"><span class="k">UPPER</span><b>${f(c.upper_limit)}</b><small>${f(c.dist_up_ticks, 0)}t · ${f(c.dist_up_pct, 2)}% ►</small></div>`;
     kv($("#circuit-kv"), [
       ["rule source", c.rule_source, { text: `${c.rule_source || NA}${c.unverified ? " (unverified)" : ""}` }], ["band", c.band, { d: 4 }], ["yclose", c.yclose],
       ["nearer", c.nearer_limit], ["approach vel", c.approach_velocity, { kind: "sign" }], ["approach accel", c.approach_acceleration, { kind: "sign" }],
@@ -338,7 +374,7 @@
       ["shares to door", c.shares_to_door, { d: 0 }], ["door visible", c.door_visible], ["shares to floor", c.shares_to_floor, { d: 0 }], ["floor visible", c.floor_visible],
       ["streak up / down", null, { text: `${f(c.consecutive_upper_streak, 0)} / ${f(c.consecutive_lower_streak, 0)}` }],
       ["continuation str", c.streak_continuation_strength, { d: 3 }], ["weakening", c.streak_weakening, { kind: "flag" }], ["break day", c.break_day, { kind: "flag" }],
-      ["break behaviour", c.break_behaviour], ["next session", c.next_session, { text: c.next_session ? JSON.stringify(c.next_session) : NA }],
+      ["break behaviour", c.break_behaviour], ["next session", c.next_session],
       ["exception", c.exception, { kind: "flag" }], ["pressure before hit", c.pressure_before_hit, { d: 3 }],
       ["layer", (st.layer_states || {}).circuit], ["streak layer", (st.layer_states || {}).streak],
       ["auction phase", (st.auction || {}).phase], ["indicative", (st.auction || {}).indicative_price], ["auction pressure", (st.auction || {}).auction_pressure, { kind: "sign", d: 3 }],
@@ -354,9 +390,9 @@
       ["breadth up/down/n", null, { text: `${f(x.breadth_up, 0)} / ${f(x.breadth_down, 0)} / ${f(x.breadth_n, 0)}` }], ["breadth net", x.breadth_net, { kind: "sign", d: 3 }], ["breadth age s", x.breadth_age_s, { d: 0 }],
       ["symbol ret 60s", x.symbol_return_60s, { kind: "sign", d: 5 }], ["market ret 60s", x.market_return_60s, { kind: "sign", d: 5 }], ["vs market", x.symbol_vs_market_60s, { kind: "sign", d: 5 }],
       ["syms with ret", x.n_symbols_with_return, { d: 0 }], ["lead/lag pairs", x.lead_lag_pairs_evaluated, { d: 0 }], ["basket sync", x.basket_sync, { d: 3 }],
-      ["circuit cluster", x.circuit_cluster, { text: x.circuit_cluster ? JSON.stringify(x.circuit_cluster) : NA }],
-      ["simult. liq change", x.simultaneous_liquidity_change, { text: x.simultaneous_liquidity_change === null || x.simultaneous_liquidity_change === undefined ? NA : typeof x.simultaneous_liquidity_change === "object" ? JSON.stringify(x.simultaneous_liquidity_change) : f(x.simultaneous_liquidity_change, 3) }],
-      ["sync expansion", x.synchronized_expansion, { text: x.synchronized_expansion === null || x.synchronized_expansion === undefined ? NA : typeof x.synchronized_expansion === "object" ? JSON.stringify(x.synchronized_expansion) : f(x.synchronized_expansion, 3) }],
+      ["circuit cluster", x.circuit_cluster, { d: 3 }],
+      ["simult. liq change", x.simultaneous_liquidity_change, { d: 3 }],
+      ["sync expansion", x.synchronized_expansion, { d: 3 }],
       ["sector", sec.sector, { text: `${sec.sector || NA}${sec.sector_source ? " (" + sec.sector_source + ")" : ""}` }], ["sector n", sec.n, { d: 0 }],
       ["sector ret 60s", sec.sector_return_60s, { kind: "sign", d: 5 }], ["peer ret 60s", sec.peer_return_60s, { kind: "sign", d: 5 }], ["vs sector", sec.symbol_vs_sector_60s, { kind: "sign", d: 5 }],
       ["sector pressure", sec.sector_pressure, { kind: "sign", d: 3 }], ["sector breadth", sec.sector_breadth, { kind: "sign", d: 3 }],
@@ -365,7 +401,7 @@
     tb.innerHTML = rel.length ? rel.map((r) => {
       const lock = r.locked_up ? "UP" : r.locked_down ? "DOWN" : (r.locked_up === null || r.locked_up === undefined) ? NA : "free";
       const pr = isNum(r.pressure_strength) ? `${r.pressure_direction > 0 ? "+" : r.pressure_direction < 0 ? "−" : "·"}${f(r.pressure_strength, 2)}` : NA;
-      return `<tr class="cross-row"><td>${esc(r.symbol)}${r.present ? "" : " <span class=\"pill\">not in store</span>"}</td><td>${esc(r.roles.join(","))}</td><td>${f(r.lag_s, 0)}</td><td>${f(r.corr, 3)}</td><td>${f(r.mid, 3)}</td><td>${f(r.ltp)}</td><td>${esc(pr)}</td><td>${esc(lock)}</td></tr>`;
+      return `<tr class="cross-row"><td>${esc(r.symbol)}${r.present ? "" : " <span class=\"pill\" title=\"no state file for this symbol in the store\">ext</span>"}</td><td>${esc(r.roles.join(","))}</td><td>${f(r.lag_s, 0)}</td><td>${f(r.corr, 3)}</td><td>${f(r.mid, 3)}</td><td>${f(r.ltp)}</td><td>${esc(pr)}</td><td>${esc(lock)}</td></tr>`;
     }).join("") : `<tr><td colspan="8" class="na">no leaders / laggers / sector peers observable at this time</td></tr>`;
   }
 
@@ -378,7 +414,7 @@
       const dis = Object.entries(s.disagreement || {}).map(([k, v]) => `${esc(k)}: ${esc(f(v.this))} vs ${esc(f(v.other))} (${esc(v.other_source || "?")})`).join("; ") || NA;
       return `<tr class="src-row${s.stale ? " stale" : ""}" data-source="${esc(s.source)}"><td>${esc(s.source)}</td><td>${esc(hms(s.last_update))}</td><td class="${s.stale ? "bad" : ""}">${f(s.freshness_s, 1)}</td><td>${f(s.cadence_s, 1)}</td>` +
         `<td>${s.stale ? '<span class="pill bad">STALE</span>' : "no"}</td><td>${s.duplicate ? '<span class="pill warn">dup</span>' : "no"}</td><td>${f(s.updates, 0)}</td><td>${f(s.duplicates, 0)}</td><td>${f(s.gaps, 0)}</td>` +
-        `<td>${agr}</td><td>${dis}</td><td title="${esc((s.field_coverage || []).join(", "))}">${(s.field_coverage || []).length}</td></tr>`;
+        `<td>${agr}</td><td class="dis">${dis}</td><td title="${esc((s.field_coverage || []).join(", "))}">${(s.field_coverage || []).length}</td></tr>`;
     }).join("") || `<tr><td colspan="12" class="na">no sources observed</td></tr>`;
     const prov = Object.entries(st.provenance || {}).map(([k, v]) => `${k}←${v}`).join(" ");
     const agreeState = Object.entries(st.source_agreement || {}).map(([k, v]) => `${k}:${v ? "✓" : "✗"}`).join(" ");
@@ -417,13 +453,16 @@
     }
     ctx.fillStyle = "#7f8ea0";
     ctx.fillText(hms(t0), L, h - 4); const lastLbl = hms(t1); ctx.fillText(lastLbl, w - Rm - lastLbl.length * 6, h - 4);
+    let clipped = false;
     if (!vals.length) {
       ctx.fillText("mid / ltp not observable up to the cursor", L + 6, 14);
     } else {
-      let y0 = Math.min(...vals), y1 = Math.max(...vals);
+      const lastPt = pts[pts.length - 1];
+      const rr = robustRange(vals, isNum(lastPt.mid) ? lastPt.mid : lastPt.ltp);
+      let y0 = rr.lo, y1 = rr.hi; clipped = rr.clipped;
       if (y1 - y0 < 1e-9) { y0 -= 0.5; y1 += 0.5; }
       const pad = (y1 - y0) * 0.08; y0 -= pad; y1 += pad;
-      const Y = (v) => T + (1 - (v - y0) / (y1 - y0)) * (h - T - B);
+      const Y = (v) => Math.max(T, Math.min(h - B, T + (1 - (v - y0) / (y1 - y0)) * (h - T - B)));
       ctx.strokeStyle = "#22303f";
       for (let i = 0; i <= 4; i++) { const v = y0 + (i / 4) * (y1 - y0); ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - Rm, Y(v)); ctx.stroke(); ctx.fillText(f(v, 2), 2, Y(v) + 3); }
       for (const [k, color] of CHART_LINES) {
@@ -439,7 +478,7 @@
     }
     ctx.strokeStyle = "#ffb74d"; ctx.beginPath(); ctx.moveTo(X(tcur), T); ctx.lineTo(X(tcur), h - B); ctx.stroke();
     const nEp = (H.episodes || []).filter((e) => ms(e.start) <= tcur).length;
-    $("#chart-sub").textContent = `${pts.length}/${H.n_total} states ≤ cursor${H.downsampled ? " (downsampled)" : ""} · ${nEp} mechanism episodes`;
+    $("#chart-sub").textContent = `${pts.length}/${H.n_total} states ≤ cursor${H.downsampled ? " (downsampled)" : ""} · ${nEp} mechanism episodes${clipped ? " · y: 2–98th pct, outliers clipped to the edge" : ""}`;
     $("#chart-legend").innerHTML = CHART_LINES.map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("") +
       `<span><i style="background:rgba(38,194,129,0.5)"></i>episode</span><span><i style="background:rgba(239,83,80,0.5)"></i>failed episode</span><span><i style="background:#ffb74d"></i>cursor</span>`;
   }
@@ -504,7 +543,7 @@
 
   // ------------------------------------------------------------------ replay / live control
   function stopPlay() { S.playing = false; if (S.playTimer) { clearInterval(S.playTimer); S.playTimer = null; } renderReplay(); }
-  function goReplay(t) { S.live = false; stopPoll(); S.virt = t; return showAt(t); }
+  function goReplay(t) { S.live = false; S.gen++; stopPoll(); S.virt = t; return showAt(t); }
   function sliderTime() {
     if (!S.range) return null;
     const v = parseInt($("#replay-slider").value, 10) / SLIDER_MAX;
@@ -514,12 +553,15 @@
     stopPoll();
     S.pollTimer = setInterval(async () => {
       if (!S.live || S.busy) return;
-      try { await loadRange(); await loadSeries(); await loadMetrics(); await showAt(null); } catch (e) { setStatus("poll error: " + e.message, true); }
+      try {
+        await loadRange(); await loadSeries(); await loadMetrics();
+        if (S.live) await showAt(null);          // re-checked: a scrub may have happened while loading
+      } catch (e) { setStatus("poll error: " + e.message, true); }
     }, POLL_MS);
   }
   function stopPoll() { if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } }
   async function goLive() {
-    stopPlay(); S.live = true;
+    stopPlay(); S.live = true; S.gen++;
     await loadRange(); await loadSeries(); await loadMetrics(); await showAt(null);
     startPoll();
   }
@@ -540,7 +582,7 @@
   }
 
   async function setSymbol(sym) {
-    S.symbol = sym; S.cur = null; S.cross = null; S.history = null; S.timeline = null; S.expanded.clear(); S.virt = null;
+    S.symbol = sym; S.cur = null; S.cross = null; S.history = null; S.timeline = null; S.expanded.clear(); S.virt = null; S.gen++;
     location.hash = sym;
     stopPlay();
     await goLive();
@@ -558,7 +600,7 @@
       $("#btn-last").addEventListener("click", () => S.cur && goReplay(ms(S.cur.last_t)));
       $("#btn-prev").addEventListener("click", () => S.cur && S.cur.prev_t && goReplay(ms(S.cur.prev_t)));
       $("#btn-next").addEventListener("click", () => S.cur && S.cur.next_t && goReplay(ms(S.cur.next_t)));
-      $("#replay-slider").addEventListener("input", () => { stopPlay(); const t = sliderTime(); if (t !== null) goReplay(t); });
+      $("#replay-slider").addEventListener("input", () => { const t = sliderTime(); stopPlay(); if (t !== null) goReplay(t); });
       $("#speed").addEventListener("change", () => { /* read on each tick */ });
       $("#mech-all").addEventListener("change", (e) => { S.showAllMech = e.target.checked; renderMech(S.cur && S.cur.state); });
       $("#mech-table").addEventListener("click", (e) => {

@@ -39,7 +39,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from ..events import utc
@@ -57,6 +57,8 @@ def _parse_at(at: Optional[str]) -> Optional[datetime]:
     """'latest' / None → None; otherwise an aware UTC datetime or HTTP 400."""
     if at is None or at == "" or at == "latest":
         return None
+    # an unescaped '+' of a UTC offset arrives URL-decoded as a space; restore it (a space there is never valid)
+    at = re.sub(r" (\d{2}:?\d{2})$", r"+\1", at.strip())
     try:
         return utc(at)
     except (ValueError, TypeError) as e:
@@ -310,9 +312,8 @@ class StoreReader:
         if n <= max_points:
             idx = list(range(lo, hi))
         else:
-            step = n / float(max_points)
-            idx = sorted({lo + int(round(k * step)) for k in range(max_points)} | {lo, hi - 1})
-            idx = [i for i in idx if lo <= i < hi]
+            # exactly max_points indices, evenly spaced from the first to the last state of the range
+            idx = [lo + int(round(k * (n - 1) / float(max_points - 1))) for k in range(max_points)]
         points = []
         for i in idx:
             d = f.read(i) if i in f._cache else self._read_nocache(f, i)
@@ -524,6 +525,12 @@ def create_app(store: str) -> FastAPI:
     @app.get("/")
     def index() -> Any:
         return FileResponse(os.path.join(STATIC_DIR, "index.html"), media_type="text/html")
+
+    @app.get("/favicon.ico")
+    def favicon() -> Any:
+        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#0b1017"/>'
+               '<rect x="6" y="2" width="4" height="12" fill="#4fc3f7"/><rect x="3" y="12" width="10" height="2" fill="#4fc3f7"/></svg>')
+        return Response(content=svg, media_type="image/svg+xml")
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

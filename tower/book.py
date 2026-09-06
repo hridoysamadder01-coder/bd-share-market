@@ -44,11 +44,33 @@ WINDOW_S = 60.0                # velocity / acceleration / OFI / migration windo
 WALL_PERSIST_SHARE = 0.5       # persistence counts while qty ≥ 50 % of its current size
 _ACTIONS_DELETE = {"DELETE", "REMOVE", "D", "2"}       # FIX MDUpdateAction 2 = Delete
 _ACTIONS_SET = {"NEW", "ADD", "CHANGE", "UPDATE", "N", "C", "0", "1", None}
+_SIDES_BID = {"bid", "b", "buy", "0"}                  # FIX MDEntryType 0 = Bid
+_SIDES_ASK = {"ask", "a", "sell", "s", "offer", "o", "1"}   # FIX MDEntryType 1 = Offer
 
 
-def _px(p: Any) -> float:
-    """Canonical float price key (rounds away float noise so 461.80000001 == 461.8)."""
-    return round(float(p), 6)
+def _px(p: Any) -> Optional[float]:
+    """Canonical float price key (rounds away float noise so 461.80000001 == 461.8).
+    ``None`` for a price that is missing or not finite — such a row is not a level."""
+    if p is None:
+        return None
+    try:
+        f = float(p)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(f):
+        return None
+    return round(f, 6)
+
+
+def _side(side: Any) -> str:
+    """Canonical side name. Unknown or missing sides raise: silently routing an
+    update to the wrong side would corrupt the book without any visible error."""
+    s = str(side).strip().lower() if side is not None else ""
+    if s in _SIDES_BID:
+        return "bid"
+    if s in _SIDES_ASK:
+        return "ask"
+    raise ValueError(f"unknown book side {side!r} (expected bid/ask)")
 
 
 @dataclass
@@ -67,12 +89,19 @@ class Level:
     history: Deque[Tuple[datetime, float]] = field(default_factory=lambda: deque(maxlen=512))
 
     def set_qty(self, t: datetime, qty: float, orders: Optional[int]) -> float:
-        """Apply a new quantity; returns Δqty. Records history only on change."""
+        """Apply a new quantity; returns Δqty. Records history only on change.
+
+        An order count is kept only while it describes the displayed quantity:
+        when the quantity changes and the observation carries no count, the old
+        count is no longer observed (it belonged to the previous size) → None.
+        """
         dq = qty - self.qty
         if dq != 0.0:
             self.qty = qty
             self.last_changed = t
             self.history.append((t, qty))
+            if orders is None:
+                self.orders = None
         if orders is not None:
             if orders != self.orders:
                 self.last_changed = t
@@ -147,11 +176,13 @@ class EvolvingBook:
         self.velocity: Optional[float] = None
         self.acceleration: Optional[float] = None
         # ---- rolling trackers (causal; keyed by event time)
-        self._abs_dq = RollingSeries(window_s=max(600.0, 2 * self.window_s), min_keep=0)
-        self._vel = RollingSeries(window_s=max(600.0, 2 * self.window_s), min_keep=0)
-        self._ofi = RollingSeries(window_s=max(600.0, 2 * self.window_s), min_keep=0)
-        self._wall_px: Dict[str, _Track] = {"bid": _Track(), "ask": _Track()}
-        self._mean_dist: Dict[str, _Track] = {"bid": _Track(), "ask": _Track()}
+        keep_s = max(600.0, 2 * self.window_s)          # every tracker must outlive one look-back window
+        self._abs_dq = RollingSeries(window_s=keep_s, min_keep=0)
+        self._vel = RollingSeries(window_s=keep_s, min_keep=0)
+        self._ofi = RollingSeries(window_s=keep_s, min_keep=0)
+        # wall track holds (price, dist_ticks) so migration in distance is measured against the touch *then*
+        self._wall_px: Dict[str, _Track] = {"bid": _Track(keep_s), "ask": _Track(keep_s)}
+        self._mean_dist: Dict[str, _Track] = {"bid": _Track(keep_s), "ask": _Track(keep_s)}
 
     # ------------------------------------------------------------------ views
     def levels(self, side: str) -> List[Level]:
@@ -185,13 +216,15 @@ class EvolvingBook:
             if lv is None:
                 continue
             p = _px(lv[0])
+            if p is None:
+                continue                                   # no finite price → not a displayed level
             q = float(lv[1]) if lv[1] is not None else 0.0
             o: Optional[int] = None
             if len(lv) > 2 and lv[2] is not None:
                 o = int(lv[2])
             if orders is not None and i < len(orders) and orders[i] is not None:
                 o = int(orders[i])
-            if q <= 0 or math.isnan(q):
+            if not math.isfinite(q) or q <= 0:
                 continue
             if p in out:
                 out[p][0] += q
@@ -203,22 +236,25 @@ class EvolvingBook:
         return [(p, out[p][0], out[p][1]) for p in order]
 
     def apply_snapshot(self, t: datetime, bids: Optional[Iterable[Any]], asks: Optional[Iterable[Any]],
+                       orders: Optional[Any] = None,
                        bid_orders: Optional[Sequence[Optional[int]]] = None,
-                       ask_orders: Optional[Sequence[Optional[int]]] = None,
-                       orders: Optional[Any] = None) -> List[Dict[str, Any]]:
+                       ask_orders: Optional[Sequence[Optional[int]]] = None) -> List[Dict[str, Any]]:
         """Replace the displayed book with a full image observed at ``t``.
 
         Levels whose price persists keep their ``first_seen`` and history;
         prices that vanish are dropped (re-appearance starts a new level).
-        ``orders`` may be given as ``(bid_orders, ask_orders)`` or
-        ``{"bid": [...], "ask": [...]}`` (CONTRACTS signature); the explicit
-        keyword lists take precedence. Returns the level events of this update.
+        ``orders`` (the fourth positional argument, per CONTRACTS) may be given
+        as ``(bid_orders, ask_orders)`` or ``{"bid": [...], "ask": [...]}``;
+        the explicit keyword lists take precedence when given.
+        Returns the level events of this update.
         """
-        if orders is not None and bid_orders is None and ask_orders is None:
+        if orders is not None:
             if isinstance(orders, dict):
-                bid_orders, ask_orders = orders.get("bid"), orders.get("ask")
+                ob, oa = orders.get("bid"), orders.get("ask")
             else:
-                bid_orders, ask_orders = orders[0], orders[1]
+                ob, oa = orders[0], orders[1]
+            bid_orders = ob if bid_orders is None else bid_orders
+            ask_orders = oa if ask_orders is None else ask_orders
         prev_state = self._pre_state()
         nb = self._normalise(bids, bid_orders)
         na = self._normalise(asks, ask_orders)
@@ -255,8 +291,9 @@ class EvolvingBook:
         position, which for a price-level book equals setting the resolved
         price. Returns the level events of this update.
         """
-        side = "bid" if str(side).lower().startswith("b") else "ask"
-        act = None if action is None else str(action).upper()
+        side = _side(side)
+        # an unrecognised action (e.g. the FIX adapter's "UNKNOWN") is governed by the qty rule below
+        act = None if action is None else str(action).strip().upper()
         prev_state = self._pre_state()
         cur = self._bids if side == "bid" else self._asks
         if price is None:
@@ -269,6 +306,8 @@ class EvolvingBook:
                 # level beyond the displayed range and no price: nothing observable to change
                 return self._post_update(t, prev_state)
         p = _px(price)
+        if p is None:
+            raise ValueError(f"apply_update needs a finite price, got {price!r}")
         remove = act in _ACTIONS_DELETE or (qty is not None and float(qty) <= 0)
         if remove:
             cur.pop(p, None)
@@ -281,6 +320,8 @@ class EvolvingBook:
                     self._has_orders = True
             else:
                 q = float(qty)
+                if not math.isfinite(q):
+                    raise ValueError(f"apply_update needs a finite quantity, got {qty!r}")
                 lv = cur.get(p)
                 if lv is None:
                     lv = Level(price=p, qty=q, orders=order_count, first_seen=t, last_changed=t)
@@ -293,8 +334,11 @@ class EvolvingBook:
         return self._post_update(t, prev_state)
 
     # ------------------------------------------------------------ update core
+    def _orders_image(self) -> List[Tuple[float, str, Optional[int]]]:
+        return [(l.price, s, l.orders) for s in ("bid", "ask") for l in self.levels(s)]
+
     def _pre_state(self) -> Dict[str, Any]:
-        return {"bids": self.bids(), "asks": self.asks(),
+        return {"bids": self.bids(), "asks": self.asks(), "orders": self._orders_image(),
                 "tb": self._touch("bid"), "ta": self._touch("ask"), "first": self.t is None}
 
     def _post_update(self, t: datetime, prev: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -322,13 +366,15 @@ class EvolvingBook:
             self.ofi = self._ofi_step(tb0, tb1, ta0, ta1)
             if self.ofi is not None:
                 self._ofi.push(t, self.ofi)
-            self.unchanged_run = self.unchanged_run + 1 if not ev else 0
+            # an order-count change with no size change is still a change of the displayed book
+            changed = bool(ev) or prev["orders"] != self._orders_image()
+            self.unchanged_run = 0 if changed else self.unchanged_run + 1
             self._abs_dq.push(t, sum(abs(e["dq"]) for e in ev))
         self._update_velocity(t)
-        # geometry trackers for migration
+        # geometry trackers for migration (wall: price and its distance from the touch at that time)
         for s in ("bid", "ask"):
             w = self._wall(s, t, track=False)
-            self._wall_px[s].push(t, w["price"] if w else None)
+            self._wall_px[s].push(t, (w["price"], w["dist_ticks"]) if w else None)
             self._mean_dist[s].push(t, self._mean_distance(s))
         return self.last_events
 
@@ -401,7 +447,9 @@ class EvolvingBook:
     def _update_velocity(self, t: datetime) -> None:
         """velocity = Σ|Δqty| over updates in (t − W, t] divided by min(W, t − t_first)
         (units per second); None until a second observation exists.  acceleration =
-        (velocity(t) − velocity(t − W)) / W; None until a velocity ≥ W old exists."""
+        (velocity(t) − velocity(t')) / (t − t') where t' is the time of the last velocity
+        observation at or before t − W (the actual elapsed time, never a nominal W — with
+        sparse updates t' can be far older than W); None until such a point exists."""
         if self.t_first is None or t == self.t_first or self.n_updates < 2:
             self.velocity = None
             self.acceleration = None
@@ -417,8 +465,13 @@ class EvolvingBook:
         total = sum(p.v for p in self._abs_dq.buf if p.t > cutoff)
         self.velocity = total / span
         self._vel.push(t, self.velocity)
-        prev_v = self._vel.value_at_or_before(t - timedelta(seconds=self.window_s))
-        self.acceleration = None if prev_v is None else (self.velocity - prev_v) / self.window_s
+        t_then = t - timedelta(seconds=self.window_s)
+        prev_pt = next((p for p in reversed(self._vel.buf) if p.t <= t_then), None)
+        if prev_pt is None:
+            self.acceleration = None
+        else:
+            gap = (t - prev_pt.t).total_seconds()
+            self.acceleration = (self.velocity - prev_pt.v) / gap if gap > 0 else None
 
     def ofi_window(self) -> Optional[float]:
         """Rolling Σ e_n over the trailing window (None when no e_n was observable)."""
@@ -448,8 +501,11 @@ class EvolvingBook:
 
         persistence_s: time the level has continuously held ≥ 50 % of its
         current size.  migrated_ticks: (price_now − price_W_ago) / tick, signed
-        in price; migrated_dist_ticks: change of its distance from the touch.
-        Both None when no observation ≥ W old exists or the side was empty then.
+        in price; migrated_dist_ticks: dist_now − dist_W_ago, the change of the
+        wall's distance from the touch *as it was at each time* (so a wall that
+        stays at one price while the touch walks away migrates in distance but
+        not in price).  Both None when no observation ≥ W old exists or the side
+        was empty then.
         """
         ls = self.levels(side)
         if not ls:
@@ -465,12 +521,10 @@ class EvolvingBook:
                                "migrated_ticks": None, "migrated_dist_ticks": None}
         if track:
             t_then = now - timedelta(seconds=self.window_s)
-            found, px_then = self._wall_px[side].at_or_before(t_then)
-            if found and px_then is not None:
+            found, then = self._wall_px[side].at_or_before(t_then)
+            if found and then is not None:
+                px_then, d_then = then
                 out["migrated_ticks"] = round((wall.price - px_then) / self.tick, 6)
-                # distance then is not stored; reconstruct from the touch then via mean-dist track? no —
-                # report the distance change relative to the *current* touch (pure wall move in ticks)
-                d_then = self._dist_ticks(side, px_then, touch)
                 out["migrated_dist_ticks"] = round(out["dist_ticks"] - d_then, 6)
         return out
 
