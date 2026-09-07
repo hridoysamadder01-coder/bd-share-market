@@ -5,8 +5,10 @@ One rerunnable collector (`collector/dse_public_collector.py`), three passes on 
 flows reproduced, nothing authenticated or paywalled touched, no field invented.
 
 Dataset: `evidence/public/2026-09-06/` (normalized + metadata). Byte-exact raw bodies stay
-under `data/raw/` (3,111 files, 49 MB, gzip above 64 KB with a verified round trip) and are
-shipped in the artifact zip; they are not committed.
+under `runtime/public_data/raw/` (3,111 files, 43.6 MB, gzip above 64 KB with a verified round
+trip) and are shipped in the artifact zip; they are not committed. `metadata/validation.json`
+is the combined view of all three passes, recomputed from the files on disk, and
+`metadata/raw_index.json` lists every stored payload with its sha256.
 
 ## What came back
 
@@ -69,8 +71,9 @@ These need a richer feed: a HAR recording of the owner's own broker terminal ses
 ## Rerun
 
 ```bash
-python3 -m collector.dse_public_collector --out data --all-depth --all-tape --company \
-        --extras --history-start 2024-01-01
+python3 -m collector.dse_public_collector --all-depth --all-tape --company \
+        --extras --history-start 2024-01-01          # → runtime/public_data (git-ignored)
+python3 -m collector.dse_public_collector --out runtime/public_data --rebuild-metadata
 ```
 
 Parsers are covered by `tests/test_collector.py` (8 tests on archived real payloads).

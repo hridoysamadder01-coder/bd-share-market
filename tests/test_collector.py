@@ -114,3 +114,60 @@ def test_page_table_picks_the_data_table_not_the_ticker():
     head, rows = parse_page_table(html)
     assert head == ["Code", "Limit", "Tick"]
     assert [r[0] for r in rows] == ["GP", "BATBC", "ACI"]
+
+
+def test_output_directory_guard_refuses_source_and_system_paths(tmp_path):
+    """The collector's output tree is regenerated, so it may never be the repository root, a
+    parent of it, the home directory, a system path or a directory holding tracked source
+    (data/ holds tracked code — writing runtime output there is what caused an rm -rf incident)."""
+    import pytest
+    from collector.dse_public_collector import REPO_ROOT, assert_safe_out
+    for bad in (REPO_ROOT, REPO_ROOT.parent, os.path.expanduser("~"), "/", "/etc", "/tmp",
+                REPO_ROOT / "data", REPO_ROOT / "seeing"):
+        with pytest.raises(SystemExit):
+            assert_safe_out(bad)
+    ok = assert_safe_out(tmp_path / "public_data")          # a fresh runtime directory is fine
+    assert ok == (tmp_path / "public_data").resolve()
+
+
+def test_metadata_is_merged_across_passes_and_counts_come_from_the_files(tmp_path):
+    """A later pass that writes only one small table must not publish zeros for the tables an
+    earlier pass produced: ledgers are appended and validation.json is recomputed from disk."""
+    import json
+    import pandas as pd
+    from collector.dse_public_collector import (append_json_list, merge_sha_index, rebuild_metadata,
+                                                write_table)
+    out = tmp_path / "run"
+    norm, meta = out / "normalized", out / "metadata"
+    # pass 1: a big table and its ledgers
+    write_table(norm / "historical_prices.parquet", [{"symbol": "GP", "trade_date": "2026-09-01", "close": 1.0},
+                                                     {"symbol": "GP", "trade_date": "2026-09-02", "close": 2.0}])
+    write_table(norm / "symbols.csv", [{"symbol": "GP"}, {"symbol": "BATBC"}])
+    append_json_list(meta / "manifest.json", [{"source": "dse", "ok": True, "bytes": 10, "pass_id": "p1"},
+                                              {"source": "dse", "ok": False, "bytes": 0, "pass_id": "p1"}])
+    append_json_list(meta / "failures.json", [{"source": "dse", "error": "x", "pass_id": "p1"}])
+    merge_sha_index(meta / "duplicate_raw_payloads.json", {"abc": ["raw/dse/a.html", "raw/dse/b.html"]})
+    first = rebuild_metadata(out)
+    assert first["rows"]["historical_prices.parquet"] == 2 and first["requests_total"] == 2
+
+    # pass 2: writes one small table only, and (as an empty result) must not blank the big one
+    write_table(norm / "dse_top_ten_gainer.parquet", [{"symbol": "GP", "change": 1.0}])
+    write_table(norm / "historical_prices.parquet", [])          # empty result, file already exists
+    append_json_list(meta / "manifest.json", [{"source": "dse_extras", "ok": True, "bytes": 5, "pass_id": "p2"}])
+    append_json_list(meta / "failures.json", [{"source": "dse_extras", "error": "y", "pass_id": "p2"}])
+    merge_sha_index(meta / "duplicate_raw_payloads.json", {"abc": ["raw/dse/c.html"]})
+    v = rebuild_metadata(out)
+
+    assert v["rows"]["historical_prices.parquet"] == 2           # the earlier pass survives
+    assert v["rows"]["dse_top_ten_gainer.parquet"] == 1
+    assert v["normalized_rows_total"] == 2 + 2 + 1
+    assert v["requests_total"] == 3                              # ledgers appended, not overwritten
+    assert v["requests_by_source"]["dse"] == {"ok": 1, "failed": 1, "bytes": 10}
+    assert v["requests_by_source"]["dse_extras"] == {"ok": 1, "failed": 0, "bytes": 5}
+    assert v["failures"] == 2
+    assert len(json.load(open(meta / "duplicate_raw_payloads.json"))["abc"]) == 3
+    assert v["symbols_discovered"] == 2 and v["combined"] is True
+    # the counts are the files', not any ledger's: delete a row and the rebuild follows the file
+    pd.DataFrame([{"symbol": "GP", "trade_date": "2026-09-01", "close": 1.0}]).to_parquet(
+        norm / "historical_prices.parquet", index=False)
+    assert rebuild_metadata(out)["rows"]["historical_prices.parquet"] == 1

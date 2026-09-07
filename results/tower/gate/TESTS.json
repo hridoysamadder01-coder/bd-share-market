@@ -1,0 +1,16 @@
+{
+ "passed": 653,
+ "failed": 0,
+ "skipped": 0,
+ "errors": 0,
+ "rc": 0,
+ "failed_tests": [],
+ "skipped_tests": [],
+ "summary_line": "653 passed, 2 warnings in 669.13s (0:11:09)",
+ "split": {
+  "total_collected": 653,
+  "realdata": 28,
+  "machinery": 576,
+  "other": 49
+ }
+}

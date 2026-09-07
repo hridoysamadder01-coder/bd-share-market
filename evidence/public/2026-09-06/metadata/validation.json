@@ -1,57 +1,52 @@
 {
-  "started_utc": "2026-09-06T15:49:14.833227+00:00",
-  "completed_utc": "2026-09-06T15:49:57.599869+00:00",
+  "combined": true,
+  "derived_from": "files on disk (normalized tables, merged manifest, raw tree, metadata/passes)",
+  "rebuilt_utc": "2026-09-06T16:36:25.016080+00:00",
+  "passes": 0,
+  "pass_ids": [],
+  "pass_windows": [],
   "symbols_discovered": 725,
-  "symbols_pulled": 725,
   "rows": {
-    "symbols.csv": 725,
-    "market_watch.parquet": 637,
-    "market_grid.parquet": 412,
-    "market_depth.parquet": 0,
-    "market_depth_summary.parquet": 0,
-    "trades_or_tape.parquet": 0,
-    "tape_interval_flow.parquet": 0,
-    "market_stats.parquet": 1,
-    "circuit_limits.parquet": 635,
     "block_market.parquet": 35,
-    "dse_latest.parquet": 395,
-    "company_fundamentals.parquet": 0,
-    "company_financials.parquet": 0,
-    "company_pe_history.parquet": 0,
-    "company_shareholding.parquet": 0,
-    "historical_prices.parquet": 0,
-    "dse_market_statistics_breadth.parquet": 8,
-    "dse_market_statistics_block.parquet": 35,
-    "dse_market_statistics_totals.parquet": 1,
+    "circuit_limits.parquet": 635,
+    "company_financials.parquet": 1954,
+    "company_fundamentals.parquet": 636,
+    "company_pe_history.parquet": 12570,
+    "company_shareholding.parquet": 1220,
     "dse_circuit_breaker_official.parquet": 636,
+    "dse_close_price.parquet": 636,
+    "dse_latest.parquet": 395,
+    "dse_marginable_securities.parquet": 144,
+    "dse_market_statistics_block.parquet": 35,
+    "dse_market_statistics_breadth.parquet": 8,
+    "dse_market_statistics_totals.parquet": 1,
     "dse_pe_at_a_glance.parquet": 419,
+    "dse_recent_market_information.parquet": 30,
     "dse_sector_wise_company_list.parquet": 23,
     "dse_top_ten_gainer.parquet": 10,
     "dse_top_ten_loser.parquet": 10,
-    "dse_marginable_securities.parquet": 144,
-    "dse_close_price.parquet": 636,
-    "dse_recent_market_information.parquet": 30
+    "historical_prices.parquet": 310895,
+    "market_depth.parquet": 556,
+    "market_depth_summary.parquet": 1450,
+    "market_grid.parquet": 412,
+    "market_stats.parquet": 1,
+    "market_watch.parquet": 637,
+    "symbols.csv": 725,
+    "tape_interval_flow.parquet": 32917,
+    "trades_or_tape.parquet": 33307
   },
+  "normalized_rows_total": 400297,
+  "requests_total": 17,
   "requests_by_source": {
-    "lankabd_watch": {
-      "ok": 1,
+    "dse": {
+      "ok": 2,
       "failed": 0,
-      "bytes": 591309
+      "bytes": 852184
     },
-    "lankabd_grid": {
-      "ok": 1,
+    "dse_extras": {
+      "ok": 9,
       "failed": 0,
-      "bytes": 445286
-    },
-    "lankabd_circuit": {
-      "ok": 1,
-      "failed": 0,
-      "bytes": 1777298
-    },
-    "lankabd_market": {
-      "ok": 1,
-      "failed": 0,
-      "bytes": 258
+      "bytes": 3362406
     },
     "lankabd_block": {
       "ok": 1,
@@ -63,27 +58,50 @@
       "failed": 0,
       "bytes": 102477
     },
-    "dse": {
-      "ok": 2,
+    "lankabd_circuit": {
+      "ok": 1,
       "failed": 0,
-      "bytes": 852184
+      "bytes": 1777298
     },
-    "dse_extras": {
-      "ok": 9,
+    "lankabd_grid": {
+      "ok": 1,
       "failed": 0,
-      "bytes": 3362406
+      "bytes": 445286
+    },
+    "lankabd_market": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 258
+    },
+    "lankabd_watch": {
+      "ok": 1,
+      "failed": 0,
+      "bytes": 591309
     }
   },
-  "client_stats": {
-    "requests": 18,
-    "errors": 0,
-    "tls_fallbacks": 1
-  },
+  "manifest_covers_every_stored_payload": false,
+  "ledger_note": "manifest.json, failures.json and duplicate_raw_payloads.json are append-merged across passes from this version on; a tree written by the earlier overwriting version carries only its last pass's ledgers, which is why manifest_covers_every_stored_payload can be false. The payloads themselves were never lost: metadata/raw_index.json enumerates every stored file with its sha256, and the row counts above come from the normalized files, not from any ledger.",
   "failures": 0,
   "duplicate_raw_payload_groups": 0,
-  "depth_symbols_with_levels": 0,
-  "depth_max_levels_seen": 0,
-  "cross_source_best_bid_checked": 0,
-  "cross_source_best_bid_agree": 0,
-  "depth_summary_rows": 0
+  "raw_files_by_source": {
+    "dse": 6,
+    "dse_company": 725,
+    "dse_extras": 19,
+    "dse_history": 178,
+    "dsebd_depth": 725,
+    "lankabd_block": 3,
+    "lankabd_cidmap": 3,
+    "lankabd_circuit": 3,
+    "lankabd_depth": 725,
+    "lankabd_grid": 3,
+    "lankabd_market": 3,
+    "lankabd_tape": 715,
+    "lankabd_watch": 3
+  },
+  "raw_files_total": 3111,
+  "raw_bytes_total": 43625707,
+  "depth_symbols_with_levels": 171,
+  "depth_max_levels_seen": 5,
+  "cross_source_best_bid_checked": 93,
+  "cross_source_best_bid_agree": 93
 }

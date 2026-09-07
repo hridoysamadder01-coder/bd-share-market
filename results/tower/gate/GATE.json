@@ -1,0 +1,331 @@
+{
+ "replay": {
+  "fixture_determinism": {
+   "identical": true,
+   "symbols": [
+    "FINEFOODS",
+    "MALEKSPIN",
+    "SHARPIND"
+   ]
+  },
+  "capture": {
+   "path": "/home/user/bd-share-market/evidence/capture/2026-09-06",
+   "events": 326588,
+   "states": 315327,
+   "reconstruction_failures": 0,
+   "errors": [],
+   "quote_only_suppressed": 297898,
+   "previous_session_tape_rows": 2777,
+   "symbols": {
+    "BEXIMCO": {
+     "states": 1312,
+     "nonempty_book": 1249,
+     "two_sided": 1224,
+     "circuit_limits_present": 1312,
+     "source_freshness_present": 1312,
+     "active_mechanisms": {
+      "cross_lead_lag": 1030,
+      "resilience_asymmetry": 576,
+      "queue_pull_stack": 216,
+      "churn_anomaly": 147,
+      "book_trade_divergence": 141,
+      "recovery_curve_state": 118,
+      "ofi_state": 109,
+      "liquidity_depletion": 71
+     }
+    },
+    "BRACBANK": {
+     "states": 1255,
+     "nonempty_book": 1199,
+     "two_sided": 1185,
+     "circuit_limits_present": 1255,
+     "source_freshness_present": 1255,
+     "active_mechanisms": {
+      "cross_lead_lag": 819,
+      "book_trade_divergence": 433,
+      "resilience_asymmetry": 421,
+      "queue_pull_stack": 305,
+      "liquidity_depletion": 124,
+      "churn_anomaly": 117,
+      "close_session_pressure": 96,
+      "ofi_state": 88
+     }
+    },
+    "BXPHARMA": {
+     "states": 1251,
+     "nonempty_book": 1189,
+     "two_sided": 1145,
+     "circuit_limits_present": 1251,
+     "source_freshness_present": 1251,
+     "active_mechanisms": {
+      "cross_lead_lag": 1115,
+      "resilience_asymmetry": 510,
+      "book_trade_divergence": 467,
+      "queue_pull_stack": 210,
+      "ofi_state": 140,
+      "absorption": 138,
+      "flow_impact_divergence": 120,
+      "close_session_pressure": 108
+     }
+    },
+    "GP": {
+     "states": 1201,
+     "nonempty_book": 1102,
+     "two_sided": 1102,
+     "circuit_limits_present": 1201,
+     "source_freshness_present": 1201,
+     "active_mechanisms": {
+      "cross_lead_lag": 1077,
+      "resilience_asymmetry": 444,
+      "queue_pull_stack": 219,
+      "liquidity_depletion": 172,
+      "churn_anomaly": 168,
+      "flow_impact_divergence": 120,
+      "book_trade_divergence": 119,
+      "absorption": 108
+     }
+    },
+    "IPDC": {
+     "states": 1208,
+     "nonempty_book": 1143,
+     "two_sided": 1117,
+     "circuit_limits_present": 1208,
+     "source_freshness_present": 1208,
+     "active_mechanisms": {
+      "cross_lead_lag": 992,
+      "resilience_asymmetry": 436,
+      "book_trade_divergence": 273,
+      "flow_impact_divergence": 167,
+      "churn_anomaly": 158,
+      "queue_pull_stack": 155,
+      "ofi_state": 151,
+      "liquidity_depletion": 111
+     }
+    },
+    "LOVELLO": {
+     "states": 1305,
+     "nonempty_book": 1240,
+     "two_sided": 1227,
+     "circuit_limits_present": 1305,
+     "source_freshness_present": 1305,
+     "active_mechanisms": {
+      "cross_lead_lag": 1175,
+      "book_trade_divergence": 385,
+      "resilience_asymmetry": 369,
+      "queue_pull_stack": 262,
+      "ofi_state": 157,
+      "flow_impact_divergence": 152,
+      "liquidity_depletion": 146,
+      "absorption": 125
+     }
+    },
+    "MALEKSPIN": {
+     "states": 1261,
+     "nonempty_book": 1199,
+     "two_sided": 1174,
+     "circuit_limits_present": 1261,
+     "source_freshness_present": 1261,
+     "active_mechanisms": {
+      "cross_lead_lag": 1166,
+      "resilience_asymmetry": 579,
+      "book_trade_divergence": 237,
+      "flow_impact_divergence": 215,
+      "queue_pull_stack": 208,
+      "absorption": 126,
+      "churn_anomaly": 116,
+      "recovery_curve_state": 102
+     }
+    },
+    "ORIONPHARM": {
+     "states": 1154,
+     "nonempty_book": 1086,
+     "two_sided": 1063,
+     "circuit_limits_present": 1154,
+     "source_freshness_present": 1154,
+     "active_mechanisms": {
+      "cross_lead_lag": 864,
+      "resilience_asymmetry": 353,
+      "book_trade_divergence": 340,
+      "deep_book_shape": 238,
+      "queue_pull_stack": 176,
+      "churn_anomaly": 132,
+      "flow_impact_divergence": 125,
+      "liquidity_depletion": 85
+     }
+    },
+    "POWERGRID": {
+     "states": 1085,
+     "nonempty_book": 998,
+     "two_sided": 998,
+     "circuit_limits_present": 1085,
+     "source_freshness_present": 1085,
+     "active_mechanisms": {
+      "cross_lead_lag": 801,
+      "resilience_asymmetry": 294,
+      "book_trade_divergence": 280,
+      "queue_pull_stack": 134,
+      "flow_impact_divergence": 126,
+      "churn_anomaly": 95,
+      "recovery_curve_state": 88,
+      "ofi_state": 61
+     }
+    },
+    "PTL": {
+     "states": 1260,
+     "nonempty_book": 1186,
+     "two_sided": 1159,
+     "circuit_limits_present": 1260,
+     "source_freshness_present": 1260,
+     "active_mechanisms": {
+      "cross_lead_lag": 983,
+      "resilience_asymmetry": 709,
+      "queue_pull_stack": 264,
+      "book_trade_divergence": 194,
+      "absorption": 138,
+      "ofi_state": 119,
+      "churn_anomaly": 101,
+      "liquidity_depletion": 99
+     }
+    },
+    "SAIHAMCOT": {
+     "states": 1302,
+     "nonempty_book": 1226,
+     "two_sided": 1226,
+     "circuit_limits_present": 1302,
+     "source_freshness_present": 1302,
+     "active_mechanisms": {
+      "cross_lead_lag": 1130,
+      "book_trade_divergence": 497,
+      "resilience_asymmetry": 367,
+      "queue_pull_stack": 215,
+      "churn_anomaly": 107,
+      "ofi_state": 104,
+      "liquidity_depletion": 100,
+      "recovery_curve_state": 99
+     }
+    },
+    "SAIHAMTEX": {
+     "states": 1241,
+     "nonempty_book": 1141,
+     "two_sided": 759,
+     "circuit_limits_present": 1241,
+     "source_freshness_present": 1241,
+     "active_mechanisms": {
+      "cross_lead_lag": 851,
+      "circuit_regime": 540,
+      "book_trade_divergence": 440,
+      "circuit_lock_strength": 312,
+      "resilience_asymmetry": 308,
+      "queue_pull_stack": 207,
+      "absorption": 154,
+      "flow_impact_divergence": 133
+     }
+    },
+    "SHARPIND": {
+     "states": 1321,
+     "nonempty_book": 1266,
+     "two_sided": 1003,
+     "circuit_limits_present": 1321,
+     "source_freshness_present": 1321,
+     "active_mechanisms": {
+      "cross_lead_lag": 935,
+      "book_trade_divergence": 407,
+      "circuit_regime": 258,
+      "resilience_asymmetry": 251,
+      "recovery_curve_state": 182,
+      "circuit_lock_strength": 178,
+      "queue_pull_stack": 168,
+      "flow_impact_divergence": 153
+     }
+    },
+    "SQURPHARMA": {
+     "states": 1273,
+     "nonempty_book": 1201,
+     "two_sided": 1176,
+     "circuit_limits_present": 1273,
+     "source_freshness_present": 1273,
+     "active_mechanisms": {
+      "cross_lead_lag": 1004,
+      "resilience_asymmetry": 572,
+      "queue_pull_stack": 245,
+      "liquidity_depletion": 196,
+      "book_trade_divergence": 160,
+      "flow_impact_divergence": 156,
+      "churn_anomaly": 135,
+      "absorption": 118
+     }
+    }
+   },
+   "mechanisms_with_varying_scores": 43,
+   "mechanisms_total": 49,
+   "mechanisms_constant": [
+    "auction_imbalance",
+    "circuit_break_weakness",
+    "circuit_next_session",
+    "circuit_streak",
+    "participation_footprint",
+    "pegged_repricing"
+   ],
+   "transitions_per_layer": {
+    "pressure": 1139,
+    "circuit": 94,
+    "mechanism": 11985,
+    "liquidity": 1530,
+    "accumulation": 6
+   },
+   "final_state_hash": {
+    "MALEKSPIN": "03378014211dc94d9bdb7be729476c39f64dc86c60919a86fbbe608c9298ca7e",
+    "SHARPIND": "33bcc4f6a461fc91d437fd0f7ffed2c5409f2358c44d15929806c497565f2658",
+    "SAIHAMCOT": "d8f3e1476831e926a7b04ade02369ed8656aee282194b204a226a635273516e6",
+    "SAIHAMTEX": "2424f785b555f679624cc32aee6ad6112067dc8518d202712acf0d0e2f0ad57b",
+    "BXPHARMA": "46b679c81ebd22ea857a73c3c4d7f9130f325e309d43b3f7e0b917d568a6a9d9",
+    "PTL": "cd804e620348aed544492372e0d8e579f4f3026d5d8a803c1af94c3203f7c98a",
+    "LOVELLO": "976880115338f65c6b3a5db207929f6bd89040e9fd7cdd7e69f015f8ae717790",
+    "BRACBANK": "48fca14b7c9f330ade63e2819cb0527bc5e0207b512e0b227b0616b11586f050",
+    "BEXIMCO": "51b51e15db671932bb08dbbe07397ed0f8ca5fbbf4eeb98afa8c88c2185ba3a7",
+    "GP": "df45e238f2fcb2aebe34eb18792f7902898eb38ae04c2ce6f06276e4be0dbdbc",
+    "IPDC": "fb8bc2f7c1a332c13650dfa885bfc82e5ed7f297d2e0202ac64cbc2186a66dd7",
+    "ORIONPHARM": "8d22edf9587928d80056fa803a21d12e5b60680aedd8ee6b09222da5e742d07a",
+    "POWERGRID": "be6f6620ccae85cdfc7353ced19683ab275c4857fc1e8a52b8bd666fba9f2872",
+    "SQURPHARMA": "67b8e1aa02eb69a74d41baf0107cbf5a3f2c23fb98be444056664a9e345fc30a"
+   }
+  }
+ },
+ "placeholders": {
+  "n_suspicious": 0,
+  "suspicious": [],
+  "n_benign": 5,
+  "benign": [
+   "tower/circuit.py:283: pass  [except-clause no-op]",
+   "tower/ui/server.py:68: pass  [except-clause no-op]",
+   "tower/ui/server.py:75: pass  [except-clause no-op]",
+   "tower/ui/server.py:89: pass  [except-clause no-op]",
+   "tower/mechanics/base.py:106: raise NotImplementedError  [abstract base method]"
+  ]
+ },
+ "go": {
+  "vet": 0,
+  "test": {
+   "cmd": "go test ./...",
+   "rc": 0,
+   "tail": "ok  \ttower/ingest\t6.133s\n"
+  },
+  "build": 0
+ },
+ "tests": {
+  "passed": 653,
+  "failed": 0,
+  "skipped": 0,
+  "errors": 0,
+  "rc": 0,
+  "failed_tests": [],
+  "skipped_tests": [],
+  "summary_line": "653 passed, 2 warnings in 669.13s (0:11:09)",
+  "split": {
+   "total_collected": 653,
+   "realdata": 28,
+   "machinery": 576,
+   "other": 49
+  }
+ }
+}

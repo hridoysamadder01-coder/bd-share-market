@@ -4,6 +4,10 @@
 > repository, **with its full commit history**, so the international HFT system and this
 > research never share a repo again. Nothing here imports from, builds with, or writes to OYSHE.
 
+> 🗺️ **New here? Read [`PROJECT_MAP.md`](PROJECT_MAP.md).** It maps every decision (what / why / when),
+> what broke and how it was fixed, where each headline number lives, and what is blocked and on whom —
+> the whole project in one page.
+
 ## SCOPE LOCK
 
 This repository is **independent of the OYSHE HFT system** (`hridoysamadder01-coder/oyshe`):

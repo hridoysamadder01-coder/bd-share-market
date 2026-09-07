@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSE Observation Tower</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">DSE OBSERVATION TOWER</div>
+  <label class="sel">SYMBOL <select id="symbol"></select></label>
+  <div class="hud">
+    <span class="hud-item">STATE TIME <b id="state-time">—</b></span>
+    <span class="hud-item">SEQ <b id="state-seq">—</b></span>
+    <span class="hud-item">PHASE <b id="state-phase">—</b></span>
+    <span class="hud-item">BOOK SRC <b id="state-book-source">—</b></span>
+    <span class="hud-item">MODE <b id="mode">—</b></span>
+  </div>
+  <div id="status" class="status">connecting…</div>
+</header>
+
+<section id="replay" class="panel replay">
+  <h2>REPLAY</h2>
+  <div class="replay-row">
+    <button id="btn-live" title="follow the newest state">LIVE</button>
+    <button id="btn-first" title="first state">|&lt;</button>
+    <button id="btn-prev" title="previous state">&lt;</button>
+    <button id="btn-play" title="play / pause">&#9654;</button>
+    <button id="btn-next" title="next state">&gt;</button>
+    <button id="btn-last" title="last state">&gt;|</button>
+    <label>SPEED <select id="speed"><option value="1">1×</option><option value="5">5×</option><option value="20" selected>20×</option><option value="100">100×</option><option value="600">600×</option></select></label>
+    <span class="rng" id="range-first">—</span>
+    <input type="range" id="replay-slider" min="0" max="10000" value="10000" step="1">
+    <span class="rng" id="range-last">—</span>
+    <span class="rng">POS <b id="replay-pos">—</b></span>
+  </div>
+</section>
+
+<main id="tower">
+  <section class="panel chart" id="panel-chart">
+    <h2>MID / LTP <span class="sub" id="chart-sub">mechanism episodes shaded</span></h2>
+    <canvas id="chart" height="180"></canvas>
+    <div class="legend" id="chart-legend"></div>
+  </section>
+
+  <section class="panel pressure" id="panel-pressure">
+    <h2>PRESSURE</h2>
+    <div id="pressure-gauges" class="gauges"></div>
+    <div id="pressure-kv" class="kv"></div>
+  </section>
+
+  <section class="panel response" id="panel-response">
+    <h2>PRICE RESPONSE</h2>
+    <div id="response-kv" class="kv"></div>
+    <div class="mini"><span class="mini-title">FLOW → IMPACT (signed flow vs price response, history ≤ cursor)</span><canvas id="flow-impact" height="90"></canvas></div>
+  </section>
+
+  <section class="panel book" id="panel-book">
+    <h2>LIVE BOOK <span class="sub" id="book-sub"></span></h2>
+    <div class="l1" id="book-l1"></div>
+    <div class="ladder-wrap"><table id="ladder"><thead><tr><th>bid qty</th><th>price</th><th>ask qty</th><th>#</th></tr></thead><tbody></tbody></table></div>
+    <div id="book-geometry" class="kv small"></div>
+  </section>
+
+  <section class="panel flow" id="panel-flow">
+    <h2>TRADE FLOW</h2>
+    <div id="flow-print" class="print"></div>
+    <div id="flow-gauges" class="gauges"></div>
+    <div id="flow-kv" class="kv"></div>
+  </section>
+
+  <section class="panel liquidity" id="panel-liquidity">
+    <h2>LIQUIDITY</h2>
+    <div id="liq-kv" class="kv"></div>
+    <div class="mini"><span class="mini-title">RECOVERY CURVE (s since shock → recovered share)</span><canvas id="recovery" height="70"></canvas></div>
+  </section>
+
+  <section class="panel circuit" id="panel-circuit">
+    <h2>CIRCUIT</h2>
+    <div id="circuit-band" class="band"></div>
+    <div id="circuit-kv" class="kv small"></div>
+  </section>
+
+  <section class="panel mech" id="panel-mech">
+    <h2>ACTIVE MECHANICS <span class="sub" id="mech-sub"></span> <label class="toggle"><input type="checkbox" id="mech-all"> show inactive</label></h2>
+    <div class="tbl-wrap"><table id="mech-table"><thead><tr><th>mechanism</th><th>family</th><th>score</th><th>state</th><th>start</th><th>duration</th><th>evidence</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel cross" id="panel-cross">
+    <h2>CROSS-STOCK</h2>
+    <div id="cross-kv" class="kv small"></div>
+    <div class="tbl-wrap"><table id="cross-table"><thead><tr><th>symbol</th><th>role</th><th>lag</th><th>corr</th><th>mid</th><th>ltp</th><th>pressure</th><th>lock</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel timeline" id="panel-timeline">
+    <h2>STATE TIMELINE <span class="sub">lanes per layer · hover a segment</span></h2>
+    <div class="tl-wrap"><canvas id="timeline" height="200"></canvas><div id="tl-tip" class="tip" hidden></div></div>
+  </section>
+
+  <section class="panel sources" id="panel-sources">
+    <h2>SOURCE STATUS <span class="sub" id="sources-sub"></span></h2>
+    <div class="tbl-wrap"><table id="sources-table"><thead><tr><th>source</th><th>last update</th><th>fresh s</th><th>cadence s</th><th>stale</th><th>dup</th><th>upd</th><th>dups</th><th>gaps</th><th>agreement</th><th>disagreement</th><th>fields</th></tr></thead><tbody></tbody></table></div>
+    <div id="metrics-kv" class="kv small"></div>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

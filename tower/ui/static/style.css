@@ -1,0 +1,110 @@
+:root {
+  --bg: #0b1017; --panel: #111823; --panel2: #16202d; --line: #22303f; --fg: #d7e0ea; --dim: #7f8ea0;
+  --accent: #4fc3f7; --bid: #26c281; --ask: #ef5350; --warn: #ffb74d; --bad: #ff5252; --ok: #66bb6a;
+  --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 12px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+b, .num, td, .kv, .l1, .hud, .rng { font-family: var(--mono); }
+#topbar { display: flex; align-items: center; gap: 18px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: #0d141d; position: sticky; top: 0; z-index: 5; }
+.brand { font-weight: 700; letter-spacing: 0.18em; color: var(--accent); white-space: nowrap; }
+.hud-item { white-space: nowrap; }
+.sel select, #speed { background: var(--panel2); color: var(--fg); border: 1px solid var(--line); padding: 3px 6px; font-family: var(--mono); }
+.hud { display: flex; gap: 16px; color: var(--dim); font-size: 11px; }
+.hud b { color: var(--fg); margin-left: 4px; }
+.status { margin-left: auto; color: var(--dim); font-size: 11px; }
+.status.err { color: var(--bad); }
+
+#tower { display: grid; gap: 8px; padding: 8px; grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-areas:
+    "chart chart chart chart pressure pressure response response"
+    "book book flow flow liquidity liquidity circuit circuit"
+    "book book mech mech mech mech cross cross"
+    "timeline timeline timeline timeline timeline timeline timeline timeline"
+    "sources sources sources sources sources sources sources sources"; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; min-width: 0; overflow: hidden; }
+.panel h2 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.14em; color: var(--accent); font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+.panel h2 .sub { color: var(--dim); letter-spacing: 0; font-weight: 400; text-transform: none; }
+.panel h2 .toggle { margin-left: auto; color: var(--dim); font-weight: 400; letter-spacing: 0; }
+.panel.chart { grid-area: chart; } .panel.pressure { grid-area: pressure; } .panel.response { grid-area: response; }
+.panel.book { grid-area: book; } .panel.flow { grid-area: flow; } .panel.liquidity { grid-area: liquidity; }
+.panel.circuit { grid-area: circuit; } .panel.mech { grid-area: mech; } .panel.cross { grid-area: cross; }
+.panel.timeline { grid-area: timeline; } .panel.sources { grid-area: sources; }
+.panel.replay { margin: 8px 8px 0; }
+canvas { display: block; width: 100%; }
+
+.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 14px; }
+.kv.small { grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); font-size: 11px; }
+.kv .row { display: flex; justify-content: space-between; border-bottom: 1px dotted #1c2735; padding: 1px 0; }
+.kv .k { color: var(--dim); }
+.kv .row.wide { grid-column: 1 / -1; }
+.kv .v { color: var(--fg); }
+.v.na { color: #4c5a6a; }
+.v.pos { color: var(--bid); } .v.neg { color: var(--ask); } .v.warn { color: var(--warn); } .v.bad { color: var(--bad); } .v.ok { color: var(--ok); }
+
+.gauges .g { display: grid; grid-template-columns: 110px 1fr 60px; align-items: center; gap: 8px; margin: 3px 0; }
+.gauges .g .k { color: var(--dim); }
+.gauges .g .bar { position: relative; height: 10px; background: #0e151e; border: 1px solid var(--line); }
+.gauges .g .bar i { position: absolute; top: 0; bottom: 0; }
+.gauges .g .bar .mid { position: absolute; top: -2px; bottom: -2px; left: 50%; width: 1px; background: #3b4b5c; }
+.gauges .g .v { text-align: right; }
+
+.l1 { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; }
+.l1 .l1c { display: flex; flex-direction: column; background: var(--panel2); padding: 2px 5px; border-radius: 3px; min-width: 0; }
+.l1 .l1c .k { color: var(--dim); font-size: 9px; letter-spacing: 0.08em; }
+.l1 .l1c b { font-size: 13px; } .l1 .l1c small { color: var(--dim); font-size: 10px; }
+.l1 .bidpx { color: var(--bid); } .l1 .askpx { color: var(--ask); }
+.ladder-wrap { max-height: 330px; overflow: auto; }
+#ladder { width: 100%; border-collapse: collapse; }
+#ladder th { color: var(--dim); font-weight: 400; text-align: center; font-size: 10px; }
+#ladder td { padding: 1px 4px; text-align: right; white-space: nowrap; position: relative; }
+#ladder td.px { text-align: center; width: 70px; }
+#ladder tr.ask td.px { color: var(--ask); } #ladder tr.bid td.px { color: var(--bid); }
+#ladder tr.best td.px { font-weight: 700; }
+#ladder tr.spread td { text-align: center; color: var(--dim); font-size: 10px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+#ladder td.qty { width: 40%; }
+#ladder td.qty .fill { position: absolute; top: 1px; bottom: 1px; opacity: 0.35; }
+#ladder tr.bid td.qty .fill { right: 0; background: var(--bid); } #ladder tr.ask td.qty .fill { left: 0; background: var(--ask); }
+#ladder tr.bid td.qty { text-align: right; } #ladder tr.ask td.qty { text-align: left; }
+#ladder td.qty span { position: relative; }
+#ladder tr.wall td.qty span { color: var(--warn); font-weight: 700; }
+#ladder tr.wall td.px::after { content: " ▮"; color: var(--warn); }
+#ladder td.n { color: var(--dim); width: 28px; }
+
+.print { font-family: var(--mono); background: var(--panel2); padding: 4px 6px; margin-bottom: 4px; border-left: 3px solid var(--line); }
+.print.buy { border-left-color: var(--bid); } .print.sell { border-left-color: var(--ask); }
+
+.tbl-wrap { max-height: 300px; overflow: auto; }
+table.grid, #mech-table, #sources-table, #cross-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+#mech-table th, #sources-table th, #cross-table th { text-align: left; color: var(--dim); font-weight: 400; position: sticky; top: 0; background: var(--panel); }
+#mech-table td, #sources-table td, #cross-table td { padding: 2px 5px; border-bottom: 1px solid #1a2431; white-space: nowrap; vertical-align: top; }
+#sources-table td.dis { white-space: normal; max-width: 420px; }
+.kv .v { word-break: break-word; text-align: right; }
+.status { white-space: nowrap; }
+tr.mech-row.inactive td { color: #5f6f80; }
+tr.mech-row.active td.state, tr.mech-row.confirmed td.state { color: var(--bid); }
+tr.mech-row.building td.state { color: var(--warn); } tr.mech-row.failed td.state { color: var(--bad); } tr.mech-row.resolved td.state { color: var(--accent); }
+.scorebar { display: inline-block; width: 70px; height: 8px; background: #0e151e; border: 1px solid var(--line); vertical-align: middle; margin-right: 4px; }
+.scorebar i { display: block; height: 100%; background: var(--accent); }
+tr.mech-row td.ev { cursor: pointer; color: var(--dim); }
+tr.mech-ev td { white-space: pre-wrap; font-family: var(--mono); font-size: 10px; color: #a9b7c6; background: #0e151e; }
+.pill { display: inline-block; padding: 0 5px; border-radius: 8px; font-size: 10px; border: 1px solid var(--line); margin-right: 2px; }
+.pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); } .pill.warn { color: var(--warn); }
+
+.band { display: grid; grid-template-columns: 1fr 1fr 1fr; font-family: var(--mono); background: var(--panel2); padding: 4px 6px; margin-bottom: 6px; gap: 6px; }
+.band > div { display: flex; flex-direction: column; min-width: 0; } .band > div.c { text-align: center; } .band > div.r { text-align: right; }
+.band .k { color: var(--dim); font-size: 9px; letter-spacing: 0.08em; } .band b { font-size: 13px; } .band small { color: var(--dim); font-size: 10px; white-space: nowrap; }
+.band .lock { color: var(--bad); font-weight: 700; }
+
+.mini { margin-top: 6px; } .mini-title { display: block; color: var(--dim); font-size: 10px; margin-bottom: 2px; }
+.legend { display: flex; gap: 12px; color: var(--dim); font-size: 10px; margin-top: 3px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 3px; margin-right: 4px; vertical-align: middle; }
+
+.tl-wrap { position: relative; }
+.tip { position: absolute; background: #0d141d; border: 1px solid var(--accent); padding: 4px 8px; font-family: var(--mono); font-size: 11px; pointer-events: none; z-index: 9; }
+
+.replay-row { display: flex; align-items: center; gap: 8px; }
+.replay-row button { background: var(--panel2); color: var(--fg); border: 1px solid var(--line); padding: 3px 8px; cursor: pointer; font-family: var(--mono); }
+.replay-row button.on { border-color: var(--accent); color: var(--accent); }
+#replay-slider { flex: 1; }
+.rng { color: var(--dim); font-size: 11px; }

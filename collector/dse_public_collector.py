@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """All-symbol public DSE acquisition: raw-first, rerunnable, provenance-complete.
 
-    python3 -m collector.dse_public_collector --out data --all-depth --all-tape \
-        --company --history-start 2015-01-01
+    python3 -m collector.dse_public_collector --all-depth --all-tape --company --extras \
+        --history-start 2024-01-01            # writes runtime/public_data (git-ignored)
+    python3 -m collector.dse_public_collector --out DIR --rebuild-metadata   # offline, combined view
 
 Public/open endpoints only. Normal browser flows are reproduced (anti-forgery token,
 referer, XHR headers); nothing authenticated, paywalled or CAPTCHA-protected is touched.
@@ -43,11 +44,16 @@ NOT_AVAILABLE = no obtained public source carries it):
     individual trade prints · number of orders per level · order ids ·
     queue position · intra-interval add/cancel netting                    NOT_AVAILABLE
 
-Every response is written byte-exact under ``data/raw/<source>/`` (gzip above 64 KB,
+Every response is written byte-exact under ``<out>/raw/<source>/`` (gzip above 64 KB,
 verified by round-trip) and every normalized row carries source, endpoint, symbol,
 exchange, exchange timestamp when the source has one, receipt timestamp, the raw file it
 came from, that file's sha256, the HTTP status and its truth class. Nothing that failed
-is dropped: failures land in ``data/metadata/failures.json`` and in the request manifest.
+is dropped: failures land in ``<out>/metadata/failures.json`` and in the request manifest.
+
+The output directory is runtime state: it defaults to ``runtime/public_data`` (git-ignored),
+is refused if it is the repository root, a parent of it, the home directory, a system path or
+any directory holding files tracked by git, and its metadata is append-merged across passes,
+so a later small pass never erases an earlier pass's evidence.
 """
 from __future__ import annotations
 
@@ -57,6 +63,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from collections import Counter, defaultdict
@@ -73,6 +80,7 @@ from seeing.capture.http_client import Fetched, PoliteClient
 DSE = "https://www.dsebd.org"
 LB = "https://www.lankabd.com"
 GZIP_ABOVE = 64 * 1024
+DEFAULT_OUT = "runtime/public_data"        # regenerated runtime tree, git-ignored, never mixed with source
 NUM_RE = re.compile(r"-?\d+(?:,\d{3})*(?:\.\d+)?")
 
 
@@ -95,6 +103,44 @@ def num(x: Any) -> Optional[float]:
 
 def slug(s: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(s)).strip("_")[:80]
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+FORBIDDEN_OUT = {Path("/"), Path("/home"), Path("/root"), Path("/etc"), Path("/usr"), Path("/var"),
+                 Path("/bin"), Path("/lib"), Path("/opt"), Path("/tmp"), Path("/srv"), Path("/boot")}
+
+
+def tracked_files_under(path: Path) -> List[str]:
+    """Repository files tracked by git under ``path`` (empty when git is unavailable or the
+    path is outside the repository)."""
+    try:
+        rel = path.relative_to(REPO_ROOT)
+    except ValueError:
+        return []
+    try:
+        p = subprocess.run(["git", "-C", str(REPO_ROOT), "ls-files", "--", str(rel)],
+                           capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [ln for ln in p.stdout.splitlines() if ln.strip()]
+
+
+def assert_safe_out(out: Path) -> Path:
+    """The output directory is written to and regenerated; it must never be a place whose loss
+    would take source code or the system with it. Refuses the repository root or any of its
+    parents, the home directory, well-known system roots, and any directory that already holds
+    files tracked by git."""
+    p = Path(out).expanduser().resolve()
+    if p in FORBIDDEN_OUT or p == Path.home() or p == REPO_ROOT or p in REPO_ROOT.parents:
+        raise SystemExit(f"refusing to use {p} as the collector output directory: it is the repository "
+                         f"root, a parent of it, the home directory or a system path. Use a dedicated "
+                         f"runtime directory such as runtime/public_data.")
+    tracked = tracked_files_under(p)
+    if tracked:
+        raise SystemExit(f"refusing to use {p} as the collector output directory: it holds "
+                         f"{len(tracked)} file(s) tracked by git (e.g. {tracked[0]}). Collector output is "
+                         f"regenerated and must live in an ignored runtime directory.")
+    return p
 
 
 # ------------------------------------------------------------------ company page (dsebd.org)
@@ -340,7 +386,8 @@ EXTRA_PAGES = {
 # ------------------------------------------------------------------ collector
 class Collector:
     def __init__(self, out: Path, min_gap: float = 0.4, timeout: float = 45.0):
-        self.out = out
+        self.out = assert_safe_out(out)          # never the repo root, home, a system path or tracked source
+        out = self.out
         self.raw = out / "raw"
         self.norm = out / "normalized"
         self.meta = out / "metadata"
@@ -730,16 +777,15 @@ class Collector:
                               "levels_lankabd": lvl[s]["lankabd_depth"], "levels_dsebd": lvl[s]["dsebd_depth"]})
         write_table(self.meta / "depth_crosscheck.csv", cross)
 
-        coverage = {}
-        for name, rows in tables.items():
-            df = pd.DataFrame(rows)
-            coverage[name] = ({c: round(float(df[c].notna().mean()), 4) for c in df.columns} if len(df) else {})
+        # ---- this pass's own record (provenance per pass; never overwritten by a later pass)
         dup = {k: v for k, v in self.sha_seen.items() if len(v) > 1}
         agree = [c for c in cross if c["bid_agree"] is not None]
-        validation = {
-            "started_utc": self.t0, "completed_utc": utcnow(),
+        pass_id = self.t0
+        this_pass = {
+            "pass_id": pass_id, "started_utc": self.t0, "completed_utc": utcnow(),
+            "argv": sys.argv[1:],
             "symbols_discovered": len(universe), "symbols_pulled": len(symbols),
-            "rows": {k: len(v) for k, v in tables.items()},
+            "rows_written_this_pass": {k: len(v) for k, v in tables.items() if v},
             "requests_by_source": {k: dict(v) for k, v in self.stats.items()},
             "client_stats": dict(self.client.stats),
             "failures": len(self.failures),
@@ -748,19 +794,18 @@ class Collector:
             "depth_max_levels_seen": max([max(v.values()) for v in lvl.values()], default=0),
             "cross_source_best_bid_checked": len(agree),
             "cross_source_best_bid_agree": sum(1 for c in agree if c["bid_agree"]),
-            "depth_summary_rows": len(depth_sum),
         }
-        json_dump(self.meta / "validation.json", validation)
-        json_dump(self.meta / "field_coverage.json", coverage)
-        json_dump(self.meta / "failures.json", self.failures)
-        json_dump(self.meta / "manifest.json", self.manifest)
-        json_dump(self.meta / "duplicate_raw_payloads.json", dup)
+        json_dump(self.meta / "passes" / f"{slug(pass_id)}.json", this_pass)
+
+        # ---- append-only across passes: a later small pass must never erase an earlier one's evidence
+        append_json_list(self.meta / "manifest.json", [{**r, "pass_id": pass_id} for r in self.manifest])
+        append_json_list(self.meta / "failures.json", [{**r, "pass_id": pass_id} for r in self.failures])
+        merge_sha_index(self.meta / "duplicate_raw_payloads.json", dup)
         json_dump(self.meta / "sources.json", SOURCES)
         json_dump(self.meta / "observability.json", OBSERVABILITY)
-        json_dump(self.meta / "schema.json", {k: sorted(pd.DataFrame(v).columns) if v else []
-                                              for k, v in tables.items()})
-        samples = {k: v[:2] for k, v in tables.items() if v}
-        json_dump(self.meta / "sample_records.json", samples)
+
+        # ---- the combined view is derived from the files on disk, not from this pass's memory
+        validation = rebuild_metadata(self.out)
         print(json.dumps(validation, indent=2, default=str))
         return validation
 
@@ -827,6 +872,147 @@ def json_dump(path: Path, obj: Any) -> None:
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
 
 
+def read_json(path: Path, default: Any) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+def append_json_list(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
+    """Append this pass's rows to a JSON list that earlier passes may already have written."""
+    existing = read_json(path, [])
+    if not isinstance(existing, list):
+        existing = []
+    json_dump(path, existing + list(rows))
+
+
+def merge_sha_index(path: Path, new: Dict[str, List[str]]) -> None:
+    """Union of sha256 → raw paths across passes (a payload repeated in a later pass is a
+    duplicate of the earlier one and must stay visible as such)."""
+    out = read_json(path, {})
+    if not isinstance(out, dict):
+        out = {}
+    for sha, paths in new.items():
+        out[sha] = sorted(set(out.get(sha, [])) | set(paths))
+    json_dump(path, out)
+
+
+def read_table(path: Path) -> "pd.DataFrame":
+    return pd.read_parquet(path) if path.suffix == ".parquet" else pd.read_csv(path)
+
+
+def rebuild_metadata(out: Path) -> Dict[str, Any]:
+    """Recompute the COMBINED metadata of an output directory from what is actually on disk.
+
+    Row counts come from the normalized files, request counts from the merged manifest, raw
+    counts from the raw tree, and per-pass provenance from ``metadata/passes/``. Nothing is
+    carried over from a single run's memory, so a later small pass can no longer publish zeros
+    for tables an earlier pass produced. Safe to run offline (``--rebuild-metadata``).
+    """
+    norm, meta, raw = out / "normalized", out / "metadata", out / "raw"
+    rows: Dict[str, int] = {}
+    coverage: Dict[str, Dict[str, float]] = {}
+    schema: Dict[str, List[str]] = {}
+    samples: Dict[str, List[Dict[str, Any]]] = {}
+    for f in sorted(norm.glob("*")):
+        if f.suffix not in (".parquet", ".csv"):
+            continue
+        try:
+            df = read_table(f)
+        except Exception as e:                                        # noqa: BLE001
+            rows[f.name] = -1
+            schema[f.name] = [f"UNREADABLE: {type(e).__name__}: {e}"]
+            continue
+        rows[f.name] = int(len(df))
+        schema[f.name] = sorted(map(str, df.columns))
+        coverage[f.name] = {str(c): round(float(df[c].notna().mean()), 4) for c in df.columns} if len(df) else {}
+        samples[f.name] = json.loads(df.head(2).to_json(orient="records", date_format="iso"))
+
+    manifest = read_json(meta / "manifest.json", [])
+    manifest = manifest if isinstance(manifest, list) else []
+    by_source: Dict[str, Dict[str, int]] = defaultdict(lambda: {"ok": 0, "failed": 0, "bytes": 0})
+    for r in manifest:
+        st = by_source[str(r.get("source"))]
+        st["ok" if r.get("ok") else "failed"] += 1
+        st["bytes"] += int(r.get("bytes") or 0)
+    failures = read_json(meta / "failures.json", [])
+    dup = read_json(meta / "duplicate_raw_payloads.json", {})
+    passes = [read_json(p, {}) for p in sorted((meta / "passes").glob("*.json"))]
+
+    raw_files = {d.name: len(list(d.glob("*"))) for d in sorted(raw.glob("*")) if d.is_dir()}
+    raw_bytes = sum(f.stat().st_size for d in raw.glob("*") if d.is_dir() for f in d.glob("*") if f.is_file())
+    # an index of every stored payload, so the raw tree is machine-checkable even when the
+    # manifest is thinner than it (an earlier version of this collector overwrote the manifest
+    # on each pass; the payloads themselves were never lost)
+    raw_index = [{"source": d.name, "path": str(f.relative_to(out)), "bytes": f.stat().st_size,
+                  "sha256": hashlib.sha256(f.read_bytes()).hexdigest(),
+                  "mtime_utc": datetime.fromtimestamp(f.stat().st_mtime, timezone.utc).isoformat()}
+                 for d in sorted(raw.glob("*")) if d.is_dir() for f in sorted(d.glob("*")) if f.is_file()]
+    if raw_index:
+        json_dump(meta / "raw_index.json", raw_index)
+
+    depth_syms = depth_max = 0
+    dp = norm / "market_depth.parquet"
+    if dp.exists():
+        try:
+            d = read_table(dp)
+            if len(d):
+                depth_syms = int(d["symbol"].nunique())
+                depth_max = int(d["level"].max())
+        except Exception:                                             # noqa: BLE001
+            pass
+    checked = agreed = 0
+    cc = meta / "depth_crosscheck.csv"
+    if cc.exists():
+        try:
+            c = pd.read_csv(cc)
+            if len(c) and "bid_agree" in c:
+                checked = int(c["bid_agree"].notna().sum())
+                agreed = int((c["bid_agree"] == True).sum())          # noqa: E712
+        except Exception:                                             # noqa: BLE001
+            pass
+    sym_csv = norm / "symbols.csv"
+    symbols = int(len(pd.read_csv(sym_csv))) if sym_csv.exists() else 0
+
+    validation = {
+        "combined": True,
+        "derived_from": "files on disk (normalized tables, merged manifest, raw tree, metadata/passes)",
+        "rebuilt_utc": utcnow(),
+        "passes": len(passes),
+        "pass_ids": [p.get("pass_id") for p in passes],
+        "pass_windows": [{"pass_id": p.get("pass_id"), "started_utc": p.get("started_utc"),
+                          "completed_utc": p.get("completed_utc"), "argv": p.get("argv"),
+                          "rows_written_this_pass": p.get("rows_written_this_pass")} for p in passes],
+        "symbols_discovered": symbols,
+        "rows": rows,
+        "normalized_rows_total": sum(v for v in rows.values() if v > 0),
+        "requests_total": len(manifest),
+        "requests_by_source": {k: dict(v) for k, v in sorted(by_source.items())},
+        "manifest_covers_every_stored_payload": len(manifest) >= sum(raw_files.values()),
+        "ledger_note": ("manifest.json, failures.json and duplicate_raw_payloads.json are append-merged "
+                        "across passes from this version on; a tree written by the earlier overwriting "
+                        "version carries only its last pass's ledgers, which is why "
+                        "manifest_covers_every_stored_payload can be false. The payloads themselves were "
+                        "never lost: metadata/raw_index.json enumerates every stored file with its sha256, "
+                        "and the row counts above come from the normalized files, not from any ledger."),
+        "failures": len(failures) if isinstance(failures, list) else 0,
+        "duplicate_raw_payload_groups": len(dup) if isinstance(dup, dict) else 0,
+        "raw_files_by_source": raw_files,
+        "raw_files_total": sum(raw_files.values()),
+        "raw_bytes_total": raw_bytes,
+        "depth_symbols_with_levels": depth_syms,
+        "depth_max_levels_seen": depth_max,
+        "cross_source_best_bid_checked": checked,
+        "cross_source_best_bid_agree": agreed,
+    }
+    json_dump(meta / "validation.json", validation)
+    json_dump(meta / "field_coverage.json", coverage)
+    json_dump(meta / "schema.json", schema)
+    json_dump(meta / "sample_records.json", samples)
+    return validation
+
+
 def write_table(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
     """Write a normalized table. An empty result never overwrites an existing file: a run that
     collects only part of the surface (``--extras``, ``--history-start`` alone) leaves the tables
@@ -850,7 +1036,9 @@ def write_table(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
 
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", default="data")
+    ap.add_argument("--out", default=DEFAULT_OUT,
+                    help=f"runtime output directory (default {DEFAULT_OUT}); it is regenerated, "
+                         f"must be git-ignored and may not hold tracked files")
     ap.add_argument("--all-depth", action="store_true", help="displayed depth for every symbol, both sensors")
     ap.add_argument("--all-tape", action="store_true", help="cumulative intraday tape for every symbol with a cid")
     ap.add_argument("--company", action="store_true", help="dsebd company page fundamentals for every symbol")
@@ -862,7 +1050,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--min-gap", type=float, default=0.4)
     ap.add_argument("--timeout", type=float, default=45.0)
     ap.add_argument("--max-symbols", type=int, default=None, help="debug only; omit for every symbol")
+    ap.add_argument("--rebuild-metadata", action="store_true",
+                    help="offline: recompute the combined metadata of --out from the files on disk "
+                         "(no requests); use after multi-pass runs or to refresh committed evidence")
     a = ap.parse_args(argv)
+    if a.rebuild_metadata:                       # read-only over an existing tree; no network, no guard
+        print(json.dumps(rebuild_metadata(Path(a.out)), indent=2, default=str))
+        return 0
     c = Collector(Path(a.out), min_gap=a.min_gap, timeout=a.timeout)
     c.run(a.all_depth, a.all_tape, a.company, a.history_start, a.history_end, a.max_symbols, a.extras)
     return 0
