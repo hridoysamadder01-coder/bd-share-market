@@ -6,11 +6,33 @@
       "date": "2099-01-01",
       "started_utc": "2026-09-07T21:04:31.339500Z",
       "note": "preflight heartbeat proves push access; NOT session success"
+    },
+    {
+      "stage": "CAPTURE_COMPLETE",
+      "at": "2026-09-07T21:04:35.345337Z",
+      "simulated": true
+    },
+    {
+      "stage": "VERIFIED",
+      "at": "2026-09-07T21:04:35.345780Z",
+      "hash_chain_ok": true
+    },
+    {
+      "stage": "FUSED",
+      "at": "2026-09-07T21:04:35.346291Z",
+      "accepted": true,
+      "n_frames": 4000,
+      "reject_reasons": []
     }
   ],
-  "stage": "STARTED",
-  "updated_utc": "2026-09-07T21:04:31.339541Z",
+  "stage": "FUSED",
+  "updated_utc": "2026-09-07T21:04:35.346299Z",
   "date": "2099-01-01",
   "started_utc": "2026-09-07T21:04:31.339500Z",
-  "note": "preflight heartbeat proves push access; NOT session success"
+  "note": "preflight heartbeat proves push access; NOT session success",
+  "simulated": true,
+  "hash_chain_ok": true,
+  "accepted": true,
+  "n_frames": 4000,
+  "reject_reasons": []
 }
