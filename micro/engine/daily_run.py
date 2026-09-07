@@ -301,6 +301,17 @@ def _build_features(sess: str, date: str, fp: str, hash_ok: bool, build) -> dict
 def _update_index(date: str, rec: dict) -> None:
     ip = os.path.join(MICRO, "sessions", "INDEX.json")
     idx = json.load(open(ip))
+    if rec.get("simulated"):
+        # A --simulate run carries no market data. It must never occupy a DEV/VAL/HOLDOUT
+        # slot. This guard exists because a smoke test on 2026-09-07 did exactly that:
+        # it wrote 2099-01-01 into accepted_sessions and filled the first DEV slot.
+        idx.setdefault("simulated_sessions_never_counted", [])
+        note = f"{date} (--simulate; no market data)"
+        if note not in idx["simulated_sessions_never_counted"]:
+            idx["simulated_sessions_never_counted"].append(note)
+        json.dump(idx, open(ip, "w"), indent=2)
+        print(f"INDEX not advanced: {date} is a --simulate run, never counted as a session")
+        return
     for k in ("accepted_sessions", "rejected_sessions"):
         idx[k] = [s for s in idx.get(k, []) if s != date]
     idx["accepted_sessions" if rec.get("accepted") else "rejected_sessions"].append(date)

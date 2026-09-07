@@ -1,7 +1,5 @@
 {
-  "accepted_sessions": [
-    "2099-01-01"
-  ],
+  "accepted_sessions": [],
   "rejected_sessions": [],
   "dev_needed": 8,
   "val_needed": 4,
@@ -10,11 +8,14 @@
   "calibration_session_excluded": "2026-09-06",
   "note": "arrival order of ACCEPTED sessions decides the split; holdout outcomes sealed until denominator complete",
   "counts": {
-    "accepted": 1,
-    "dev_filled": 1,
+    "accepted": 0,
+    "dev_filled": 0,
     "val_filled": 0,
     "holdout_filled": 0
   },
   "next_slot": "DEV",
-  "sessions_until_holdout_opens": 11
+  "sessions_until_holdout_opens": 12,
+  "simulated_sessions_never_counted": [
+    "2099-01-01 (--simulate smoke test, 2026-09-07; no market data, removed)"
+  ]
 }
