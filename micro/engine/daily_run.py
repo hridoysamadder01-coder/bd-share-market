@@ -5,7 +5,7 @@ capture -> verify hash chain -> fuse -> frozen features -> acceptance record -> 
 Repo research code is READ-ONLY; only micro/ is written.
 Nothing here fits, tunes or evaluates a model: collection only. The holdout stays sealed.
 """
-import argparse, datetime as dt, json, os, subprocess, sys, tarfile
+import argparse, datetime as dt, json, os, subprocess, sys, tarfile, time
 
 REPO = "/home/user/bd-share-market"
 MICRO = os.path.join(REPO, "micro")
@@ -42,6 +42,29 @@ def main():
 
     cap = f"/tmp/dse_micro_capture/{date}"
     sess = os.path.join(MICRO, "sessions", date); os.makedirs(sess, exist_ok=True)
+
+    # PREFLIGHT: prove we can PERSIST before investing 4.5 h in capture.
+    # 2026-09-07 the fired session captured the whole session and then could not push,
+    # so the data died with the ephemeral container. Fail loud in minute 1 instead.
+    hb = {"date": date, "phase": "STARTED", "started_utc": dt.datetime.utcnow().isoformat() + "Z",
+          "note": "preflight heartbeat; proves the fired session can push to the data branch"}
+    json.dump(hb, open(os.path.join(sess, "HEARTBEAT.json"), "w"), indent=2)
+    sh(["git", "add", "micro/sessions/"])
+    sh(["git", "commit", "-m", f"micro: {date} capture STARTED (preflight heartbeat)\n\n"
+        "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\n"
+        "Claude-Session: https://claude.ai/code/session_01Y5oSPtMaU6mDMzki4Ti6K5"])
+    pushed = False
+    for delay in (0, 2, 4, 8):
+        if delay: time.sleep(delay)
+        if sh(["git", "push", "-u", "origin", BRANCH]).returncode == 0:
+            pushed = True; break
+    if not pushed:
+        print("PREFLIGHT FAILED: cannot push to the data branch. Aborting BEFORE the 4.5 h capture "
+              "so no session time is wasted. This fired session lacks push entitlement to "
+              f"{BRANCH}; grant it (or run capture on a persistent runner) — nothing was captured.")
+        return 3
+    print("PREFLIGHT OK: push works; the morning heartbeat landed on the data branch. Capturing now.")
+
     from micro_features import UNIVERSE, build
 
     if not a.skip_capture:
