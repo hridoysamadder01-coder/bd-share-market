@@ -1,0 +1,160 @@
+{
+  "fetched_utc": "2026-09-07T20:47:24.262337Z",
+  "source": "bdshare.get_market_depth_data (dsebd.org/mkt_depth_3.php)",
+  "symbols": {
+    "BEXIMCO": {
+      "rows": 8,
+      "columns": [
+        "buy_price",
+        "buy_volume",
+        "sell_price",
+        "sell_volume"
+      ],
+      "data": [
+        {
+          "buy_price": 21.4,
+          "buy_volume": 2025.0,
+          "sell_price": null,
+          "sell_volume": null
+        },
+        {
+          "buy_price": 21.2,
+          "buy_volume": 500.0,
+          "sell_price": null,
+          "sell_volume": null
+        },
+        {
+          "buy_price": 21.0,
+          "buy_volume": 1000.0,
+          "sell_price": null,
+          "sell_volume": null
+        },
+        {
+          "buy_price": 20.6,
+          "buy_volume": 100.0,
+          "sell_price": null,
+          "sell_volume": null
+        },
+        {
+          "buy_price": null,
+          "buy_volume": null,
+          "sell_price": 21.6,
+          "sell_volume": 12214.0
+        },
+        {
+          "buy_price": null,
+          "buy_volume": null,
+          "sell_price": 21.7,
+          "sell_volume": 12650.0
+        },
+        {
+          "buy_price": null,
+          "buy_volume": null,
+          "sell_price": 21.8,
+          "sell_volume": 30000.0
+        },
+        {
+          "buy_price": null,
+          "buy_volume": null,
+          "sell_price": 21.9,
+          "sell_volume": 500.0
+        }
+      ]
+    },
+    "ROBI": {
+      "rows": 2,
+      "columns": [
+        "buy_price",
+        "buy_volume",
+        "sell_price",
+        "sell_volume"
+      ],
+      "data": [
+        {
+          "buy_price": 29.7,
+          "buy_volume": 50000.0,
+          "sell_price": null,
+          "sell_volume": null
+        },
+        {
+          "buy_price": null,
+          "buy_volume": null,
+          "sell_price": 31.0,
+          "sell_volume": 5000.0
+        }
+      ]
+    },
+    "AAMRANET": {
+      "rows": 1,
+      "columns": [
+        "buy_price",
+        "buy_volume"
+      ],
+      "data": [
+        {
+          "buy_price": 16.8,
+          "buy_volume": 3000
+        }
+      ]
+    },
+    "BRACBANK": {
+      "rows": 3,
+      "columns": [
+        "buy_price",
+        "buy_volume"
+      ],
+      "data": [
+        {
+          "buy_price": 62.2,
+          "buy_volume": 12000
+        },
+        {
+          "buy_price": 62.1,
+          "buy_volume": 3500
+        },
+        {
+          "buy_price": 62.0,
+          "buy_volume": 5000
+        }
+      ]
+    },
+    "1STPRIMFMF": {
+      "rows": 1,
+      "columns": [
+        "sell_price",
+        "sell_volume"
+      ],
+      "data": [
+        {
+          "sell_price": 21.9,
+          "sell_volume": 650
+        }
+      ]
+    },
+    "AAMRATECH": {
+      "rows": 0,
+      "columns": [],
+      "data": []
+    },
+    "GP": {
+      "rows": 0,
+      "columns": [],
+      "data": []
+    },
+    "CITYGENINS": {
+      "rows": 0,
+      "columns": [],
+      "data": []
+    },
+    "SQURPHARMA": {
+      "rows": 0,
+      "columns": [],
+      "data": []
+    },
+    "WALTONHIL": {
+      "rows": 0,
+      "columns": [],
+      "data": []
+    }
+  }
+}
