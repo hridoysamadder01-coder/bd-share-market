@@ -1,0 +1,778 @@
+[
+  {
+    "timestamp": "2026-09-07T21:30:37.792656+00:00",
+    "symbol": "BEXIMCO",
+    "gap": true,
+    "error": "ReadTimeout: HTTPSConnectionPool(host='dsebd.org', port=443): Read timed out. (read timeout=10)"
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:30:51.408071+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:30:56.344323+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:30:58.984595+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:01.625540+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:04.271791+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:06.898221+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:09.525543+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:12.155382+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:14.781661+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:17.416311+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:20.034873+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:22.668301+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:25.299462+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  },
+  {
+    "inferred_buy_queue": 1530.72,
+    "inferred_sell_queue": 2486.96,
+    "breakout_probability": 0.0589,
+    "buy_pressure_index": 2633.33,
+    "sell_pressure_index": 28664.0,
+    "spoof_penalty_bid": 0.3172,
+    "spoof_penalty_ask": 0.2837,
+    "n_bid_levels": 4,
+    "n_ask_levels": 4,
+    "total_bid_volume": 3625.0,
+    "total_ask_volume": 55364.0,
+    "best_bid": 21.4,
+    "best_ask": 21.6,
+    "mid": 21.5,
+    "timestamp": "2026-09-07T21:31:27.935770+00:00",
+    "symbol": "BEXIMCO",
+    "gap": false,
+    "bids": [
+      [
+        21.4,
+        2025.0
+      ],
+      [
+        21.2,
+        500.0
+      ],
+      [
+        21.0,
+        1000.0
+      ],
+      [
+        20.6,
+        100.0
+      ]
+    ],
+    "asks": [
+      [
+        21.6,
+        12214.0
+      ],
+      [
+        21.7,
+        12650.0
+      ],
+      [
+        21.8,
+        30000.0
+      ],
+      [
+        21.9,
+        500.0
+      ]
+    ]
+  }
+]

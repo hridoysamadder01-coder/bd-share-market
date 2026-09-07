@@ -1,0 +1,15 @@
+{
+  "csv": "data/pressure_analysis.csv",
+  "horizon_seconds": 300.0,
+  "total": 0,
+  "correct": 0,
+  "accuracy": 0.0,
+  "verdict": "BLOCKED",
+  "reason": "the mid price never changed across 37s of capture (1 distinct value) \u2014 nothing to predict. Re-run the capture while the market is open.",
+  "truth": "INFERRED signal vs OBSERVED forward mid",
+  "capture_span_seconds": 36.5,
+  "rows_with_mid": 14,
+  "symbols": [
+    "BEXIMCO"
+  ]
+}
