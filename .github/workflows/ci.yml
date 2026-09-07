@@ -17,7 +17,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pandas numpy pyarrow requests beautifulsoup4 lxml fastapi uvicorn
+          # httpx2: required by starlette>=1.6 testclient (tests/tower/test_ui.py imports fastapi.testclient)
+          pip install pytest pandas numpy pyarrow requests beautifulsoup4 lxml fastapi uvicorn httpx2
       - name: Run the test suite (seeing, tower, collector)
         run: python -m pytest -q tests
 
