@@ -106,6 +106,38 @@ price+quantity both sides, LTP/OHLC/YCP, day totals. Cleaner (typed JSON, no HTM
 order counts, prints, side, order ids, queue position or a sequence id. `bid_orders_per_level` stays
 NOT_OBSERVABLE across every source reached so far; only the FIX path (`fix_md.py`, tag 346) makes it OBSERVED.
 
+## Second recording — 2026-09-07 15:41:02–15:41:51 UTC (21:41 Dhaka, market closed), symbol AAMRANET
+
+File: `rich_sensor_probe_2026-09-07T1541Z_AAMRANET.ndjson` (5 `MarketDepth` records; the probe's other
+18 "text" candidates were the logged-in `/Order` HTML page and JS/CSS bundles — never evidence, and the
+probe now refuses them, see `har_probe.STATIC_MIME`). Question asked of it by the owner: *compare the
+depth just before and just after placing an advance order; is the order reflected?*
+
+| what the recording contains | evidence |
+|---|---|
+| order-placement request | **none** — no POST to any create/place/DoAction path; the only non-list order call is `GET /core/api/v1/Order/AcceptOrder/4` → `{"Success":true,"Data":"Yes","Color":"blue"}` (a 44-byte yes/no flag, not an order) |
+| the terminal's own order lists | `POST /core/api/v1/Order/AjaxSelect` ×5 and `POST /core/api/v1/AdvancedOrder/AjaxSelect` ×3, filter FromDate 06-Sep-2026, statuses {1,2,4,5,6,8,9,10} → **`total: 0`, `data: []` on every poll** |
+| depth polls | 5, identical body (1 distinct SHA-256), `Depth.DateTime` fixed at `2026-09-07T14:27:45.0997961Z` |
+| the book | **one level only**: bid 16.8 × 3000, no asks; LTP 17.4, Ycp 17.7, 321 trades, 244,508 volume; circuit 15.7–19.1 (from `Order/CompanyInfo.CircuitBreaker`), tick 0.1 |
+| public cross-check at 15:45 UTC | LankaBD `POST /Home/MarketDepthData AAMRANET` → bids `[(16.8, 3000)]`, asks `[]`, LTP 17.4, 321 trades, 244,508 volume — **byte-for-byte the same book** |
+
+Conclusions (OBSERVED unless marked):
+* `Order/MarketDepth` is the **exchange's** book as republished by the broker (`Source: "DWS"`), not a
+  broker-side view: the public portal shows the identical single level at the same minute. A broker-side
+  advance order that has not reached the exchange therefore **cannot** appear in it.
+* No before/after comparison is possible from this recording: no order event lies inside the 49-second
+  window, and every snapshot is identical. Whether the owner's advance order equals the 16.8 × 3000 level
+  is **NOT_OBSERVABLE** here — the depth payload has no owner/order-id field, and the terminal's own order
+  list reported zero orders at the time.
+* `Depth.DateTime` is **not** the exchange's last-modification time: LankaBD's watch feed stamps AAMRANET's
+  last change at 14:06:57 Dhaka (feed end 14:14:51) and CITYGENINS at 14:00:00 Dhaka, while the broker
+  stamps read 14:27:45 and 14:13:45 respectively. Read as Dhaka wall-clock, both broker stamps fall
+  *after* the exchange's, i.e. a broker-side refresh time (INFERRED); read as UTC they fall in the evening.
+  The UTC-vs-Dhaka convention stays UNRESOLVED; what is now settled is that this field must not be used
+  as exchange event time.
+* A one-level, ask-less book after the close is a real exchange state (public sensor agrees), so
+  `n_ask_levels = 0` must be accepted by every consumer, never treated as a parse failure.
+
 ## Next observation that would change something
 One HAR (or kit run) recorded **during continuous trading** with 3–5 symbols cycled through the depth panel.
 That single recording resolves the timestamp convention, measures how often the book actually changes

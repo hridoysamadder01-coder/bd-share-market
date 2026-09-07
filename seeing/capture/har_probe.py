@@ -52,6 +52,11 @@ SENSITIVE_KEYS = {
 MARKET_URL = re.compile(r"(market|depth|quote|price|watch|ticker|feed|stock|instrument|book|trade)", re.I)
 SENSITIVE_URL = re.compile(r"(login|auth|token|account|portfolio|balance|fund|withdraw|deposit|profile|client|bo\b)",
                            re.I)
+# Static assets and rendered pages: a JS bundle or a logged-in HTML page easily carries ≥ 3
+# market words, and the page can carry the account holder's details. Non-JSON bodies are
+# therefore kept ONLY when the URL itself is a market-data class and the MIME is not one of
+# these (learned from the 2026-09-07 15:41 UTC recording, which kept 18 such files before this).
+STATIC_MIME = re.compile(r"(javascript|ecmascript|css|html|font|image|audio|video|octet-stream)", re.I)
 MIN_MARKET_HITS = 2
 
 
@@ -145,9 +150,13 @@ def probe_har(har: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]
         if not c:
             skipped["not_market"] += 1
             continue
+        mime = (resp.get("content") or {}).get("mimeType") or ""
+        if c["format"] == "text" and (not MARKET_URL.search(urlparse(url).path) or STATIC_MIME.search(mime)):
+            skipped["text_not_market_endpoint"] += 1
+            continue
         records.append({
             "t_recv_utc": e.get("startedDateTime"), "method": req.get("method"), "url": url,
-            "status": resp.get("status"), "mime": ((resp.get("content") or {}).get("mimeType") or ""),
+            "status": resp.get("status"), "mime": mime,
             "transport": "xhr_or_fetch", "has_post_body": bool(req.get("postData")),
             "body_sha256": hashlib.sha256(body.encode("utf-8", "replace")).hexdigest(),
             "body_bytes": len(body), "format": c["format"], "market_key_hits": c["stats"]["market"],
