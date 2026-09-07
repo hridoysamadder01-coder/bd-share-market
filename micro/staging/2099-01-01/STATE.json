@@ -1,0 +1,16 @@
+{
+  "history": [
+    {
+      "stage": "STARTED",
+      "at": "2026-09-07T21:04:31.339538Z",
+      "date": "2099-01-01",
+      "started_utc": "2026-09-07T21:04:31.339500Z",
+      "note": "preflight heartbeat proves push access; NOT session success"
+    }
+  ],
+  "stage": "STARTED",
+  "updated_utc": "2026-09-07T21:04:31.339541Z",
+  "date": "2099-01-01",
+  "started_utc": "2026-09-07T21:04:31.339500Z",
+  "note": "preflight heartbeat proves push access; NOT session success"
+}
