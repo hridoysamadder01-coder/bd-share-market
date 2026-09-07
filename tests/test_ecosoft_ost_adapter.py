@@ -206,6 +206,25 @@ def test_probe_text_bodies_need_three_market_hints():
     assert s["skipped"] == {"not_market": 2}
 
 
+def test_probe_never_keeps_pages_or_static_assets():
+    """A logged-in HTML page and JS/CSS bundles carry plenty of market words; they are
+    not market-data endpoints and can carry the account holder's details."""
+    page = "<html>bid ask depth price volume ltp trade <span>BoAccountId 1</span></html>"
+    js = "var bid=1,ask=2,depth=3,price=4,volume=5,ltp=6,trade=7;"
+    e_page = _entry("https://ost.example/Order", page)
+    e_page["response"]["content"]["mimeType"] = "text/html"
+    e_js = _entry("https://ost.example/Scripts/Js/vendor", js)
+    e_js["response"]["content"]["mimeType"] = "application/javascript"
+    e_feed_html = _entry("https://ost.example/market/feed", js)             # market URL but a script body
+    e_feed_html["response"]["content"]["mimeType"] = "text/javascript"
+    e_feed_txt = _entry("https://ost.example/market/feed", js)              # market URL, plain text → kept
+    e_feed_txt["response"]["content"]["mimeType"] = "text/plain"
+    recs, s = har_probe.probe_har(_har([e_page, e_js, e_feed_html, e_feed_txt]))
+    assert s["kept"] == 1 and recs[0]["url"] == "https://ost.example/market/feed" and recs[0]["format"] == "text"
+    assert s["skipped"] == {"text_not_market_endpoint": 3}
+    assert "BoAccountId" not in json.dumps(recs)
+
+
 def test_probe_cli_refuses_to_write_on_leak(tmp_path, monkeypatch, capsys):
     har = tmp_path / "s.har"
     har.write_text(json.dumps(_har([_entry("https://x/market", '{"price":1,"volume":2}')])))
