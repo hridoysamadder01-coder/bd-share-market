@@ -47,7 +47,7 @@ from seeing.clock import session_phase, to_dhaka       # noqa: E402
 # A mix on purpose: symbols seen holding residual orders while closed (AAMRANET,
 # 1STPRIMFMF, BEXIMCO, ROBI, BRACBANK) and symbols seen empty (CITYGENINS, GP,
 # SQURPHARMA, WALTONHIL). Both behaviours have to be tracked, not just one.
-DEFAULT_SYMBOLS = ("CITYGENINS", "AAMRANET", "1STPRIMFMF", "BRACBANK", "GP",
+DEFAULT_SYMBOLS = ("CITYGENINS", "AAMRANET", "AAMRATECH", "1STPRIMFMF", "BRACBANK", "GP",
                    "SQURPHARMA", "BEXIMCO", "ROBI", "WALTONHIL")
 
 
