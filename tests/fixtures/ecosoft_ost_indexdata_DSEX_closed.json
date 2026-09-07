@@ -1,0 +1,24 @@
+{
+ "Success": true,
+ "Data": {
+  "Ycp": 5558.45,
+  "Gainer": 168,
+  "Looser": 146,
+  "Unchanged": 63,
+  "TradingCode": "DSEX",
+  "StockExchange": 1,
+  "Date": "2026-09-07T00:00:00",
+  "Ltp": 5567.42,
+  "Close": 5567.42,
+  "CloseOrLtp": 5567.42,
+  "Open": 5569.4,
+  "High": 5586.0,
+  "Low": 5491.61,
+  "Volume": 200350191,
+  "Trade": 185987,
+  "Value": 571.32463,
+  "Change": 8.97,
+  "ChangePercentage": 0.1613,
+  "IsSector": false
+ }
+}

@@ -1,0 +1,78 @@
+{
+ "Success": true,
+ "StockExchange": 1,
+ "IsBlock": false,
+ "TradingCode": "CITYGENINS",
+ "Depth": {
+  "TradingCode": "CITYGENINS",
+  "DateTime": "2026-09-07T14:13:45.1505564Z",
+  "Open": 126.0,
+  "Ltp": 128.3,
+  "Ycp": 127.6,
+  "Close": 128.2,
+  "High": 128.4,
+  "Low": 126.0,
+  "Trade": 212,
+  "Volume": 112750,
+  "Value": 14.376,
+  "Source": "DWS",
+  "Change": 0.7,
+  "ChangePercentage": 0.54858934169279,
+  "BuySellDetails": [
+   {
+    "BuyPrice": 128.1,
+    "BuyVolume": 914,
+    "SellPrice": 128.3,
+    "SellVolume": 949
+   },
+   {
+    "BuyPrice": 127.8,
+    "BuyVolume": 2400,
+    "SellPrice": 128.4,
+    "SellVolume": 1
+   },
+   {
+    "BuyPrice": 127.7,
+    "BuyVolume": 5420,
+    "SellPrice": 128.5,
+    "SellVolume": 2953
+   },
+   {
+    "BuyPrice": 127.6,
+    "BuyVolume": 3920,
+    "SellPrice": 129.0,
+    "SellVolume": 2916
+   },
+   {
+    "BuyPrice": 127.5,
+    "BuyVolume": 1604,
+    "SellPrice": 129.9,
+    "SellVolume": 1000
+   },
+   {
+    "BuyPrice": 127.4,
+    "BuyVolume": 1250,
+    "SellPrice": 130.0,
+    "SellVolume": 900
+   },
+   {
+    "BuyPrice": 127.3,
+    "BuyVolume": 1000,
+    "SellPrice": 139.0,
+    "SellVolume": 5000
+   },
+   {
+    "BuyPrice": 127.2,
+    "BuyVolume": 554
+   },
+   {
+    "BuyPrice": 127.1,
+    "BuyVolume": 500
+   },
+   {
+    "BuyPrice": 127.0,
+    "BuyVolume": 249
+   }
+  ]
+ }
+}
