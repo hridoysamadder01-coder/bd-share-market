@@ -90,9 +90,53 @@ the archive and the owner's CSVs matched to the last decimal on open, high, low,
 volume — 100 % on every field. Every row carries its `source`, so the two can never be silently
 mixed. `RAW_EXTENSION_MANIFEST.json` holds the hashes, counts and that overlap check.
 
-The ownership question is now measurable. It is still **not measured**: the test itself needs a
-pre-registration written before the first number is computed, exactly like `MICRO_PREREG.json`.
-Nothing below this line has been run.
+The ownership question is now measurable **in principle**. Measuring the denominator immediately
+afterwards showed it is not measurable **in practice** — see the next section. No pre-registration
+was written, because writing rules for a test the data cannot run is theatre.
+
+## The real blocker: DSE publishes three as-on dates per company, and keeps no archive
+
+Before writing any rules, the usable sample was counted. It collapses.
+
+Signal date taken as the first trading day at or after `as_on + 21 days` (a conservative stand-in
+for publication, since the page carries no publication timestamp — only "as on"):
+
+| forward horizon | observations | symbols | distinct as-on dates | concentration |
+|---|---|---|---|---|
+| 20 trading days | 208 | 184 | 29 | **162 of 208 (78 %) share the single as-on month 2026-06** |
+| 40 trading days | 46 | 24 | 28 | scattered singles across 2021–2025 |
+
+208 rows that mostly share one month are not 208 independent observations; they are close to one
+event. Whatever the market did after June 2026 would be the entire result, dressed up as a signal.
+At 40 days there are 46 rows over 24 symbols, which decides nothing either.
+
+The cause was checked at the source rather than inferred. `dsebd.org/displayCompany.php` exposes
+exactly **three** as-on dates per company — the last year-end plus the two most recent months:
+
+```
+SAIHAMTEX : Jun 30, 2025 (year ended) | Jul 31, 2026 | Aug 31, 2026
+BEXIMCO   : Jun 30, 2024 (year ended) | Jun 30, 2026 | Jul 31, 2026
+GP        : Dec 31, 2025 (year ended) | Jul 31, 2026 | Aug 31, 2026
+```
+
+So each symbol yields at most two changes, both from the last few months, and the most recent ones
+have no forward price yet. There is no historical archive of monthly shareholding on the exchange's
+site to backfill from. BullBD's `selectedShareHoldingData` came back empty for the symbol checked.
+
+**Status: BLOCKED_BY_DATA, and extending the price table did not fix it** — that fix was real and
+worth doing (22 → 371 symbols joinable), but the binding constraint turned out to be the *ownership*
+history, not the price history.
+
+### What would actually unblock it
+
+Collect the snapshot every month from now on. `collector/dse_public_collector.py` already captures
+these five columns; it simply has to run monthly, because the exchange overwrites the window rather
+than archiving it. Each run adds one as-on date per symbol, and a year of that is a real panel:
+~400 symbols × 12 dates, spread across 12 independent months instead of concentrated in one.
+
+That is a slow clock — one observation per symbol per month — and it should be started rather than
+argued about. Nothing about the idea is testable before it has run for several months, and no
+number computed from today's data would mean anything.
 
 ## The blocker as it stood on 2026-09-07 (kept for the record)
 
