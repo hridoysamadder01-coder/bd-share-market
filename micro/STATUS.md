@@ -7,15 +7,15 @@ touches the running capture._
 
 | | |
 |---|---|
-| checked at | 2026-09-08T04:29:09+00:00 UTC · 10:29:09 Dhaka |
-| market | **MARKET OPEN** — 220 min to close |
-| process | alive, pid 3284 |
+| checked at | 2026-09-08T07:45:15+00:00 UTC · 13:45:15 Dhaka |
+| market | **MARKET OPEN** — 24 min to close |
+| process | alive, pid 1742 |
 | stage | **CAPTURING** |
-| stages so far | STARTED → CAPTURING → CAPTURING |
-| checkpoints pushed | 4 |
-| last checkpoint | d5edcad · 57s ago |
-| next due | 2026-09-08T04:43:12+00:00 |
-| local == remote | yes ✅ (d5edcadecb82 / d5edcadecb82) |
+| stages so far | STARTED → CAPTURING → CAPTURING → CAPTURING → STARTED → CAPTURING → CAPTURING → CAPTURING → CAPTURING → CAPTURING → STARTED → CAPTURING → CAPTURING → CAPTURING |
+| checkpoints pushed | 3 |
+| last checkpoint | 2b01817 · 11m 25s ago |
+| next due | 2026-09-08T07:48:50+00:00 |
+| local == remote | yes ✅ (2b01817ddf71 / 2b01817ddf71) |
 
 ## Session ledger
 
@@ -33,5 +33,5 @@ numbers until it finishes and passes its own quality gate.
 
 ## Last checkpoint commit
 
-`d5edcad` — micro: refresh STATUS.md after restoring checkpointing
-at 2026-09-08T04:28:12+00:00
+`2b01817` — micro: raw checkpoint
+at 2026-09-08T07:33:50+00:00
