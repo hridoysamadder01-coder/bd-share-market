@@ -11,6 +11,49 @@ from research.discovery import panel
 from research.discovery.candidates import Candidate, evaluate, vol_quintile
 
 
+needs_results = pytest.mark.skipif(
+    not panel.results_available(),
+    reason="results/*.parquet is a generated, git-ignored tree and is absent in CI; "
+           "apply_reservations and dev_slices are covered synthetically below")
+
+
+def test_reservations_remove_the_sealed_holdout_and_the_2026_slice():
+    """The rule itself, without the git-ignored parquet tree."""
+    d = pd.DataFrame({"symbol": ["A"] * 6,
+                      "ts": pd.to_datetime(["2015-01-01", "2019-06-01", "2020-01-01",
+                                            "2022-07-27", "2025-01-01", "2026-03-01"])})
+    out = panel.apply_reservations(d)
+    assert [str(t.date()) for t in out["ts"]] == ["2015-01-01", "2025-01-01"]
+    assert out.attrs["rows_removed_as_reserved"] == 4
+    assert not out["ts"].between(*panel.SEALED_HOLDOUT).any()
+    assert (out["ts"] < panel.VIRGIN_SLICE_START).all()
+
+
+def test_reservation_boundaries_are_inclusive_on_the_sealed_window():
+    edge = pd.DataFrame({"symbol": ["A"] * 4,
+                         "ts": pd.to_datetime(["2018-12-31", "2019-01-01",
+                                               "2022-07-27", "2022-07-28"])})
+    kept = [str(t.date()) for t in panel.apply_reservations(edge)["ts"]]
+    assert kept == ["2018-12-31", "2022-07-28"]
+
+
+def test_dev_slices_never_pool_panels_or_eras_synthetic():
+    """dev_slices must never hand a candidate a frame spanning two regimes."""
+    n = 12000
+    d = pd.DataFrame({
+        "symbol": ["A"] * n,
+        "ts": list(pd.date_range("2023-01-02", periods=n // 2, freq="D"))
+              + list(pd.date_range("2024-03-01", periods=n - n // 2, freq="D")),
+    })
+    d["panel"] = panel.panels.label(d)
+    fa, fb = (pd.Timestamp(x) for x in panel.C.FLOOR_ERA)
+    d["floor_era"] = d["ts"].between(fa, fb)
+    for s in panel.dev_slices(d, min_rows=100):
+        assert s.frame["panel"].nunique() == 1
+        assert s.frame["floor_era"].nunique() == 1
+
+
+@needs_results
 def test_sealed_holdout_and_reserved_slice_are_asserted_not_just_filtered():
     d = panel.load_dev()
     assert not d["ts"].between(*panel.SEALED_HOLDOUT).any()
@@ -88,7 +131,8 @@ def test_events_are_counted_distinctly_not_as_occurrences():
     assert r["n_events"] == 80 and r["symbols"] == 2
 
 
-def test_dev_slices_never_pool_panels_or_eras():
+@needs_results
+def test_dev_slices_never_pool_panels_or_eras_on_real_data():
     d = panel.add_regime_and_room(panel.load_dev())
     for s in panel.dev_slices(d):
         assert s.frame["panel"].nunique() == 1

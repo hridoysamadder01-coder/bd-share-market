@@ -63,24 +63,45 @@ def _results_dir(explicit: Optional[str] = None) -> str:
     raise FileNotFoundError("dse_eod_features.parquet not found; pass results_dir")
 
 
-def load_dev(results_dir: Optional[str] = None) -> pd.DataFrame:
-    """Features joined to labels, with everything reserved removed and asserted."""
-    r = _results_dir(results_dir)
-    f = pd.read_parquet(os.path.join(r, "dse_eod_features.parquet"))
-    lab = pd.read_parquet(os.path.join(r, "dse_eod_labels.parquet"))
-    d = f.merge(lab, on=["symbol", "ts"], how="inner")
+def apply_reservations(d: pd.DataFrame) -> pd.DataFrame:
+    """Drop everything reserved, then ASSERT it is gone.
 
+    Split out from `load_dev` so the rule that matters — sealed data never
+    reaches discovery — is testable without the git-ignored parquet tree. The
+    assertions are the point: a filter that silently does nothing is exactly the
+    failure this guards against.
+    """
     before = len(d)
     d = d[~d["ts"].between(*SEALED_HOLDOUT)]
     d = d[d["ts"] < VIRGIN_SLICE_START]
     d = d.sort_values(["symbol", "ts"]).reset_index(drop=True)
-
-    # Assert, do not trust the filter.
     assert not d["ts"].between(*SEALED_HOLDOUT).any(), "sealed holdout leaked into DEV"
     assert (d["ts"] < VIRGIN_SLICE_START).all(), "reserved 2026 slice leaked into DEV"
     d.attrs["rows_removed_as_reserved"] = before - len(d)
+    return d
+
+
+def load_dev(results_dir: Optional[str] = None) -> pd.DataFrame:
+    """Features joined to labels, with everything reserved removed and asserted.
+
+    Needs the generated `results/` tree, which is git-ignored; tests that call
+    this skip when it is absent, and `apply_reservations` covers the rule itself.
+    """
+    r = _results_dir(results_dir)
+    f = pd.read_parquet(os.path.join(r, "dse_eod_features.parquet"))
+    lab = pd.read_parquet(os.path.join(r, "dse_eod_labels.parquet"))
+    d = apply_reservations(f.merge(lab, on=["symbol", "ts"], how="inner"))
     d.attrs["panel_summary"] = panels.summary(d)
     return d
+
+
+def results_available(results_dir: Optional[str] = None) -> bool:
+    """Whether the generated parquet tree is present (it is not, in CI)."""
+    try:
+        _results_dir(results_dir)
+        return True
+    except FileNotFoundError:
+        return False
 
 
 def input_columns(d: pd.DataFrame) -> List[str]:
