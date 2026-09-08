@@ -129,10 +129,17 @@
       "checkpoint_utc": "2026-09-08T07:19:03.332034Z",
       "checkpoint_bytes": 20978840,
       "final_checkpoint": false
+    },
+    {
+      "stage": "CAPTURING",
+      "at": "2026-09-08T07:33:49.917901Z",
+      "checkpoint_utc": "2026-09-08T07:33:49.917619Z",
+      "checkpoint_bytes": 23343372,
+      "final_checkpoint": false
     }
   ],
   "stage": "CAPTURING",
-  "updated_utc": "2026-09-08T07:19:03.332269Z",
+  "updated_utc": "2026-09-08T07:33:49.917909Z",
   "date": "2026-09-08",
   "started_utc": "2026-09-08T07:03:22.873275Z",
   "note": "preflight heartbeat proves push access; NOT session success",
@@ -152,7 +159,7 @@
     "BEXIMCO,BRACBANK,BXPHARMA,GP,IPDC,LOVELLO,MALEKSPIN,ORIONPHARM,POWERGRID,PTL,SAIHAMCOT,SAIHAMTEX,SHARPIND,SQURPHARMA"
   ],
   "started": "2026-09-08T07:03:37.506596Z",
-  "checkpoint_utc": "2026-09-08T07:19:03.332034Z",
-  "checkpoint_bytes": 20978840,
+  "checkpoint_utc": "2026-09-08T07:33:49.917619Z",
+  "checkpoint_bytes": 23343372,
   "final_checkpoint": false
 }
