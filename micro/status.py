@@ -97,24 +97,27 @@ def read_index() -> Dict[str, Any]:
 
 
 def checkpoints(date: str) -> List[Dict[str, str]]:
-    """Commits the runner made for *this* session, newest first.
+    """Commits this session made, newest first.
 
-    The subject must name this session's date. A looser filter (any subject
-    containing "capture" or "checkpoint") swept up unrelated history — including
-    a different session's preflight — and reported 10 checkpoints when one had
-    been pushed.
+    Anchored on the session's own preflight commit rather than on subject text.
+    The runner writes its checkpoints as plain ``micro: raw checkpoint`` with no
+    date in the subject, so a date-matching filter saw only the preflight and
+    reported a healthy capture as STALLED. Every commit at or after the preflight
+    belongs to this session; the preflight itself is the anchor and is counted.
     """
-    raw = _run("git", "log", "--pretty=%h|%cI|%s", "-60")
-    want = re.compile(rf"^micro:\s*{re.escape(date)}\b")
-    out = []
+    raw = _run("git", "log", "--pretty=%h|%cI|%s", "-80")
+    entries = []
     for line in raw.splitlines():
         parts = line.split("|", 2)
-        if len(parts) != 3:
-            continue
-        sha, when, subj = parts
-        if want.match(subj):
-            out.append({"sha": sha, "utc": when, "subject": subj})
-    return out
+        if len(parts) == 3:
+            entries.append({"sha": parts[0], "utc": parts[1], "subject": parts[2]})
+    anchor = re.compile(rf"^micro:\s*{re.escape(date)}\b.*capture STARTED")
+    out = []
+    for e in entries:                                  # newest first
+        out.append(e)
+        if anchor.match(e["subject"]):
+            return [x for x in out if x["subject"].startswith("micro:")]
+    return []                                          # no preflight for this date yet
 
 
 def collect(date: Optional[str] = None) -> Dict[str, Any]:
