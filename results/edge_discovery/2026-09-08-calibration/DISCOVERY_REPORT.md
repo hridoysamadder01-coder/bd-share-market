@@ -10,6 +10,13 @@ nothing here is tradeable, and no sealed data was opened to produce it.
 session: 4,257 unified states, 14 listings, one session.
 **39 PROMISING · 12 WEAK · 2 KILLED · 1 INSUFFICIENT_SAMPLE** at the primary horizon.
 
+> **Read §3 and §12 together.** §3 finds that nothing built from the **displayed
+> book** beats E1 — and §12 explains why: every such quantity correlates ρ ≈ 0.6
+> with it, because they are all the same information. §12 then finds the one thing
+> that does beat it, from a **different source** (the tape), at the shortest
+> horizon, with an interval clear of zero. §12 also records a look-ahead it nearly
+> shipped, and what that leak did to the numbers.
+
 > **One session is one block.** Nothing here is validated. The micro DEV set is
 > empty (`micro/sessions/INDEX.json`: 0 accepted sessions), so the preregistered
 > block bootstrap over sessions cannot run at all. What follows is measurement on
@@ -154,9 +161,10 @@ exactly where it does not, on both metrics.** That is a mechanism, not a score.
 
 ---
 
-## 3. The incremental gate — nothing beats E1 with an established margin
+## 3. The incremental gate — nothing built from the book beats E1
 
-Two comparisons, and they must both be read.
+Two comparisons, and they must both be read. (The qualifier matters: §12 finds
+that something built from the **tape** does beat it.)
 
 **Pooled**, only two candidates exceed E1 by more than one combined standard
 deviation:
@@ -189,6 +197,11 @@ Two results are established, and both are negative:
 
 The handoff's own lesson, confirmed rather than assumed: complexity did not
 improve prediction here, and two specific ways of adding it did measurable harm.
+
+**But the lesson is about the *source*, not about complexity.** Every candidate in
+this section is a function of the displayed book, and §12 shows they are 0.6-correlated
+with E1 for that reason. Adding a second *view of the same thing* cannot help. Adding
+a second *thing* can, and does — see §12.
 
 `CTX_sector_permission` covers **8 symbols, not 14** — only Textile (5) and
 Pharmaceuticals (3) have enough members for a real sector tier — so its lift is
@@ -471,3 +484,151 @@ Nothing above is tradeable. E1's mean forward move at h4 is **+0.13 ticks agains
 an MAE of −0.29 ticks** — the adverse excursion is more than twice the expected
 gain. Path cost and fillability are **Stage 10.5**, and until that exists none of
 this is an edge. It is structure.
+
+---
+
+# 12. The one thing that beats E1 — and what it cost to find
+
+Added after the first pass. Sections 1–11 tested variations on a single idea and
+found, correctly, that they are all the same idea. This section tests a different
+one.
+
+## What failed, and why it failed the same way
+
+Four new quantities were invented from the **displayed book**, each answering a
+question quantity cannot:
+
+| quantity | the question it asks | ρ with E1 | AUC (h4) |
+|---|---|---|---|
+| `ttc_asym` | **time** — which side empties first at the current flow rate | +0.63 | 0.651 |
+| `wbc_asym_2000` | **price** — is it cheaper to buy or to sell 2,000 shares | +0.66 | 0.325 (i.e. 0.675 flipped) |
+| `hhi_asym` | **shape** — is the size one wall or a staircase | **+0.04** | 0.471 |
+| `pressure_per_cost` | pressure per tick of entry cost | +0.61 | 0.652 |
+
+None of them adds to E1. The reason is in the ρ column: **three of the four are
+0.6-correlated with E1, and the one that is genuinely independent carries no
+signal.** Different algebra on the same source is still the same source. That is a
+real structural result about this data, not a failure of imagination — and it is
+what sent the search to a different source instead of a fifth formula.
+
+`wbc_asym` is also a *sign* correction worth recording: cheaper-to-buy predicts
+price going **down**, not up. The mechanism is coherent — cheap to buy means the
+ask is thick and close, which is supply standing there — but it is the opposite of
+the docstring's first guess, and the data settled it.
+
+## What worked: the tape
+
+    qt_flow = signed interval volume / top-5 liquidity     ρ with E1 = +0.08
+
+The book says what is **waiting**. The tape says what is **actually happening**.
+Fusing them with a causal rank-sum — no fitted weights:
+
+    QT = causal_rank(imb_l1) + causal_rank(qt_flow)
+
+| horizon | E1 | QT | delta | 95 % CI (symbol blocks) | established |
+|---|---|---|---|---|---|
+| **h2 (≈87 s)** | 0.7058 | **0.7770** | **+0.0712** | **[+0.0280, +0.1067]** | **YES** |
+| h4 | 0.7124 | 0.7312 | +0.0188 | [−0.0116, +0.0465] | no |
+| h8 | 0.6610 | 0.6723 | +0.0113 | [−0.0203, +0.0428] | no |
+
+Improves in **9 of 10** symbols at h2 (only GP is worse, −0.090).
+
+**This is the only construction in this repository that beats E1 with an interval
+clear of zero.** It is also the preregistration's own primary question — *does
+fused order-book + order-flow information beat the strongest standalone baseline* —
+answered yes, at the shortest horizon, on one session.
+
+Two properties make it worth carrying:
+
+* **The gain is at the shortest horizon**, which is also where E1's adverse
+  excursion is smallest relative to its gain (0.58× at h2 against 2.1× at h4).
+  For once, edge and path point the same way.
+* **The single frame beats the accumulation.** A 4-frame cumulative signed volume
+  *hurts* (−0.021). It is flow arriving now that matters, not flow already in the
+  price — the same shape as level-beats-derivative in §3b.
+
+## The look-ahead this section nearly shipped
+
+The first version of `qt_fusion` combined its inputs with `rank(pct=True)` over
+the whole frame. A whole-sample percentile depends on **every row after t**, so
+the number could not have been computed live, and the measurement using it was
+reading its own future.
+
+It mattered:
+
+| | leaky (whole-sample rank) | causal (trailing rank) |
+|---|---|---|
+| h4 delta | +0.0348, CI [+0.0122, +0.0553] — **"established"** | +0.0188, CI [−0.0116, +0.0465] — **not** |
+
+**The leak manufactured a second significant horizon.** It was caught by
+`tests/test_invented.py::test_no_feature_reads_the_future`, which corrupts every
+frame past a cut point and requires bit-identical values before it. `causal_rank`
+now ranks each value against that symbol's own strictly-earlier values and is NaN
+until 20 observations exist.
+
+Recorded rather than quietly fixed, because the failure mode is the dangerous one:
+it did not look like a bug, it looked like a result.
+
+## A cost model that came for free
+
+Walking the displayed book gives Stage 10.5 its first data-derived numbers:
+
+| order size | median round trip | median buy slip | median sell slip |
+|---|---|---|---|
+| 500 | **1.00 tick** | 0.50 | 0.50 |
+| 2,000 | **1.75 ticks** | 0.76 | 0.50 |
+| 10,000 | **2.43 ticks** | 1.43 | 1.06 |
+
+Buying costs more than selling at size. These are displayed-book estimates, not
+realised fills — but they are the first cost numbers here that come from data
+rather than assumption, and they set the bar any signal must clear: **QT's edge at
+h2 has to be worth more than 1.00 tick round trip to be worth taking.**
+
+## The economic test — and why it settles the question
+
+The cost model above is not decoration. Run every rule against it:
+
+| rule | h | n | mean gain | MFE | MAE | **gain − 1.00 tick cost** |
+|---|---|---|---|---|---|---|
+| E1 alone | 2 | 1,658 | +0.102 | +0.212 | −0.059 | **−0.898** |
+| E1 alone | 4 | 1,634 | +0.135 | +0.498 | −0.287 | **−0.865** |
+| E1 alone | 8 | 1,648 | −0.013 | +0.837 | −0.717 | **−1.013** |
+| **E1 AND flow>0** | 2 | 520 | **+0.341** | +0.415 | **+0.139** | **−0.659** |
+| **E1 AND flow>0** | 4 | 516 | **+0.398** | +0.751 | −0.097 | **−0.602** |
+| E1 AND flow>0 | 8 | 517 | +0.259 | +1.061 | −0.485 | −0.741 |
+
+The QT rule does everything a better signal should: it **triples E1's expected
+move** (+0.102 → +0.341 ticks at h2), turns the average adverse excursion
+**positive** (+0.139 — on average the position never goes against you inside the
+window), and improves the MAE-to-gain ratio from 0.58× to 0.41×.
+
+**And it still loses to cost by 0.6 ticks.**
+
+Even with a *perfect exit* at the maximum favourable excursion — not achievable,
+it requires knowing the future — the best case is h8 at **+0.061 ticks**, which is
+zero within noise:
+
+| perfect-exit upper bound | h2 | h4 | h8 |
+|---|---|---|---|
+| MFE − cost | −0.585 | −0.249 | **+0.061** |
+
+### What this actually settles
+
+**As a taker strategy — crossing the spread to get in — this is dead**, and it is
+dead by a factor of about 2.5, not by a hair. No amount of threshold tuning closes
+a 0.6-tick gap when the whole signal is worth 0.4 ticks.
+
+That is a definitive answer, and it is worth more than another PROMISING row.
+It also points at the only direction that changes the arithmetic:
+
+**Post, don't cross.** Every number above assumes paying the round trip. A limit
+order resting at the touch pays *no* spread — it earns part of it. The same
++0.34 ticks of directional edge, with the 1.00-tick cost removed, is a completely
+different proposition. What it needs instead is a **fill model**: when you post at
+the bid and the signal is right, you often *do not get filled* (the price leaves
+without you), and when the signal is wrong you always do. That adverse-selection
+asymmetry is the real question, it is measurable from this same data, and it is
+the next thing to build.
+
+**This is why Stage 10.5 is a stage and not a footnote.** The cost layer did not
+merely qualify the finding — it inverted the conclusion about what to build next.
