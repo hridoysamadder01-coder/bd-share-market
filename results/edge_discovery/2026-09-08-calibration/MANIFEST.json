@@ -1,62 +1,15 @@
 {
- "candidates": 44,
+ "candidates": 54,
  "captures": [
   "evidence/capture/2026-09-06"
  ],
- "controls_beating_strongest_baseline": [],
- "controls_run_for": [
-  "tlpi_2",
-  "tlpi_1",
-  "geom_divergence",
-  "c_e1_minus_market",
-  "x_e1_minus_tlpi0",
-  "v_e1_vetoed"
- ],
  "e1_threshold": 0.2,
- "evaluations": 132,
- "horizons_s": [
-  60,
-  180,
-  600
+ "evaluations": 162,
+ "frame_horizons": [
+  2,
+  4,
+  8
  ],
- "label_coverage": {
-  "180": {
-   "down": 1143,
-   "flat": 1502,
-   "flat_pct_of_labelled": 42.93,
-   "gap_over_2H": 70,
-   "labelled": 3499,
-   "labelled_pct": 82.19,
-   "median_dt_s": 204.64,
-   "no_forward_frame": 57,
-   "states": 4257,
-   "up": 854
-  },
-  "60": {
-   "down": 602,
-   "flat": 2039,
-   "flat_pct_of_labelled": 65.35,
-   "gap_over_2H": 556,
-   "labelled": 3120,
-   "labelled_pct": 73.29,
-   "median_dt_s": 84.99,
-   "no_forward_frame": 17,
-   "states": 4257,
-   "up": 479
-  },
-  "600": {
-   "down": 1544,
-   "flat": 775,
-   "flat_pct_of_labelled": 22.4,
-   "gap_over_2H": 0,
-   "labelled": 3460,
-   "labelled_pct": 81.28,
-   "median_dt_s": 625.97,
-   "no_forward_frame": 183,
-   "states": 4257,
-   "up": 1141
-  }
- },
  "lambda_grid": [
   0.0,
   0.25,
@@ -66,11 +19,31 @@
   4.0,
   8.0
  ],
- "prereg_note": "read-only; no threshold, feature, outcome, universe or split was changed",
+ "matching_keys": [
+  "symbol",
+  "tod_bucket",
+  "spread_bucket"
+ ],
+ "matching_source": "tower/experiment.py matched_controls \u2014 reused, not reimplemented",
+ "median_cadence_s": 43.67,
+ "prereg_note": "read-only; \u03b8=0.20, outcome, universe, splits and horizons unchanged",
  "prereg_sha256": "169935bdb2ef772c6944da12d1afd691c0c2a1b685281ff16b01085d3c7ac01d",
- "primary_horizon_s": 180,
+ "primary_frame_horizon": 4,
+ "ranking_criterion_1_unavailable": "DEV/VAL agreement needs \u22652 sessions; 1 available",
  "run_id": "2026-09-08-calibration",
- "schema": "edge_discovery_run/1",
+ "schema": "edge_discovery_run/2",
+ "sectors_observable_for_tier": [
+  "Pharmaceuticals & Chemicals",
+  "Textile"
+ ],
+ "sectors_single_member_not_observable": [
+  "Bank",
+  "Financial Institutions",
+  "Food & Allied",
+  "Fuel & Power",
+  "Miscellaneous",
+  "Telecommunication"
+ ],
  "session_ledger": {
   "accepted_sessions": 0,
   "calibration_session_excluded": "2026-09-06",
@@ -91,8 +64,7 @@
  "sessions": [
   "2026-09-06"
  ],
- "stage3_gate": "PASS",
- "state_summary": {
+ "stage2_summary": {
   "companies": 14,
   "distinct_state_sha256": 4257,
   "hashed_fields": 96,
@@ -110,7 +82,12 @@
   "unresolved_states": 0,
   "xsrc_agreement_rate_mean": 0.759426
  },
- "status_counts": {
-  "INSUFFICIENT_SAMPLE": 132
- }
+ "states": 4257,
+ "status_counts_primary_horizon": {
+  "INSUFFICIENT_SAMPLE": 1,
+  "KILLED": 2,
+  "PROMISING": 39,
+  "WEAK": 12
+ },
+ "symbols": 14
 }

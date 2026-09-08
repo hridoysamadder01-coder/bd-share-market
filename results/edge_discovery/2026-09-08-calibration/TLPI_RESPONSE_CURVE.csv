@@ -1,15 +1,22 @@
-lambda,candidate,horizon_s,rows,episodes,blocks,auc,ci_lo,ci_hi,ci_kind,up,down,status,note,scale
-0.0,tlpi_0,180,1997,466,1,0.53914,0.51153,0.56585,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-0.25,tlpi_0p25,180,1997,496,1,0.60519,0.57933,0.62994,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-0.5,tlpi_0p5,180,1997,507,1,0.64231,0.61834,0.66676,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-1.0,tlpi_1,180,1997,523,1,0.67596,0.6536,0.70033,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-2.0,tlpi_2,180,1997,548,1,0.692,0.66893,0.7152,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-4.0,tlpi_4,180,1997,555,1,0.68783,0.66422,0.71087,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-8.0,tlpi_8,180,1997,559,1,0.6825,0.65941,0.70532,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,ticks
-0.0,tlpi_0_rel,180,1997,466,1,0.53914,0.51153,0.56585,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
-0.25,tlpi_0p25_rel,180,1997,466,1,0.53928,0.51166,0.56595,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
-0.5,tlpi_0p5_rel,180,1997,466,1,0.5394,0.51175,0.56604,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
-1.0,tlpi_1_rel,180,1997,468,1,0.53981,0.5121,0.56649,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
-2.0,tlpi_2_rel,180,1997,467,1,0.5405,0.51265,0.56708,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
-4.0,tlpi_4_rel,180,1997,466,1,0.54173,0.5138,0.56813,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
-8.0,tlpi_8_rel,180,1997,471,1,0.54433,0.51617,0.5709,within_session_rows_only,854,1143,INSUFFICIENT_SAMPLE,1 independent block(s); the prereg's block is a whole session and 3 are needed before any between-session statement exists. The interval shown is over rows within the session and does not generalise. NOT a kill.,relative_to_mid
+lambda,horizon_frames,matched_lift_pp,matched_lift_sd,episodes,n_signal_valid,auc,auc_rows,mean_fwd_ticks,mae,mfe,status
+0.0,2,-4.02562,1.06242,133,1733,0.53368,1351,-0.04183,-0.19215,0.12435,WEAK
+0.0,4,-4.68342,1.18375,133,1704,0.54298,1993,-0.06837,-0.51056,0.4196,WEAK
+0.0,8,0.67435,1.07699,133,1696,0.54886,2483,-0.10967,-1.00649,0.88267,WEAK
+0.25,2,4.27018,0.96116,205,2047,0.6008,1351,0.02467,-0.13605,0.17416,WEAK
+0.25,4,4.92059,0.76776,205,2016,0.60416,1993,0.01612,-0.44221,0.47842,WEAK
+0.25,8,9.99974,0.60345,205,2022,0.61282,2483,0.00593,-0.8912,0.91889,PROMISING
+0.5,2,7.53567,0.8399,237,2136,0.64063,1351,0.05454,-0.10323,0.18446,PROMISING
+0.5,4,11.45375,0.79269,237,2110,0.64118,1993,0.06872,-0.37417,0.47796,PROMISING
+0.5,8,15.06664,0.84521,237,2121,0.64245,2483,0.04455,-0.78784,0.88967,PROMISING
+1.0,2,10.29038,0.62871,262,1987,0.67802,1351,0.09311,-0.06517,0.20659,PROMISING
+1.0,4,15.28033,0.55737,262,1962,0.67519,1993,0.11035,-0.3104,0.49134,PROMISING
+1.0,8,15.59107,0.58355,262,1973,0.65922,2483,0.08033,-0.70096,0.88039,PROMISING
+2.0,2,10.18159,0.47203,294,1792,0.69975,1351,0.07868,-0.07115,0.19252,PROMISING
+2.0,4,14.1825,0.75268,294,1762,0.69309,1993,0.08939,-0.31413,0.4651,PROMISING
+2.0,8,11.90851,0.77287,294,1775,0.65961,2483,-0.00479,-0.72338,0.8293,PROMISING
+4.0,2,10.01209,0.66335,309,1682,0.70564,1351,0.09661,-0.06272,0.21136,PROMISING
+4.0,4,14.09775,0.95708,309,1660,0.69423,1993,0.12741,-0.29699,0.5012,PROMISING
+4.0,8,12.18899,1.12768,309,1672,0.64958,2483,0.00389,-0.72638,0.86453,PROMISING
+8.0,2,10.78744,0.5403,309,1660,0.70426,1351,0.09639,-0.06325,0.21024,PROMISING
+8.0,4,15.43256,0.66489,309,1636,0.69271,1993,0.12775,-0.29523,0.49725,PROMISING
+8.0,8,12.66162,0.64626,309,1650,0.64225,2483,-0.01242,-0.72394,0.84091,PROMISING
