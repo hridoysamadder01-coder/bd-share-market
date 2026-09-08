@@ -570,8 +570,19 @@ func TestFileTailFromEndAndRotateBetweenRuns(t *testing.T) {
 			after = append(after, r)
 		}
 	}
-	if len(after) != 2 || after[0]["reason"] != "rotate" {
-		t.Fatalf("rotate between runs: %v", after)
+	// Either restart reason is correct here, and which one fires is the OS's choice,
+	// not the test's: startOffset calls it "rotate" when the new file has a different
+	// inode, and falls through to "truncate" (size < persisted offset) when the OS
+	// hands the replacement the SAME inode number, which it is free to do right after
+	// an unlink. Both mean the persisted offset was discarded and the run restarted at
+	// 0 with a GAP rather than silence, which is what this test is actually about.
+	// Asserting "rotate" alone made the test pass on filesystems that do not recycle
+	// inodes and fail on those that do (green here, red on the CI runner).
+	if len(after) != 2 || (after[0]["reason"] != "rotate" && after[0]["reason"] != "truncate") {
+		t.Fatalf("replacement between runs must restart with a GAP: %v", after)
+	}
+	if after[0]["kind"] != "GAP" {
+		t.Fatalf("the restart record must be a GAP, got %v", after[0]["kind"])
 	}
 	if b, _ := decodeBody(after[1]); string(b) != "fresh\n" || after[1]["transport"].(map[string]any)["offset"].(float64) != 0 {
 		t.Fatalf("post-rotate: %q", b)
