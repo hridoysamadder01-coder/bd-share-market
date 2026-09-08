@@ -30,3 +30,9 @@ runtime/
 # tables + COVERAGE.json under evidence/public_engine/<run>/extract/, written by
 #   python3 -m seeing.extract --store <run> --out <run>/extract
 evidence/public_engine/*-full/segments/
+
+# whole-market intraday sessions (seeing/capture/market_day.py): one session over
+# ~384 symbols is roughly 100 MB of raw book and tape payloads. Same rule as
+# above — the raw store stays local, the repository keeps MANIFEST.json,
+# SOURCE_STATUS.json and extract/.
+evidence/market_day/*/segments/
