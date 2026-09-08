@@ -459,6 +459,115 @@ class DSEOwnershipAdapter:
         return out
 
 
+@dataclass
+class DSEMarketHistoryAdapter:
+    """A rolling ~30 session-day market history from dsebd.org, no account needed.
+
+    Found by checking a broker terminal's header ribbon against what the public
+    site already gives away. The ribbon read `DSEX: 5539.32 | Tr: 168,534 | Vol:
+    191,268,628 | Val: 590.44 cr`; this page's top row for the same day reads
+    168,534 trades, 191,268,628 shares and 5,904.379 mn — the same numbers, free.
+
+    Two things here exist nowhere else in the collection:
+
+    * **Total market capitalisation** (6,911,303.853 mn on 2026-09-08). No other
+      wired source publishes it, and it is the denominator for turnover-to-cap —
+      the only size-free way to compare one session's activity against another's.
+    * **DSES and DS30 beside DSEX.** A move in the broad index that the shariah
+      and blue-chip indices do not share is a different event from one they do,
+      and that separation cannot be recovered from DSEX alone.
+
+    The window is short and rolling — roughly a month — so this is a source that
+    must be polled to accumulate rather than fetched once. Rows are keyed by their
+    own date, so re-runs overlap harmlessly and the panel grows a row per session.
+
+    `DGEN Index` is published as a literal "-": DGEN was retired, so the column is
+    kept empty rather than zero, because a discontinued index is not an index that
+    fell to nothing.
+    """
+
+    client: PoliteClient
+    name: str = "dse_market_history"
+    kind: str = "market"
+    url: str = "https://www.dsebd.org/recent_market_information.php"
+    observes = ("date", "total_trade", "total_volume", "total_value_mn",
+                "market_cap_mn", "dsex", "dses", "ds30", "t_recv")
+
+    # Matched loosely (case, whitespace, the "in Taka (mn)" qualifiers) so a
+    # cosmetic rewording does not silently drop a column — and the header actually
+    # seen is recorded on the frame either way, so a real change is visible.
+    COLUMNS = (("date", r"^date$"),
+               ("total_trade", r"total\s+trade"),
+               ("total_volume", r"total\s+volume"),
+               ("total_value_mn", r"total\s+value"),
+               ("market_cap_mn", r"market\s+cap"),
+               ("dsex", r"\bDSEX\b"),
+               ("dses", r"\bDSES\b"),
+               ("ds30", r"\bDS30\b"),
+               ("dgen", r"\bDGEN\b"))
+
+    DATE_RE = re.compile(r"^\d{2}-\d{2}-\d{4}$")
+
+    def fetch(self, key: Optional[str] = None) -> Fetched:
+        return self.client.get(self.url, headers={"Accept": "text/html,application/xhtml+xml"},
+                               allow_tls_fallback=True)
+
+    def parse(self, body: bytes, key: Optional[str] = None) -> Parsed:
+        out = Parsed(self.name, truth=capability_map(self.observes))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body.decode("utf-8", "replace"), "lxml")
+
+        # The page opens with a 397-row scrolling ticker of every instrument — by
+        # far the largest table, and carrying nothing this source is for. So the
+        # history table is found by its HEADER, never by size or position.
+        table, header, idx = None, None, {}
+        for t in soup.find_all("table"):
+            rows = t.find_all("tr")
+            if len(rows) < 2:
+                continue
+            cells = [c.get_text(" ", strip=True) for c in rows[0].find_all(["th", "td"])]
+            if len(cells) < 2:
+                continue
+            # Identified by the header carrying BOTH Date and DSEX — not by column
+            # count, which would break the day DSE trims a column, and not by size
+            # or position, which the ticker wins. `^date$` is anchored so a ticker
+            # cell like "1JANATAMF 3.40 0.00 0.00%" cannot match it.
+            found: Dict[str, int] = {}
+            for field, pat in self.COLUMNS:
+                for i, c in enumerate(cells):
+                    if re.search(pat, c, re.I):
+                        found[field] = i
+                        break
+            if "date" in found and "dsex" in found:
+                table, header, idx = t, cells, found
+                break
+        if table is None:
+            out.problems.append("no market-history table (no header carrying both Date and DSEX)")
+            return out
+
+        for tr in table.find_all("tr")[1:]:
+            cells = [c.get_text(" ", strip=True) for c in tr.find_all("td")]
+            if len(cells) <= idx["date"]:
+                continue
+            raw_date = cells[idx["date"]]
+            if not self.DATE_RE.match(raw_date):
+                continue                       # a totals row, a spacer, or a footer line
+            d, m, y = raw_date.split("-")
+            fr: Dict[str, Any] = {"date": f"{y}-{m}-{d}", "date_raw": raw_date}
+            for field, i in idx.items():
+                if field != "date":
+                    fr[field] = _num(cells[i]) if i < len(cells) else None
+            out.frames.append(fr)
+
+        if not out.frames:
+            out.problems.append(f"history table found but no dated rows parsed; header={header}")
+            return out
+        out.frames[0]["header_seen"] = header
+        out.frames[0]["columns_missing"] = [f for f, _ in self.COLUMNS if f not in idx]
+        out.frames[0]["sessions_on_page"] = len(out.frames)
+        return out
+
+
 # ---------------------------------------------------------------------- registry
 def build_specs(client: PoliteClient, symbols: Sequence[str]) -> List[Any]:
     """SourceSpec rows for everything in this module, blocked entries included."""
@@ -485,6 +594,11 @@ def build_specs(client: PoliteClient, symbols: Sequence[str]) -> List[Any]:
         SourceSpec("cdbl_stats", "macro", CDBLStatisticsAdapter(client), 86400.0,
                    access_note="BO accounts, depository participants, enlisted ISINs, "
                                "CDS market value, shares in CDS"),
+        SourceSpec("dse_market_history", "market", DSEMarketHistoryAdapter(client), 3600.0,
+                   access_note="~30 session-day rolling history: trades, volume, turnover, "
+                               "TOTAL MARKET CAP, and DSEX/DSES/DS30 together. The market-cap "
+                               "and the two non-DSEX indices are published by no other wired "
+                               "source. The window rolls, so the panel only exists if polled"),
         SourceSpec("dse_ownership", "ownership", DSEOwnershipAdapter(client), 2592000.0,
                    per_symbol=True,
                    access_note="monthly shareholding snapshot — the slow clock that is the only "

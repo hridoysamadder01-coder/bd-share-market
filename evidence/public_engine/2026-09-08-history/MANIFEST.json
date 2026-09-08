@@ -1,0 +1,38 @@
+{
+ "schema_version": 1,
+ "capturer_id": "engine-vm",
+ "epoch": "69331d62b3894b54bc3d74157a2bdf9f",
+ "software_version": "c49f052b347279a00790e3e9c42d347d32e05bb8",
+ "opened_utc": "2026-09-08T10:24:56.895113+00:00",
+ "segments": [
+  {
+   "source": "dse_market_history",
+   "path": "segments/dse_market_history__engine-vm__17c98cee__20260908T10__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "4bb2139367f3b05510a8629d3d22dfa9ad29e95232677f78794e77f077a71a43",
+   "bytes": 1627,
+   "epoch": "17c98cee32404fec9d7ce6115970f682",
+   "closed_utc": "2026-09-08T10:24:49.592161+00:00"
+  },
+  {
+   "source": "dse_market_history",
+   "path": "segments/dse_market_history__engine-vm__69331d62__20260908T10__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "e58297270cf18467a4c4f793676d9fe0455df8bff8c02be68c71a373dbdde059",
+   "bytes": 392550,
+   "epoch": "69331d62b3894b54bc3d74157a2bdf9f",
+   "closed_utc": "2026-09-08T10:25:00.577861+00:00"
+  }
+ ],
+ "previous_epochs": [
+  {
+   "epoch": "17c98cee32404fec9d7ce6115970f682",
+   "opened_utc": "2026-09-08T10:24:37.952106+00:00"
+  }
+ ],
+ "closed_utc": "2026-09-08T10:25:00.578898+00:00"
+}

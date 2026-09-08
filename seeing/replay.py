@@ -53,17 +53,18 @@ SOURCE_TABLE = {
     "bullbd_detail": "fundamentals", "dse_ownership": "ownership",
     "stocknow_instruments": "instruments", "cse_current_price": "cse",
     "bb_bill_rate": "macro", "cdbl_stats": "macro", "bsec_publications": "regulatory",
+    "dse_market_history": "market_history",
 }
 
 TABLES = ("books", "watch", "tape", "market", "block", "circuit", "hts", "latest",
           "fundamentals", "ownership", "instruments", "cse", "macro", "regulatory",
-          "gaps", "heartbeats", "meta")
+          "market_history", "gaps", "heartbeats", "meta")
 
 # Tables whose frames may carry small lists or dicts. Those do not survive a
 # parquet round trip, so they are JSON-encoded on the way in. `books` is excluded
 # on purpose — fusion reads bid_levels/ask_levels as real Python lists.
 _JSON_ENCODED_TABLES = frozenset({"fundamentals", "ownership", "instruments", "cse",
-                                  "macro", "regulatory"})
+                                  "macro", "regulatory", "market_history"})
 
 
 def _adapters() -> Dict[str, Any]:

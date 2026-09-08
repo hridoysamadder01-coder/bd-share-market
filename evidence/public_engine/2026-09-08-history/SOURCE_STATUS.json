@@ -1,0 +1,48 @@
+{
+ "t_utc": "2026-09-08T10:25:00.571279+00:00",
+ "session_phase": "CLOSED",
+ "trading_date_dhaka": "2026-09-08",
+ "capturer_id": "engine-vm",
+ "out_dir": "evidence/public_engine/2026-09-08-history",
+ "cadence_scale": 1.0,
+ "symbols": [],
+ "client": {
+  "requests": 1,
+  "errors": 0,
+  "tls_fallbacks": 1
+ },
+ "sources": [
+  {
+   "source": "dse_market_history",
+   "status": "WORKING",
+   "attempts": 1,
+   "ok": 1,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T10:24:56.895374+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "market",
+   "cadence_s": 3600.0,
+   "per_symbol": false,
+   "phases": [
+    "CLOSED",
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "~30 session-day rolling history: trades, volume, turnover, TOTAL MARKET CAP, and DSEX/DSES/DS30 together. The market-cap and the two non-DSEX indices are published by no other wired source. The window rolls, so the panel only exists if polled"
+  }
+ ],
+ "by_status": {
+  "WORKING": 1
+ },
+ "raw_records": 1
+}
