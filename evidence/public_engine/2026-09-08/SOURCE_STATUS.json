@@ -1,0 +1,116 @@
+{
+ "t_utc": "2026-09-08T03:27:41.589345+00:00",
+ "session_phase": "CLOSED",
+ "trading_date_dhaka": "2026-09-08",
+ "capturer_id": "engine-vm",
+ "out_dir": "evidence/public_engine/2026-09-08",
+ "symbols": [
+  "MALEKSPIN",
+  "SHARPIND",
+  "SAIHAMCOT",
+  "SAIHAMTEX",
+  "BXPHARMA",
+  "PTL",
+  "LOVELLO",
+  "BRACBANK",
+  "BEXIMCO",
+  "GP",
+  "SQURPHARMA",
+  "IPDC",
+  "POWERGRID",
+  "ORIONPHARM"
+ ],
+ "client": {
+  "requests": 16,
+  "errors": 0,
+  "tls_fallbacks": 1
+ },
+ "sources": [
+  {
+   "source": "stocknow_instruments",
+   "status": "WORKING",
+   "attempts": 1,
+   "ok": 1,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T03:27:27.051066+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "watch",
+   "cadence_s": 120.0,
+   "per_symbol": false,
+   "phases": [
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "473 instruments; 7/15/30/90/180/365-day reference prices, yearly high/low, floor flag, source updated_at"
+  },
+  {
+   "source": "cse_current_price",
+   "status": "WORKING",
+   "attempts": 1,
+   "ok": 1,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T03:27:28.749844+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "watch",
+   "cadence_s": 120.0,
+   "per_symbol": false,
+   "phases": [
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "the other exchange \u2014 independent cross-check, 388 rows"
+  },
+  {
+   "source": "bullbd_detail",
+   "status": "WORKING",
+   "attempts": 14,
+   "ok": 14,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T03:27:40.991075+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "fundamentals",
+   "cadence_s": 21600.0,
+   "per_symbol": true,
+   "phases": [
+    "CLOSED",
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "EPS / NAV / PE / paid-up capital / outstanding shares + ISO-stamped snapshot"
+  }
+ ],
+ "by_status": {
+  "WORKING": 3
+ },
+ "raw_records": 16
+}
