@@ -200,11 +200,13 @@ Nothing in this adapter needs to change for that — `frames_from_probe()` alrea
 # Recording 3 — 2026-09-08 08:57 UTC, AAMRANET (`rich_sensor_probe_2026-09-08T0857Z_AAMRANET.ndjson`)
 
 Saved by the account holder from their own logged-in browser, 2026-09-08
-08:57:01 → 08:58:07 UTC (14:57 → 14:58 Dhaka). 7 `Order/MarketDepth` polls at a
-**11.0 s** median gap, plus `CompanyInfo`, `TradingCodes` and one third-party chat
+08:57:01 → **09:18:39** UTC (14:57 → 15:18 Dhaka). **119** `Order/MarketDepth`
+polls at a **11.0 s** median gap over **21.6 minutes**, plus `CompanyInfo`, `TradingCodes` and one third-party chat
 widget the probe kept because its body happened to carry two market-looking keys.
-Processed by `seeing/capture/har_probe.py`: **10 records kept, 33 sensitive keys
-stripped, `leaked_keys()` = [] (0 leaked)**. The raw HAR is NOT committed — it
+Processed by `seeing/capture/har_probe.py`: **122 records kept, 33 sensitive keys
+stripped, `leaked_keys()` = [] (0 leaked)**. (An earlier 7-poll export of this same
+session was committed first and then replaced by this superset — same recording,
+saved longer. Two files would have claimed AAMRANET twice in the identity spine.) The raw HAR is NOT committed — it
 carries request cookies and authorization that the probe never reads.
 
 ## What it settles
@@ -241,9 +243,16 @@ publishes the stamp, so the same fast polling would be deduped exactly.
 
 ## What it does NOT settle
 
-**All 7 polls are byte-identical** (`distinct body_sha256 = 1`). The market closed
-at 14:10 Dhaka and this was recorded at 14:57, so a frozen book proves nothing
-about the live update rate. **Whether EcoSoft's book actually changes faster than
+**All 119 polls are byte-identical** (`distinct body_sha256 = 1`), across 21.6
+minutes, and `Depth.DateTime` stays pinned at `14:11:54.494` in every one of them
+while `Trade` (293) and `Volume` (261,037) never move. The market closed at 14:10
+Dhaka and this was recorded from 14:57, so a frozen book proves nothing about the
+live update rate.
+
+That length is itself worth having as a **negative control**: over 119 responses
+the last-modification stamp did not tick with the response, which is the direct
+confirmation that `Depth.DateTime` is the book's change time and not a server
+clock. A single-digit sample could not have shown that. **Whether EcoSoft's book actually changes faster than
 the public ~43 s during an open market remains UNKNOWN**, and only a recording
 inside 10:00–14:00 Dhaka can answer it. That is still the open item.
 
