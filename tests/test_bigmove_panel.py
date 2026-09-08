@@ -192,3 +192,17 @@ def test_the_same_raw_data_replays_to_an_identical_feature_hash():
         cols = ["symbol", "date"] + FEATURES
         return hashlib.sha256(x[cols].to_csv(index=False).encode()).hexdigest()
     assert h(add_features(d)) == h(add_features(d.copy()))
+
+
+def test_a_frozen_share_has_no_position_within_a_zero_range():
+    """hi20 == lo20 divided by EPS produced a mean of 5.7e8 over frozen shares."""
+    n = 40
+    d = pd.DataFrame({
+        "symbol": "X", "date": pd.date_range("2015-01-01", periods=n, freq="D"),
+        "open": 10.0, "high": 10.0, "low": 10.0, "close": 10.0,
+        "volume": 100.0, "turnover": 1000.0, "trade": 5.0, "ycp": 10.0,
+    })
+    f = add_features(d)
+    rp = f["range_pos_20d"]
+    assert rp.isna().all(), "a share that never moved has no position in its range"
+    assert not np.isfinite(rp.to_numpy(dtype=float)).any()

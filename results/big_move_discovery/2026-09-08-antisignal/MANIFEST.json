@@ -1,0 +1,56 @@
+{
+ "run_id": "2026-09-08-antisignal",
+ "target": "D_shallow_pullback",
+ "definition": {
+  "downside_excursion_5 >=": -0.03,
+  "dist_from_20d_high >=": -0.05
+ },
+ "branch": "claude/big-move-ultra-push",
+ "commit": "0230fb20e981bc214419b59bdcc9438a57bbe4e1",
+ "parent_commit": "6235e34232a14518715a3e57cd654b0ecb8a54d8",
+ "panel_cache": "/tmp/claude-0/-home-user-bd-share-market/5efc8cb5-0f22-5733-a689-82183cceec19/scratchpad/bigmove_panel_xs.parquet",
+ "rows": 587474,
+ "symbols": 392,
+ "date_min": "2012-10-01",
+ "date_max": "2026-01-22",
+ "episode_stats": {
+  "n_signal_rows": 96875,
+  "n_episodes": 7232,
+  "overlap_inflation_x": 13.4,
+  "episode_symbols": 377,
+  "episode_years": 12,
+  "episode_dates": 1778,
+  "median_run_length": 13.395326327433628
+ },
+ "corp_action_rows_excluded": 4195,
+ "strata_sets": {
+  "original": [
+   "year",
+   "liq_bucket",
+   "price_bucket",
+   "prior5_bucket"
+  ],
+  "full": [
+   "year",
+   "liq_bucket",
+   "price_bucket",
+   "prior5_bucket",
+   "vol_bucket",
+   "dist20_bucket",
+   "prior3_bucket",
+   "turnover_bucket"
+  ]
+ },
+ "outcomes": [
+  "hit_p10_20d",
+  "hit_p20_30d",
+  "hit_p10_10d",
+  "hit_p5_5d",
+  "hit_p10_30d"
+ ],
+ "surface_cells": 72,
+ "control_draws": 20,
+ "bootstrap_draws": 400,
+ "command": "python3 -m research.bigmove.run_antisignal",
+ "elapsed_s": 564.8
+}

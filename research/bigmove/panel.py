@@ -157,7 +157,11 @@ def add_features(d: pd.DataFrame) -> pd.DataFrame:
         .reset_index(level=0, drop=True)
     f["dist_from_20d_high"] = px / (hi20 + EPS) - 1.0
     f["dist_from_20d_low"] = px / (lo20 + EPS) - 1.0
-    f["range_pos_20d"] = (px - lo20) / (hi20 - lo20 + EPS)
+    # A frozen share has hi20 == lo20, and dividing by EPS made the mean over
+    # such rows come out as 5.7e8. Where the 20-day range is not a range, the
+    # position within it is NOT_OBSERVABLE rather than enormous.
+    span20 = hi20 - lo20
+    f["range_pos_20d"] = np.where(span20 > 1e-6, (px - lo20) / span20, np.nan)
 
     # --- C. volume with a small body — the SAI shape, neutrally named ----------
     avg10 = _roll(gv, 10, "mean")

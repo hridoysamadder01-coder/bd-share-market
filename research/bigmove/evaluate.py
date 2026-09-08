@@ -35,20 +35,38 @@ BOOT_DRAWS = 400
 STRATA = ("year", "liq_bucket", "price_bucket", "prior5_bucket")
 
 
-def add_strata(d: pd.DataFrame) -> pd.DataFrame:
+def add_strata(d: pd.DataFrame, strata: Sequence[str] = STRATA) -> pd.DataFrame:
     """Bucket the controls, and build the join key ONCE.
 
     The key is an integer code, not a joined string: a `astype(str).agg("|".join)`
     over 580k rows silently turned a categorical NaN into a float and crashed, and
     it cost more per candidate than the evaluation it served.
+
+    `strata` is a parameter because the default set is not always enough. It
+    carries no volatility term, and a candidate selecting quarter-volatility
+    shares will beat or lose to its "matched" control for that reason alone —
+    which is exactly what happened to `D_shallow_pullback`.
     """
     f = d.copy()
     f["liq_bucket"] = pd.qcut(f["adv20_mn"].rank(method="first"), 5,
                               labels=[f"L{i}" for i in range(5)])
     f["prior5_bucket"] = pd.cut(f["prior_5d_ret"], [-np.inf, -0.05, -0.01, 0.01, 0.05, np.inf],
                                 labels=["<-5", "-5..-1", "-1..1", "1..5", ">5"])
+    if "vol20" in f.columns:
+        f["vol_bucket"] = pd.qcut(f["vol20"].rank(method="first"), 5,
+                                  labels=[f"V{i}" for i in range(5)])
+    if "dist_from_20d_high" in f.columns:
+        f["dist20_bucket"] = pd.cut(f["dist_from_20d_high"],
+                                    [-np.inf, -0.20, -0.10, -0.05, -0.02, np.inf],
+                                    labels=["<-20", "-20..-10", "-10..-5", "-5..-2", ">-2"])
+    if "prior_3d_ret" in f.columns:
+        f["prior3_bucket"] = pd.cut(f["prior_3d_ret"], [-np.inf, -0.05, -0.01, 0.01, 0.05, np.inf],
+                                    labels=["<-5", "-5..-1", "-1..1", "1..5", ">5"])
+    if "rel_turnover" in f.columns:
+        f["turnover_bucket"] = pd.qcut(f["rel_turnover"].rank(method="first"), 4,
+                                       labels=[f"T{i}" for i in range(4)])
     key = np.zeros(len(f), dtype=np.int64)
-    for c in STRATA:
+    for c in strata:
         # NaN factorizes to -1, which is a stratum of its own: a row whose bucket
         # is unknown may only be matched against other rows with the same unknown.
         codes, uniq = pd.factorize(f[c], use_na_sentinel=True)
