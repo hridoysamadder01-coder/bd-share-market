@@ -1,0 +1,127 @@
+{
+  "generated_utc": "2026-09-08T00:27:49.108917+00:00",
+  "script": "data/extend_dse_eod.py",
+  "output_parquet": "data/raw/dse_eod_extended.parquet",
+  "output_sha256": "eda5c643a9d7838bd99b8103607eb3654ae6ab573a95b9b142c4b4b34e8eaeef",
+  "output_bytes": 18200207,
+  "base": {
+    "file": "results/dse_eod_bars_annotated.parquet",
+    "rows": 862073,
+    "symbols": 392,
+    "range": [
+      "2012-10-01",
+      "2026-01-22"
+    ]
+  },
+  "fetched": {
+    "source": "dsebd.org/day_end_archive.php via bdshare.get_historical_data",
+    "requested": [
+      "2026-01-01",
+      "2026-09-08"
+    ],
+    "rows": 103718,
+    "instruments": 654,
+    "equity_symbols": 382,
+    "windows": [
+      {
+        "window": "2026-01-01..2026-01-31",
+        "rows": 13686,
+        "error": null
+      },
+      {
+        "window": "2026-02-01..2026-02-28",
+        "rows": 11055,
+        "error": null
+      },
+      {
+        "window": "2026-03-01..2026-03-31",
+        "rows": 11028,
+        "error": null
+      },
+      {
+        "window": "2026-04-01..2026-04-30",
+        "rows": 13556,
+        "error": null
+      },
+      {
+        "window": "2026-05-01..2026-05-31",
+        "rows": 10943,
+        "error": null
+      },
+      {
+        "window": "2026-06-01..2026-06-30",
+        "rows": 14106,
+        "error": null
+      },
+      {
+        "window": "2026-07-01..2026-07-31",
+        "rows": 13430,
+        "error": null
+      },
+      {
+        "window": "2026-08-01..2026-08-31",
+        "rows": 12734,
+        "error": null
+      },
+      {
+        "window": "2026-09-01..2026-09-08",
+        "rows": 3180,
+        "error": null
+      }
+    ]
+  },
+  "overlap_check": {
+    "window": [
+      "2026-01-01",
+      "2026-01-22"
+    ],
+    "rows": 1182,
+    "symbols": 74,
+    "dates": 16,
+    "per_field": {
+      "open": {
+        "exact_match_pct": 100.0,
+        "max_abs_diff": 0.0
+      },
+      "high": {
+        "exact_match_pct": 100.0,
+        "max_abs_diff": 0.0
+      },
+      "low": {
+        "exact_match_pct": 100.0,
+        "max_abs_diff": 0.0
+      },
+      "close": {
+        "exact_match_pct": 100.0,
+        "max_abs_diff": 0.0
+      },
+      "volume": {
+        "exact_match_pct": 100.0,
+        "max_abs_diff": 0.0
+      }
+    },
+    "agree": true
+  },
+  "appended": {
+    "rows": 55133,
+    "symbols": 382,
+    "range": [
+      "2026-01-25",
+      "2026-09-07"
+    ]
+  },
+  "combined": {
+    "rows": 917206,
+    "symbols": 408,
+    "range": [
+      "2012-10-01",
+      "2026-09-07"
+    ],
+    "by_source": {
+      "owner_csv_ingest": 862073,
+      "bdshare_day_end_archive": 55133
+    }
+  },
+  "turnover_note": "turnover = close x volume (derived, same definition as the base table). turnover_reported_mn is the archive's own value field in million BDT and is never merged into turnover.",
+  "truth": "OBSERVED \u2014 exchange day-end bars; no price adjusted, no gap filled."
+}

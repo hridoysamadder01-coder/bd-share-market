@@ -72,7 +72,29 @@ R2-3 cross-sectional mean reversion, P45-1 through P45-8 — is built from price
 Ownership change has never been tested in this repository. It is a different class of input:
 declared, monthly, and about who is accumulating rather than what the tape did.
 
-## The blocker, measured — this cannot be tested today
+## UPDATE 2026-09-08 — the blocker below is cleared
+
+The price gap that made this untestable has been closed. `data/extend_dse_eod.py` pulls the
+missing months from DSE's day-end archive through `bdshare` and appends them to the bar table
+after verifying the two sources agree.
+
+| | before | after |
+|---|---|---|
+| price table ends | 2026-01-22 | **2026-09-07** |
+| rows | 862,073 | **917,206** |
+| **symbols with 2+ holding dates inside the price range** | **22** | **371** |
+| holding observations with forward prices | — | **1,113**, median 46 trading days forward |
+
+The overlap was checked rather than assumed: on 2026-01-01…22, 1,182 rows across 74 symbols,
+the archive and the owner's CSVs matched to the last decimal on open, high, low, close and
+volume — 100 % on every field. Every row carries its `source`, so the two can never be silently
+mixed. `RAW_EXTENSION_MANIFEST.json` holds the hashes, counts and that overlap check.
+
+The ownership question is now measurable. It is still **not measured**: the test itself needs a
+pre-registration written before the first number is computed, exactly like `MICRO_PREREG.json`.
+Nothing below this line has been run.
+
+## The blocker as it stood on 2026-09-07 (kept for the record)
 
 The join was checked rather than assumed, and it does not hold up yet.
 
