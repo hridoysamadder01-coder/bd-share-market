@@ -1,0 +1,135 @@
+{
+ "t_utc": "2026-09-08T04:07:29.711628+00:00",
+ "session_phase": "CONTINUOUS",
+ "trading_date_dhaka": "2026-09-08",
+ "capturer_id": "engine-vm",
+ "out_dir": "evidence/public_engine/2026-09-08-macro",
+ "cadence_scale": 1.0,
+ "symbols": [],
+ "client": {
+  "requests": 4,
+  "errors": 1,
+  "tls_fallbacks": 0
+ },
+ "sources": [
+  {
+   "source": "bb_exchange_rate",
+   "status": "DEGRADED",
+   "attempts": 1,
+   "ok": 0,
+   "success_rate": 0.0,
+   "failures": {
+    "connect_error": 1
+   },
+   "consecutive_failures": 1,
+   "last_ok_utc": null,
+   "last_failure_utc": "2026-09-08T04:07:11.905479+00:00",
+   "last_failure_code": "connect_error",
+   "last_failure_detail": "ConnectionError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))",
+   "unchanged_polls": 0,
+   "kind": "macro",
+   "cadence_s": 86400.0,
+   "per_symbol": false,
+   "phases": [
+    "CLOSED",
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "USD/BDT reference rate"
+  },
+  {
+   "source": "bb_bill_rate",
+   "status": "WORKING",
+   "attempts": 1,
+   "ok": 1,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T04:07:19.436505+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "macro",
+   "cadence_s": 86400.0,
+   "per_symbol": false,
+   "phases": [
+    "CLOSED",
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "Bangladesh Bank bill / policy-adjacent rates"
+  },
+  {
+   "source": "bsec_site",
+   "status": "WORKING",
+   "attempts": 1,
+   "ok": 1,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T04:07:25.234961+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "regulatory",
+   "cadence_s": 86400.0,
+   "per_symbol": false,
+   "phases": [
+    "CLOSED",
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "regulator publications index; raw-kept, parsed on replay"
+  },
+  {
+   "source": "cdbl_site",
+   "status": "WORKING",
+   "attempts": 1,
+   "ok": 1,
+   "success_rate": 1.0,
+   "failures": {},
+   "consecutive_failures": 0,
+   "last_ok_utc": "2026-09-08T04:07:27.604481+00:00",
+   "last_failure_utc": null,
+   "last_failure_code": null,
+   "last_failure_detail": null,
+   "unchanged_polls": 0,
+   "kind": "macro",
+   "cadence_s": 86400.0,
+   "per_symbol": false,
+   "phases": [
+    "CLOSED",
+    "PRE_OPEN",
+    "CONTINUOUS",
+    "POST_CLOSE"
+   ],
+   "enabled": true,
+   "blocked_reason": null,
+   "delayed": false,
+   "delay_note": null,
+   "access_note": "CDS / BO participation statistics; raw-kept, parsed on replay"
+  }
+ ],
+ "by_status": {
+  "DEGRADED": 1,
+  "WORKING": 3
+ },
+ "raw_records": 3
+}

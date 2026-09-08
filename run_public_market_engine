@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# One command to run the public Bangladesh market data engine.
+#
+#   ./run_public_market_engine                 # one pass over every due source, then exit
+#   ./run_public_market_engine --minutes 300   # run through a trading session
+#   ./run_public_market_engine --list          # show the source registry and exit
+#
+# Output goes to evidence/public_engine/<UTC date>/ : append-only hash-chained raw
+# segments, MANIFEST.json, and SOURCE_STATUS.json (the machine-readable health file).
+# Everything is raw-first — parsing happens on replay, never at capture time.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+OUT="${PUBLIC_ENGINE_OUT:-evidence/public_engine/$(date -u +%Y-%m-%d)}"
+SYMBOLS="${PUBLIC_ENGINE_SYMBOLS:-BRACBANK,GP,SQURPHARMA,BEXIMCO,AAMRANET,CITYGENINS}"
+
+# --list needs no output directory and no symbols
+for a in "$@"; do
+  if [ "$a" = "--list" ]; then
+    exec python3 -m seeing.capture.engine --out /tmp/_engine_list --list
+  fi
+done
+
+mkdir -p "$OUT"
+echo "public market engine -> $OUT"
+echo "symbols: $SYMBOLS"
+
+if [ $# -eq 0 ]; then set -- --once; fi
+
+exec python3 -m seeing.capture.engine --out "$OUT" --symbols "$SYMBOLS" "$@"

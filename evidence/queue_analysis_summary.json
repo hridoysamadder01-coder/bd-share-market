@@ -1,0 +1,90 @@
+{
+  "generated_utc": "2026-09-07T21:32:27.248846+00:00",
+  "what_this_is": "Queue emulation layer: visible ladder -> inferred pending pressure. The ladder is OBSERVED; every inferred_* value and breakout_probability is INFERRED from ladder shape. Orders per level and queue position stay NOT_OBSERVABLE \u2014 nothing here recovers them.",
+  "market_state_during_capture": "CLOSED (DSE trades 10:00-14:10 Dhaka; this ran ~03:30 Dhaka)",
+  "symbols_tested": [
+    "BEXIMCO",
+    "GP"
+  ],
+  "per_symbol": {
+    "BEXIMCO": {
+      "file": "evidence/queue_sim_BEXIMCO.json",
+      "polls": 15,
+      "snapshots": 14,
+      "gaps": 1,
+      "gap_errors": [
+        "ReadTimeout: HTTPSConnectionPool(host='dsebd.org', port=443)"
+      ],
+      "first_utc": "2026-09-07T21:30:51.408071+00:00",
+      "last_utc": "2026-09-07T21:31:27.935770+00:00",
+      "levels": "4x4",
+      "avg_inferred_buy_queue": 1530.72,
+      "avg_inferred_sell_queue": 2486.96,
+      "breakout_probability": {
+        "mean": 0.0589,
+        "min": 0.0589,
+        "max": 0.0589,
+        "distinct_values": 1,
+        "trend": "FLAT \u2014 no variation across the capture"
+      },
+      "spoof_penalty_bid": 0.3172,
+      "spoof_penalty_ask": 0.2837,
+      "book_static": true
+    },
+    "GP": {
+      "file": "evidence/queue_sim_GP.json",
+      "polls": 10,
+      "snapshots": 10,
+      "gaps": 0,
+      "gap_errors": null,
+      "first_utc": "2026-09-07T21:31:33.494970+00:00",
+      "last_utc": "2026-09-07T21:31:59.258504+00:00",
+      "levels": "0x0",
+      "avg_inferred_buy_queue": 0.0,
+      "avg_inferred_sell_queue": 0.0,
+      "breakout_probability": {
+        "mean": 0.5,
+        "min": 0.5,
+        "max": 0.5,
+        "distinct_values": 1,
+        "trend": "FLAT \u2014 no variation across the capture"
+      },
+      "spoof_penalty_bid": 0.0,
+      "spoof_penalty_ask": 0.0,
+      "book_static": true
+    }
+  },
+  "analysis": {
+    "csv": "data/pressure_analysis.csv",
+    "records": 24,
+    "rolling_window": 5,
+    "rows_warmed_up": 16,
+    "divergence_counts": {
+      "NEUTRAL": 24
+    },
+    "divergence_threshold": 1000.0
+  },
+  "forward_test": {
+    "csv": "data/pressure_analysis.csv",
+    "horizon_seconds": 300.0,
+    "total": 0,
+    "correct": 0,
+    "accuracy": 0.0,
+    "verdict": "BLOCKED",
+    "reason": "the mid price never changed across 37s of capture (1 distinct value) \u2014 nothing to predict. Re-run the capture while the market is open.",
+    "truth": "INFERRED signal vs OBSERVED forward mid",
+    "capture_span_seconds": 36.5,
+    "rows_with_mid": 14,
+    "symbols": [
+      "BEXIMCO"
+    ]
+  },
+  "honest_reading": [
+    "BEXIMCO held a real 4x4 book: buy queue 1530.72, sell queue 2486.96, breakout 0.0589 \u2014 sell-heavy, which matches its raw ladder (3,625 bid vs 55,364 ask volume).",
+    "GP returned 0x0 on every poll: its book is empty after the close, so the model correctly produced zeros and the neutral 0.5 fallback rather than inventing pressure.",
+    "Every value repeated identically across all polls because the market was shut and the book never moved. This capture measures the plumbing, not the market.",
+    "The forward test returned BLOCKED, not an accuracy figure: the mid never changed, so there was nothing to predict. An accuracy number here would have been meaningless.",
+    "No edge is claimed. A single closed-market capture is not evidence of anything."
+  ],
+  "next_step": "Re-run during continuous trading (10:00-14:10 Dhaka) so the book moves and the forward test has real outcomes to score against."
+}

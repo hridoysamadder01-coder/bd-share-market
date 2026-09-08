@@ -1,0 +1,57 @@
+{
+ "schema_version": 1,
+ "capturer_id": "compress",
+ "epoch": "14bf7f82f7074a60bcac514e66df4f8a",
+ "software_version": "unknown",
+ "opened_utc": "2026-09-08T03:27:56.423893+00:00",
+ "segments": [
+  {
+   "source": "stocknow_instruments",
+   "path": "segments/stocknow_instruments__engine-vm__d69531ee__20260908T03__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "983e5d40bb654c466bbf6eced17bc4b807aa11fa2dabf12912e3c5f500ef6307",
+   "bytes": 402177,
+   "epoch": "d69531eea35849408ffa99b6dd7e49cc",
+   "closed_utc": "2026-09-08T03:27:41.594204+00:00",
+   "gz_path": "segments/stocknow_instruments__engine-vm__d69531ee__20260908T03__00000000.jsonl.gz",
+   "gz_sha256": "884e752f06b0971564832dbba51526b4f002b98151ba88da821fd3075fc4bc36",
+   "gz_bytes": 63696
+  },
+  {
+   "source": "cse_current_price",
+   "path": "segments/cse_current_price__engine-vm__d69531ee__20260908T03__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "85835a6337026d82f7b750a05c6be8d25a9e71c4289c5185c802dec04ee7e6e6",
+   "bytes": 491361,
+   "epoch": "d69531eea35849408ffa99b6dd7e49cc",
+   "closed_utc": "2026-09-08T03:27:41.599086+00:00",
+   "gz_path": "segments/cse_current_price__engine-vm__d69531ee__20260908T03__00000000.jsonl.gz",
+   "gz_sha256": "f952946e577acb809a58e559d7d8cc54701730195f161ff3815ff743903b8668",
+   "gz_bytes": 35724
+  },
+  {
+   "source": "bullbd_detail",
+   "path": "segments/bullbd_detail__engine-vm__d69531ee__20260908T03__00000000.jsonl",
+   "records": 16,
+   "first_seq": 0,
+   "last_seq": 15,
+   "sha256": "914a691071f5ece08048d0036654cfa36f514080e54cc4fcf279046a95ed49e9",
+   "bytes": 582389,
+   "epoch": "d69531eea35849408ffa99b6dd7e49cc",
+   "closed_utc": "2026-09-08T03:27:41.603351+00:00",
+   "gz_path": "segments/bullbd_detail__engine-vm__d69531ee__20260908T03__00000000.jsonl.gz",
+   "gz_sha256": "e113aca2ac8ebd965c53045cb49f9841125f05bc7067f2dfdbe71081a4898f9f",
+   "gz_bytes": 102829
+  }
+ ],
+ "previous_epochs": [
+  {
+   "epoch": "d69531eea35849408ffa99b6dd7e49cc",
+   "opened_utc": "2026-09-08T03:27:27.050962+00:00"
+  }
+ ]
+}
