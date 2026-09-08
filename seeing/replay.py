@@ -39,15 +39,50 @@ from .capture.raw_store import decode_body, iter_segment, sha256_bytes
 from .truth import Truth
 
 
+# Which table each source's frames land in. A source missing from this map is
+# captured but unreadable: the whole-market pull of 2026-09-08 stored 691
+# fundamentals pages and 691 ownership pages that no table could return, because
+# replay only knew the two intraday hosts. Capture breadth is worth nothing until
+# replay can read it back.
+SOURCE_TABLE = {
+    "lankabd_depth": "books", "dsebd_depth": "books", "lankabd_watch": "watch",
+    "lankabd_tape": "tape", "lankabd_market": "market", "lankabd_block": "block",
+    "lankabd_circuit": "circuit", "dsebd_hts": "hts", "dsebd_latest": "latest",
+    "lankabd_grid": "latest",
+    # whole-market breadth: one row per symbol per sweep
+    "bullbd_detail": "fundamentals", "dse_ownership": "ownership",
+    "stocknow_instruments": "instruments", "cse_current_price": "cse",
+    "bb_bill_rate": "macro", "cdbl_stats": "macro", "bsec_publications": "regulatory",
+}
+
+TABLES = ("books", "watch", "tape", "market", "block", "circuit", "hts", "latest",
+          "fundamentals", "ownership", "instruments", "cse", "macro", "regulatory",
+          "gaps", "heartbeats", "meta")
+
+# Tables whose frames may carry small lists or dicts. Those do not survive a
+# parquet round trip, so they are JSON-encoded on the way in. `books` is excluded
+# on purpose — fusion reads bid_levels/ask_levels as real Python lists.
+_JSON_ENCODED_TABLES = frozenset({"fundamentals", "ownership", "instruments", "cse",
+                                  "macro", "regulatory"})
+
+
 def _adapters() -> Dict[str, Any]:
     client = PoliteClient()
     lb = lankabd.build_adapters(client)
-    return {
+    ad: Dict[str, Any] = {
         "lankabd_depth": lb["depth"], "lankabd_watch": lb["watch"], "lankabd_tape": lb["tape"],
         "lankabd_market": lb["market"], "lankabd_block": lb["block"], "lankabd_circuit": lb["circuit"],
         "lankabd_grid": lb["grid"], "dsebd_latest": dsebd.DSEBDLatestAdapter(client),
         "dsebd_depth": dsebd.DSEBDDepthAdapter(client), "dsebd_hts": dsebd.DSEBDSessionsAdapter(client),
     }
+    # The public-breadth adapters come from their own registry rather than a second
+    # hand-written list, so replay and capture cannot drift on which adapter parses
+    # which source.
+    from .capture.adapters import bd_public
+    for spec in bd_public.build_specs(client, []):
+        if spec.adapter is not None:
+            ad[spec.name] = spec.adapter
+    return ad
 
 
 def _segment_paths(root: str) -> List[str]:
@@ -73,9 +108,7 @@ def _t_recv(rec: Dict[str, Any]) -> str:
 
 def replay(root: str, sources: Optional[List[str]] = None) -> Dict[str, Any]:
     ad = _adapters()
-    rows: Dict[str, List[Dict[str, Any]]] = {k: [] for k in
-                                             ("books", "watch", "tape", "market", "block", "circuit", "hts",
-                                              "gaps", "heartbeats", "meta", "latest")}
+    rows: Dict[str, List[Dict[str, Any]]] = {k: [] for k in TABLES}
     problems: List[str] = []
     counts: Dict[str, int] = {}
     for path in _segment_paths(root):
@@ -121,16 +154,22 @@ def replay(root: str, sources: Optional[List[str]] = None) -> Dict[str, Any]:
                     "elapsed_ms": (rec.get("http") or {}).get("elapsed_ms")}
             for pr in parsed.problems:
                 problems.append(f"{src} seq {rec['seq']} {rec.get('key') or ''}: {pr}")
-            table = {"lankabd_depth": "books", "dsebd_depth": "books", "lankabd_watch": "watch",
-                     "lankabd_tape": "tape", "lankabd_market": "market", "lankabd_block": "block",
-                     "lankabd_circuit": "circuit", "dsebd_hts": "hts", "dsebd_latest": "latest",
-                     "lankabd_grid": "latest"}.get(src)
+            table = SOURCE_TABLE.get(src)
             if table is None:
+                problems.append(f"{src}: captured but not routed to any table — SOURCE_TABLE gap")
                 continue
             for fr in parsed.frames:
                 if table == "hts":
                     rows[table].append({**base, "holidays": json.dumps(fr.get("holidays")),
                                         "sessions": json.dumps(fr.get("sessions"))})
+                elif table in _JSON_ENCODED_TABLES:
+                    # These frames carry small lists (socket_only_fields, zero_fields)
+                    # that do not survive a parquet round trip, so they are encoded
+                    # here. `books` is deliberately NOT in this set: its bid_levels
+                    # and ask_levels must stay real Python lists, because fusion
+                    # reads them directly.
+                    rows[table].append({**base, **{k: (json.dumps(v) if isinstance(v, (list, dict)) else v)
+                                                   for k, v in fr.items()}})
                 else:
                     rows[table].append({**base, **fr})
 
