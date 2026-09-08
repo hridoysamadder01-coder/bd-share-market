@@ -57,7 +57,15 @@ def fuse(tables: Dict[str, Any], coalesce_s: float = 6.0, primary: str = "lankab
     circuit = tables.get("circuit")
     tick_by_symbol: Dict[str, float] = {}
     if circuit is not None and len(circuit):
-        tick_by_symbol = circuit.groupby("symbol")["tick_size"].last().dropna().to_dict()
+        # FIRST observed tick per symbol, not the last. `.last()` handed the tick
+        # seen at 08:00 to a book reconstructed at 04:00 — the whole day's frames
+        # were scaled by a value observed after them. The tick is a market rule
+        # rather than a quantity that moves during a session, so the earliest
+        # observation is a legitimate constant; frames that precede *any* circuit
+        # observation are marked NOT_YET_OBSERVED below and are not silently
+        # given a reference they could not have had.
+        tick_by_symbol = (circuit.sort_values("t_recv").groupby("symbol")["tick_size"]
+                          .first().dropna().to_dict())
     recon = reconstruct_books(books, tick_by_symbol)
     prim = recon[recon["source"] == primary].copy()
     sec = recon[recon["source"] == secondary].copy()
@@ -195,10 +203,25 @@ def fuse(tables: Dict[str, Any], coalesce_s: float = 6.0, primary: str = "lankab
         f["market_age_s"] = (f["t_frame"] - f["t_recv"]).dt.total_seconds()
         f = f.drop(columns=["t_recv"])
 
-    # ---- circuit reference (latest per symbol at/before frame; else first; flagged)
-    f["upper_limit"] = np.nan; f["lower_limit"] = np.nan; f["tick_size"] = np.nan; f["ref_from_future"] = False
+    # ---- circuit reference: the latest poll AT OR BEFORE the frame, or nothing.
+    #
+    # This used to fall back to `gc.iloc[0]` — the first circuit row of the day —
+    # when no poll preceded the frame, and record that as `ref_from_future=True`.
+    # A flagged look-ahead is still a look-ahead: every downstream quantity built
+    # on the limit (shares_to_door, bid_at_upper_limit, room-to-band) was then
+    # computed from a reference the market had not yet shown us, and a filter on
+    # the flag is something a reader has to remember to apply. It is removed.
+    #
+    # A frame with no preceding observation now keeps NaN limits and says why in
+    # `ref_status`. NOT_YET_OBSERVED is a real state of the world at that instant,
+    # and it is the truth-class rule (`seeing/truth.py`) applied to reference data:
+    # unknown is never filled.
+    f["upper_limit"] = np.nan; f["lower_limit"] = np.nan; f["tick_size"] = np.nan
+    f["ref_age_s"] = np.nan
+    f["ref_status"] = "NO_CIRCUIT_SOURCE"
     if circuit is not None and len(circuit):
         c = circuit.sort_values("t_recv")
+        f["ref_status"] = "NOT_YET_OBSERVED"
         for sym, gc in c.groupby("symbol"):
             m = f["symbol"] == sym
             if not m.any():
@@ -206,9 +229,13 @@ def fuse(tables: Dict[str, Any], coalesce_s: float = 6.0, primary: str = "lankab
             times = gc["t_recv"].values
             for i in f.index[m]:
                 j = np.searchsorted(times, f.at[i, "t_frame"].to_datetime64(), side="right") - 1
-                row = gc.iloc[j] if j >= 0 else gc.iloc[0]
+                if j < 0:
+                    continue                      # nothing observed yet: leave NaN
+                row = gc.iloc[j]
                 f.at[i, "upper_limit"] = row["upper_limit"]; f.at[i, "lower_limit"] = row["lower_limit"]
-                f.at[i, "tick_size"] = row["tick_size"]; f.at[i, "ref_from_future"] = bool(j < 0)
+                f.at[i, "tick_size"] = row["tick_size"]
+                f.at[i, "ref_age_s"] = (f.at[i, "t_frame"] - row["t_recv"]).total_seconds()
+                f.at[i, "ref_status"] = "OBSERVED"
     # shares to the door (Q13) and limit state
     std, vis, at_up, at_lo = [], [], [], []
     for asks, bids, ul, ll, bb, ba in zip(f["ask_levels"], f["bid_levels"], f["upper_limit"], f["lower_limit"],

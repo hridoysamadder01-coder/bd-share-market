@@ -1,0 +1,7 @@
+candidate,horizon_s,eligible_rows,auc,C1_nulls_clean,C2_already_moved_confound,C3_symbols_above_half,C3_median_auc,C4_stable_across_halves,C5_strongest_baseline,C5_margin,C5_margin_ci_lo,C5_margin_ci_hi,C5_beats_baseline_established,C6_episodes,C6_auc_episode_anchored,C7_ablation_margin,C7_ablation_established
+tlpi_2,180,1997,0.692,True,False,14/14,0.70518,True,imb_l1,0.01057,-0.00658,0.02744,False,681,0.69003,0.00884,True
+tlpi_1,180,1997,0.67596,True,False,14/14,0.70457,True,imb_l1,-0.00547,-0.03403,0.02274,False,663,0.64702,0.01685,True
+geom_divergence,180,1997,0.65798,True,False,14/14,0.66463,False,imb_l1,-0.02115,-0.03843,-0.00092,False,676,0.64595,,
+c_e1_minus_market,180,1997,0.69126,True,False,14/14,0.69731,True,imb_l1,0.00983,-0.00608,0.02494,False,693,0.69364,,
+x_e1_minus_tlpi0,180,1997,0.6645,True,False,14/14,0.65959,True,imb_l1,-0.01693,-0.03725,0.00614,False,680,0.65463,,
+v_e1_vetoed,180,1997,0.65725,True,False,14/14,0.66436,True,imb_l1,-0.02418,-0.04179,-0.00764,False,695,0.65519,,

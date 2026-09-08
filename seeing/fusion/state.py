@@ -29,7 +29,11 @@ FRAME_TRUTH = {
     # LIQUIDITY / DEPLETION / REPLENISHMENT / PRESSURE / RESILIENCE / STATE — derived
     "liquidity change, depletion/replenishment, pressure build/failure, resilience, state": "INFERRED (rules in seeing.features.micro / seeing.state_machine)",
     # REFERENCE & CONTEXT
-    "upper/lower limit, tick, breaker % (circuit table)": "OBSERVED (reference, per day)",
+    "upper/lower limit, tick, breaker % (circuit table)":
+        "OBSERVED from the latest poll AT OR BEFORE the frame, with `ref_age_s`; "
+        "NOT_OBSERVABLE before the first poll of the run (`ref_status` NOT_YET_OBSERVED) "
+        "or where no circuit source was captured (NO_CIRCUIT_SOURCE). Never back-filled "
+        "from a later poll — ROADMAP.md Stage 2",
     "shares to the door (ask qty up to the upper limit)": "OBSERVED when the limit is within displayed levels, else LOWER BOUND (flagged)",
     "market-wide trades / volume / value / breadth": "OBSERVED (LankaBD market stats + watch)",
     "block-board prints": "OBSERVED (daily list)",

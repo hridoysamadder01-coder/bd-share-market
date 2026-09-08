@@ -1,0 +1,38 @@
+{
+ "180": {
+  "down": 1143,
+  "flat": 1502,
+  "flat_pct_of_labelled": 42.93,
+  "gap_over_2H": 70,
+  "labelled": 3499,
+  "labelled_pct": 82.19,
+  "median_dt_s": 204.64,
+  "no_forward_frame": 57,
+  "states": 4257,
+  "up": 854
+ },
+ "60": {
+  "down": 602,
+  "flat": 2039,
+  "flat_pct_of_labelled": 65.35,
+  "gap_over_2H": 556,
+  "labelled": 3120,
+  "labelled_pct": 73.29,
+  "median_dt_s": 84.99,
+  "no_forward_frame": 17,
+  "states": 4257,
+  "up": 479
+ },
+ "600": {
+  "down": 1544,
+  "flat": 775,
+  "flat_pct_of_labelled": 22.4,
+  "gap_over_2H": 0,
+  "labelled": 3460,
+  "labelled_pct": 81.28,
+  "median_dt_s": 625.97,
+  "no_forward_frame": 183,
+  "states": 4257,
+  "up": 1141
+ }
+}
