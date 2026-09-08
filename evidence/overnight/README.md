@@ -56,6 +56,47 @@ It reads one public sensor (LankaBD `/Home/MarketDepthData`, the same book the b
 terminal republishes) at a polite interval, hourly. It changes nothing and decides
 nothing.
 
+## STOPPED 2026-09-08 at the owner's request — the rule above is UNRESOLVED
+
+Hridoy: *"sararat er oi check bondho koro or kono dorkar hoyto nai amader."* The watcher
+was stopped, the scheduled post-open pass was cancelled, and no further passes will run.
+
+Seven passes were taken, 2026-09-07 22:09 → 2026-09-08 04:10 Dhaka. Books were compared
+by `book_sha256`, not by eye:
+
+| Dhaka time | symbols | appeared | disappeared | hash changed | empty books |
+|---|---|---|---|---|---|
+| 2026-09-07 22:09 | 9 | (first pass) | — | — | 4 |
+| 2026-09-07 22:10 | 9 | 0 | 0 | 0 | 4 |
+| 2026-09-07 22:18 | 10 | 1 (joined watch list) | 0 | 0 | 5 |
+| 2026-09-08 00:53 | 10 | 0 | 0 | 0 | 5 |
+| 2026-09-08 01:57 | 10 | 0 | 0 | 0 | 5 |
+| 2026-09-08 03:01 | 10 | 0 | 0 | 0 | 5 |
+| 2026-09-08 04:10 | 10 | 0 | 0 | 0 | 5 |
+
+Every book byte-identical across the night. Nothing appeared, nothing disappeared. The
+lone `appeared = 1` is the tenth symbol joining the watch list at 22:18, not a book event.
+
+**This does not satisfy the first branch of the decision rule, and must not be read as
+satisfying it.** That branch requires the book to be empty or unchanged **at 09:55**. The
+last pass was 04:10 Dhaka, so the final **5 h 45 m before the open — 04:10 → 09:55, the
+window in which pre-open accumulation would most plausibly appear — was never sampled.**
+The rule is therefore unresolved, not answered. Six hours of a flat closed book overnight
+is a weak observation, and it is recorded as one.
+
+There is a second, independent reason this watcher could not have settled the question
+even if it had run to 09:55. Its sensor is the LankaBD public book, described above as
+"the same book the broker terminal republishes". **That premise was later falsified**: a
+third HAR showed AAMRATECH with a 10 × 8 ladder in the terminal against a 0 × 0 public
+book one minute later. The correction is in `SCHEMA_MAP.md` (frozen close snapshot vs live
+post-close). So a flat public book is consistent both with "nothing accumulated" and with
+"accumulation happened where this sensor cannot see it", and the data cannot separate the
+two. Answering the original claim needs a broker-side sensor, not more passes of this one.
+
+Status: **STOPPED, RULE UNRESOLVED.** The mechanism (orders accepted while closed) stays
+confirmed. Whether that accumulation is observable pre-open is still open, and no claim
+either way is supported by what is in these files.
+
 ## Scope
 
 This is exploratory observation. `micro/MICRO_PREREG.json`, the universe, thresholds,
