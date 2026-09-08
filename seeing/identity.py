@@ -26,9 +26,10 @@ rule stated — never OBSERVED, because no source we reach asserts it.
 * **OBSERVED** — a source literally printed this value for this listing. Two
   sources printing the same trading code is an observation by both, not an
   inference, so a same-exchange exact match is OBSERVED. The only normalisation
-  applied before comparison is `NORMALISE_RULE` below (upper-case, strip
-  whitespace), because CSE's per-letter rendering is a display artifact of the
-  page, not a different identifier.
+  applied before comparison is `NORMALISE_RULE` below — strip whitespace, decode
+  HTML entities, upper-case — because CSE's per-letter rendering and an
+  HTML-escaped ampersand are artifacts of how a page was produced, not different
+  identifiers.
 * **INFERRED** — derived by a stated rule. The cross-exchange company link is
   the main one. Every inferred mapping carries `rule` naming exactly which rule
   produced it.
@@ -51,6 +52,7 @@ from __future__ import annotations
 import argparse
 import glob
 import gzip
+import html
 import hashlib
 import json
 import os
@@ -65,10 +67,20 @@ from .truth import Truth
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-NORMALISE_RULE = ("upper-case, then remove every whitespace character. Applied because CSE "
-                  "renders a trading code one letter per DOM node, which is a display "
-                  "artifact of the page and not a different identifier. No other "
-                  "transformation is applied — no stripping of suffixes, no fuzzy matching.")
+NORMALISE_RULE = (
+    "Remove every whitespace character, then decode HTML entities once, then upper-case. "
+    "Each step exists for an observed defect, and nothing else is applied — no stripping of "
+    "suffixes, no fuzzy matching, no repeated decoding. "
+    "(1) Entity decoding: `symbols.csv` carries the same instrument twice, as `KAY&QUE` and "
+    "as `KAY&AMP;QUE`, because one collector path HTML-escaped the ampersand. Undecoded, one "
+    "real instrument becomes two identities and the coverage denominator is wrong. Decoding "
+    "is applied exactly once: a code that genuinely contains the text `&amp;` must not be "
+    "silently decoded twice into something else. "
+    "(2) Whitespace removal runs FIRST, because CSE renders a trading code one letter per DOM "
+    "node — an entity split across those nodes only becomes decodable once the gaps are gone. "
+    "(3) Upper-casing runs last, after decoding, so that entity case (`&AMP;` vs `&amp;`) "
+    "cannot change the outcome. A spelling HTML does not define, such as `&Amp;`, is left "
+    "alone: decoding it would be a guess, not a decode.")
 
 _WS = re.compile(r"\s+")
 
@@ -94,8 +106,17 @@ ATTRIBUTES = IDENTITY_ATTRIBUTES + DESCRIPTIVE_ATTRIBUTES
 
 
 def normalise_code(raw: Any) -> str:
-    """The one normalisation, stated in NORMALISE_RULE. Never guesses."""
-    return _WS.sub("", str(raw or "")).upper()
+    """The one normalisation, stated in NORMALISE_RULE. Never guesses.
+
+    Order matters and is not incidental: strip whitespace, decode, then upper.
+    Whitespace first, because CSE splits a code across DOM nodes and an entity
+    split that way is not decodable until the gaps are closed. Upper last, so
+    entity case (`&AMP;` vs `&amp;`) cannot change the outcome. Raw evidence is
+    never rewritten — this is the canonical form used for joining, and the
+    original string travels on every claim as `code_raw`.
+    """
+    s = _WS.sub("", str(raw or ""))            # CSE splits a code across DOM nodes
+    return html.unescape(s).upper()            # exactly one pass, see NORMALISE_RULE
 
 
 # --------------------------------------------------------------------------- claims

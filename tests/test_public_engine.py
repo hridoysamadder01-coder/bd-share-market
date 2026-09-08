@@ -164,6 +164,8 @@ def test_the_registry_builds_and_declares_its_blocked_sources():
     assert by["bullbd_depth"].blocked and "socket" in by["bullbd_depth"].blocked_reason.lower()
     # and the sources proven live on 2026-09-08 are present and enabled
     for name in ("stocknow_instruments", "cse_current_price", "bullbd_detail",
-                 "bb_exchange_rate", "bsec_site", "cdbl_site"):
+                 "bb_bill_rate", "bsec_publications", "cdbl_stats", "dse_ownership"):
         assert name in by and by[name].enabled and not by[name].blocked
+    # bb_exchange_rate moved to BLOCKED on 2026-09-08: it answers 200 with a CAPTCHA
+    assert by["bb_exchange_rate"].blocked and "CAPTCHA" in by["bb_exchange_rate"].blocked_reason
     assert len({s.name for s in specs}) == len(specs)          # no duplicate names

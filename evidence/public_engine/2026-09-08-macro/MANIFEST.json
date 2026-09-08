@@ -1,0 +1,54 @@
+{
+ "schema_version": 1,
+ "capturer_id": "engine-vm",
+ "epoch": "a3d26e2a33e549a0b30a0a1a949f76ee",
+ "software_version": "62db66d815abbabb8011f7eb73a7a8f5fddea434",
+ "opened_utc": "2026-09-08T04:07:11.905377+00:00",
+ "segments": [
+  {
+   "source": "bb_exchange_rate",
+   "path": "segments/bb_exchange_rate__engine-vm__a3d26e2a__20260908T04__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "c02418a6af41775b19844af322301fecc73384fdf35c66c8dd4cee8eb5960c9f",
+   "bytes": 1626,
+   "epoch": "a3d26e2a33e549a0b30a0a1a949f76ee",
+   "closed_utc": "2026-09-08T04:07:29.713700+00:00"
+  },
+  {
+   "source": "bb_bill_rate",
+   "path": "segments/bb_bill_rate__engine-vm__a3d26e2a__20260908T04__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "e1afe714d5842ae1fc80106364cafce20f5e1beb8b1c2429a91b2829dc8704e7",
+   "bytes": 57315,
+   "epoch": "a3d26e2a33e549a0b30a0a1a949f76ee",
+   "closed_utc": "2026-09-08T04:07:29.715624+00:00"
+  },
+  {
+   "source": "bsec_site",
+   "path": "segments/bsec_site__engine-vm__a3d26e2a__20260908T04__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "7095f495ee060b56f707cea548f9abc67bb7fe859b79ea76a769823ec824427a",
+   "bytes": 399181,
+   "epoch": "a3d26e2a33e549a0b30a0a1a949f76ee",
+   "closed_utc": "2026-09-08T04:07:29.718754+00:00"
+  },
+  {
+   "source": "cdbl_site",
+   "path": "segments/cdbl_site__engine-vm__a3d26e2a__20260908T04__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "348d4e11088c3d608bf93fa8d98152e8d5d717afb7616eed9629018192cc8a12",
+   "bytes": 88292,
+   "epoch": "a3d26e2a33e549a0b30a0a1a949f76ee",
+   "closed_utc": "2026-09-08T04:07:29.720372+00:00"
+  }
+ ],
+ "closed_utc": "2026-09-08T04:07:29.721077+00:00"
+}

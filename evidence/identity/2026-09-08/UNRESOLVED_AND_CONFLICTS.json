@@ -8018,13 +8018,12 @@
   }
  ],
  "coverage_wired_dse": {
-  "absent": 68,
+  "absent": 67,
   "absent_symbols": [
    "BBL2NDSB",
    "IBBT2BOND3",
    "IFICSBOND2",
    "IFICSBOND3",
-   "KAY&AMP;QUE",
    "PALUGB1",
    "RAPLCSBOND",
    "RENATAPS",
@@ -8091,12 +8090,12 @@
   ],
   "exchange": "DSE",
   "resolved": 657,
-  "resolved_pct": 90.62,
-  "universe_size": 725,
+  "resolved_pct": 90.75,
+  "universe_size": 724,
   "unresolved": 0,
   "unresolved_symbols": []
  },
- "spine_sha256": "c3c89cbc9365732c8a8c07c526077a2bd489da76026879ab1bdb47dd1ae5a180",
+ "spine_sha256": "c516aed2940273ee524c4b2cca9e715ee02582879c4237b46996dd13631f9bc4",
  "unresolved": [
   {
    "attributes": [

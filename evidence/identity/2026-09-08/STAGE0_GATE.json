@@ -2,7 +2,7 @@
  "checks": [
   {
    "check": "every wired symbol is accounted for",
-   "detail": "657 resolved + 0 unresolved + 68 absent = 725",
+   "detail": "657 resolved + 0 unresolved + 67 absent = 724",
    "pass": true
   },
   {
@@ -12,7 +12,7 @@
   },
   {
    "check": "every absent symbol is named",
-   "detail": "68 named",
+   "detail": "67 named",
    "pass": true
   },
   {
@@ -32,20 +32,19 @@
   },
   {
    "check": "deterministic rebuild reproduces the same spine hash",
-   "detail": "c3c89cbc9365732c… vs c3c89cbc9365732c…",
+   "detail": "c516aed2940273ee… vs c516aed2940273ee…",
    "pass": true
   }
  ],
  "companies": 692,
  "conflicts": 717,
  "coverage_wired_dse": {
-  "absent": 68,
+  "absent": 67,
   "absent_symbols": [
    "BBL2NDSB",
    "IBBT2BOND3",
    "IFICSBOND2",
    "IFICSBOND3",
-   "KAY&AMP;QUE",
    "PALUGB1",
    "RAPLCSBOND",
    "RENATAPS",
@@ -112,8 +111,8 @@
   ],
   "exchange": "DSE",
   "resolved": 657,
-  "resolved_pct": 90.62,
-  "universe_size": 725,
+  "resolved_pct": 90.75,
+  "universe_size": 724,
   "unresolved": 0,
   "unresolved_symbols": []
  },
@@ -121,7 +120,7 @@
  "listings": 1078,
  "name": "Reference & Identity Spine",
  "result": "PASS",
- "spine_sha256": "c3c89cbc9365732c8a8c07c526077a2bd489da76026879ab1bdb47dd1ae5a180",
+ "spine_sha256": "c516aed2940273ee524c4b2cca9e715ee02582879c4237b46996dd13631f9bc4",
  "stage": 0,
  "unresolved": 3
 }

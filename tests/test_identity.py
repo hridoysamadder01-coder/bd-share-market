@@ -31,8 +31,52 @@ def claim(source, code, exchange="DSE", as_of="2026-09-08", **kw):
     ("", ""),
     (None, ""),
 ])
-def test_normalise_is_case_and_whitespace_only(raw, want):
+def test_normalise_handles_case_and_whitespace(raw, want):
     assert normalise_code(raw) == want
+
+
+@pytest.mark.parametrize("raw", ["KAY&AMP;QUE", "KAY&amp;QUE", "KAY&QUE", "kay&amp;que",
+                                 "K A Y & A M P ; Q U E"])
+def test_html_entities_decode_to_one_canonical_code(raw):
+    """symbols.csv carries the SAME instrument as both KAY&QUE and KAY&AMP;QUE.
+    Undecoded, one real instrument becomes two identities."""
+    assert normalise_code(raw) == "KAY&QUE"
+
+
+def test_entity_decoding_runs_before_upper_casing():
+    """Decoding after upper-casing would leave &AMP; as a special case."""
+    assert normalise_code("kay&amp;que") == normalise_code("KAY&AMP;QUE") == "KAY&QUE"
+
+
+def test_entities_are_decoded_exactly_once():
+    """A code genuinely containing the text '&amp;' must not be decoded twice."""
+    assert normalise_code("X&amp;amp;Y") == "X&AMP;Y"
+
+
+def test_an_undefined_entity_spelling_is_left_alone():
+    """HTML defines &amp; and &AMP;, not &Amp;. Decoding it would be a guess."""
+    assert normalise_code("KAY&Amp;QUE") == "KAY&AMP;QUE"
+
+
+def test_decoding_does_not_disturb_ordinary_codes():
+    for code in ("BRACBANK", "1JANATAMF", "TB10Y0423", "GP", "SQURPHARMA"):
+        assert normalise_code(code) == code
+
+
+def test_the_two_spellings_collapse_to_one_listing():
+    """The regression this hardening exists for: two rows, one instrument."""
+    s = build_spine([claim("lankabd_watch", "KAY&QUE"),
+                     claim("stocknow_instruments", "KAY&AMP;QUE")])
+    assert sorted(s.listings) == ["DSE:KAY&QUE"]
+    lst = s.listings["DSE:KAY&QUE"]
+    assert lst.sources == ["lankabd_watch", "stocknow_instruments"]
+    assert lst.resolved is True
+
+
+def test_raw_evidence_string_is_preserved_on_the_claim():
+    """Normalisation is for joining; the source's own spelling is never rewritten."""
+    c = claim("stocknow_instruments", "KAY&AMP;QUE")
+    assert c.code_raw == "KAY&AMP;QUE" and c.code == "KAY&QUE"
 
 
 def test_normalisation_does_not_strip_suffixes_or_fuzzy_match():

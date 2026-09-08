@@ -395,6 +395,70 @@ class RawPageAdapter:
         return out
 
 
+# ---------------------------------------------------------------------- ownership
+@dataclass
+class DSEOwnershipAdapter:
+    """Monthly shareholding declaration for one company, from dsebd.org.
+
+    This is the slow clock that `PUBLIC_DATA_GAPS.md` §3 names as the gap that
+    dominates everything else: DSE publishes only three as-on dates per company
+    and keeps no archive, so 162 of 208 usable observations share a single month.
+    The only remedy is time — one snapshot per symbol per month from now on, each
+    run adding one as-on date. Nothing computed before that panel exists means
+    anything, and this adapter does not pretend otherwise.
+
+    Raw-first: the page bytes are stored and the percentages are parsed on replay
+    by `collector/dse_public_collector.py`, which already owns that parser. Here
+    the parse exists only to confirm the page is a company page and not an error.
+    """
+
+    client: PoliteClient
+    name: str = "dse_ownership"
+    kind: str = "ownership"
+    observes = ("sponsor_director_pct", "government_pct", "institution_pct",
+                "foreign_pct", "public_pct", "t_recv")
+
+    # One block per as-on date. The page carries three, and a dict() over all
+    # matches would silently keep only the last — throwing away two thirds of the
+    # little ownership history DSE publishes, which is the scarce resource here.
+    ROW_RE = re.compile(
+        r"Sponsor/Director\s*:\s*([\d.]+).*?Govt\s*:\s*([\d.]+).*?Institute\s*:\s*([\d.]+)"
+        r".*?Foreign\s*:\s*([\d.]+).*?Public\s*:\s*([\d.]+)", re.S)
+    AS_ON_RE = re.compile(r"as on ([A-Za-z]{3,9}\s+\d{1,2},?\s*\d{4})", re.I)
+
+    def fetch(self, key: Optional[str] = None) -> Fetched:
+        return self.client.get("https://www.dsebd.org/displayCompany.php",
+                               params={"name": (key or "").upper()},
+                               headers={"Accept": "text/html,application/xhtml+xml"},
+                               allow_tls_fallback=True)
+
+    def parse(self, body: bytes, key: Optional[str] = None) -> Parsed:
+        out = Parsed(self.name, truth=capability_map(self.observes))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body.decode("utf-8", "replace"), "lxml")
+        text = soup.get_text(" ", strip=True)
+        rows = self.ROW_RE.findall(text)
+        if not rows:
+            out.problems.append(f"no shareholding block on the company page for {key!r}")
+            return out
+        as_on = self.AS_ON_RE.findall(text)
+        for i, (sp, gv, inst, fo, pub) in enumerate(rows):
+            out.frames.append({
+                "symbol": (key or "").upper(),
+                "as_on": as_on[i] if i < len(as_on) else None,
+                "row_index": i,
+                "sponsor_director_pct": _num(sp), "government_pct": _num(gv),
+                "institution_pct": _num(inst), "foreign_pct": _num(fo),
+                "public_pct": _num(pub),
+            })
+        # DSE publishes at most three as-on dates and keeps no archive; if that
+        # ever changes, the count changing is the signal, so it is recorded.
+        out.frames[0]["as_on_dates_on_page"] = len(rows)
+        if len(as_on) < len(rows):
+            out.problems.append(f"{len(rows)} holding rows but only {len(as_on)} as-on dates read")
+        return out
+
+
 # ---------------------------------------------------------------------- registry
 def build_specs(client: PoliteClient, symbols: Sequence[str]) -> List[Any]:
     """SourceSpec rows for everything in this module, blocked entries included."""
@@ -412,22 +476,31 @@ def build_specs(client: PoliteClient, symbols: Sequence[str]) -> List[Any]:
                    per_symbol=True,
                    access_note="EPS / NAV / PE / paid-up capital / outstanding shares "
                                "+ ISO-stamped snapshot"),
-        SourceSpec("bb_exchange_rate", "macro",
-                   BangladeshBankPageAdapter(client, "econdata/exchangerate",
-                                             name="bb_exchange_rate"), 86400.0,
-                   access_note="USD/BDT reference rate"),
-        SourceSpec("bb_bill_rate", "macro",
-                   BangladeshBankPageAdapter(client, "monetaryactivity/bbbill",
-                                             name="bb_bill_rate"), 86400.0,
-                   access_note="Bangladesh Bank bill / policy-adjacent rates"),
-        SourceSpec("bsec_site", "regulatory",
-                   RawPageAdapter(client, "https://sec.gov.bd/", name="bsec_site"), 86400.0,
-                   access_note="regulator publications index; raw-kept, parsed on replay"),
-        SourceSpec("cdbl_site", "macro",
-                   RawPageAdapter(client, "https://www.cdbl.com.bd/", name="cdbl_site"), 86400.0,
-                   access_note="CDS / BO participation statistics; raw-kept, parsed on replay"),
+        SourceSpec("bb_bill_rate", "macro", BangladeshBankBillAdapter(client), 86400.0,
+                   access_note="BB Bill auction results: ISIN, tenor, bids received/accepted, "
+                               "yield ranges — the risk-free reference"),
+        SourceSpec("bsec_publications", "regulatory", BSECPublicationsAdapter(client), 86400.0,
+                   access_note="directives, orders, notifications and press releases with dates "
+                               "and PDF links; LABELS and CONTEXT, never a live signal"),
+        SourceSpec("cdbl_stats", "macro", CDBLStatisticsAdapter(client), 86400.0,
+                   access_note="BO accounts, depository participants, enlisted ISINs, "
+                               "CDS market value, shares in CDS"),
+        SourceSpec("dse_ownership", "ownership", DSEOwnershipAdapter(client), 2592000.0,
+                   per_symbol=True,
+                   access_note="monthly shareholding snapshot — the slow clock that is the only "
+                               "remedy for the ownership gap (PUBLIC_DATA_GAPS.md section 3). "
+                               "DSE publishes 3 as-on dates and keeps no archive, so each run "
+                               "adds one date and nothing before that panel exists means anything"),
 
         # ---- registered and deliberately not fetched -------------------------
+        SourceSpec("bb_exchange_rate", "macro", None, 0.0, enabled=False,
+                   blocked_reason="the page answers HTTP 200 with a CAPTCHA, not data "
+                                  "(\"This question is for testing whether you are a human "
+                                  "visitor\", support ID, image code) — reproduced on every "
+                                  "attempt 2026-09-08. Solving a bot challenge is not something "
+                                  "this system does, so the source is blocked rather than "
+                                  "worked around. Detected as `bot_challenge`, not as WORKING.",
+                   access_note="USD/BDT reference rate — would fill fx_rate"),
         SourceSpec("amarstock", "book", None, 0.0, enabled=False,
                    blocked_reason="robots.txt Disallow: / for ClaudeBot, anthropic-ai and "
                                   "Claude-Web. Not fetched, by policy, at any cadence.",
@@ -440,3 +513,210 @@ def build_specs(client: PoliteClient, symbols: Sequence[str]) -> List[Any]:
                                   "A plain GET observes no book here.",
                    access_note="would add a third independent book sensor if the socket were public"),
     ]
+
+
+# ---------------------------------------------------------------------- Bangladesh Bank bills
+@dataclass
+class BangladeshBankBillAdapter:
+    """BB Bill auction results — the risk-free reference the price sources do not carry.
+
+    Verified 2026-09-08: HTTP 200, 44,460 B, one table. Two stacked header rows
+    (a merged "Bids received" / "Bids accepted" band over per-column labels),
+    then one row per auction: issue date, ISIN, tenor, then the received and
+    accepted blocks. A row where nothing was taken reads "No bid accepted" and
+    is SHORTER than an accepted row, so positional parsing must tolerate a
+    variable width instead of assuming a fixed column count.
+    """
+
+    client: PoliteClient
+    name: str = "bb_bill_rate"
+    kind: str = "macro"
+    path: str = "monetaryactivity/bbbill"
+    observes = ("tbill_yield", "t_recv")
+
+    def fetch(self, key: Optional[str] = None) -> Fetched:
+        return self.client.get(f"{BB_BASE}/{self.path}",
+                               headers={"Accept": "text/html,application/xhtml+xml"},
+                               allow_tls_fallback=True)
+
+    def parse(self, body: bytes, key: Optional[str] = None) -> Parsed:
+        out = Parsed(self.name, truth=capability_map(self.observes))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body.decode("utf-8", "replace"), "lxml")
+        table = None
+        for t in soup.find_all("table"):
+            if "isin" in t.get_text(" ", strip=True).lower():
+                table = t
+                break
+        if table is None:
+            out.problems.append("no auction table found (layout change or a challenge page)")
+            return out
+        for tr in table.find_all("tr"):
+            cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+            if len(cells) < 4:
+                continue
+            issue, isin = cells[0], cells[1]
+            # a data row starts with a date and an ISIN; header rows do not
+            if not re.fullmatch(r"\d{1,2}/\d{1,2}/\d{4}", issue) or not re.fullmatch(r"[A-Z]{2}\w{10}", isin):
+                continue
+            accepted = not any("no bid accepted" in c.lower() for c in cells)
+            fr = {
+                "issue_date": issue, "isin": isin, "tenor": cells[2] if len(cells) > 2 else None,
+                "bids_received_count": _num(cells[3]) if len(cells) > 3 else None,
+                "bids_received_face_value_cr": _num(cells[4]) if len(cells) > 4 else None,
+                "bids_received_yield_range": cells[5] if len(cells) > 5 else None,
+                "any_bid_accepted": accepted,
+                "cells": cells, "n_cells": len(cells),
+            }
+            if accepted and len(cells) >= 10:
+                fr.update({
+                    "bids_accepted_count": _num(cells[6]),
+                    "bids_accepted_face_value_cr": _num(cells[7]),
+                    "sale_value_cr": _num(cells[8]),
+                    "accepted_yield_range": cells[9],
+                    "weighted_average_price": _num(cells[10]) if len(cells) > 10 else None,
+                })
+            elif accepted:
+                out.problems.append(f"accepted auction row with only {len(cells)} cells: {isin}")
+            out.frames.append(fr)
+        if not out.frames:
+            out.problems.append("auction table found but no data rows parsed")
+        return out
+
+
+# ---------------------------------------------------------------------- CDBL
+@dataclass
+class CDBLStatisticsAdapter:
+    """CDBL headline statistics — BO accounts and depository participation.
+
+    Verified 2026-09-08: HTTP 200, 82,085 B. The figures are label/value pairs in
+    a two-column table ("BO Accounts Operable in ..." | "1,661,613"), not a data
+    grid. Labels are matched loosely because CDBL truncates them in the markup;
+    the label text is kept verbatim beside the parsed value so a wording change
+    is visible rather than silently unmatched.
+    """
+
+    client: PoliteClient
+    name: str = "cdbl_stats"
+    kind: str = "macro"
+    url: str = "https://www.cdbl.com.bd/"
+    observes = ("bo_accounts", "shares_in_cds", "t_recv")
+
+    KEYS = (("bo_accounts", r"\bBO\b.*account"),
+            ("depository_participants", r"depository\s+participant"),
+            ("isin_enlisted", r"\bISIN\b"),
+            ("cds_market_value", r"market\s+value"),
+            ("shares_in_cds", r"(shares|securities).*(in\s+CDS|dematerial)"))
+
+    def fetch(self, key: Optional[str] = None) -> Fetched:
+        return self.client.get(self.url, headers={"Accept": "text/html,application/xhtml+xml"},
+                               allow_tls_fallback=True)
+
+    def parse(self, body: bytes, key: Optional[str] = None) -> Parsed:
+        out = Parsed(self.name, truth=capability_map(self.observes))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body.decode("utf-8", "replace"), "lxml")
+        stats: Dict[str, Any] = {}
+        seen: List[Dict[str, Any]] = []
+        for tr in soup.find_all("tr"):
+            cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+            if len(cells) != 2:
+                continue
+            label, value = cells[0], cells[1]
+            n = _num(value)
+            if not label or n is None:
+                continue
+            seen.append({"label": label, "value": n, "raw_value": value})
+            for field_name, pat in self.KEYS:
+                if field_name not in stats and re.search(pat, label, re.I):
+                    stats[field_name] = n
+        if not seen:
+            out.problems.append("no label/value statistic pairs found (layout change?)")
+            return out
+        out.frames.append({"source_url": self.url, **stats,
+                           "all_pairs": seen, "n_pairs": len(seen),
+                           "unmatched_labels": [p["label"] for p in seen
+                                                if not any(re.search(pat, p["label"], re.I)
+                                                           for _, pat in self.KEYS)]})
+        return out
+
+
+# ---------------------------------------------------------------------- BSEC
+@dataclass
+class BSECPublicationsAdapter:
+    """BSEC publications: directives, orders, notifications and press releases.
+
+    Verified 2026-09-08: HTTP 200, 385,303 B, **zero tables** — the publications
+    are dated links to PDFs under `/storage/laws/` and `/storage/press_releases/`.
+    Each anchor reads "Sep 01, 2026 Directive Regarding ...", so the date and the
+    document type are parsed out of the link text and the category from its path.
+
+    These are LABELS and CONTEXT for research, never live signals, and the
+    document body is a PDF this parser does not open: it records that the
+    publication exists, when, of what type, and where. Extracting a penalty or a
+    symbol from the PDF is a separate job and is not guessed here.
+    """
+
+    client: PoliteClient
+    name: str = "bsec_publications"
+    kind: str = "regulatory"
+    url: str = "https://sec.gov.bd/"
+    observes = ("announcement_date", "announcement_type", "announcement_text", "t_recv")
+
+    DATE_RE = re.compile(r"^([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})\s*(.*)$", re.S)
+    TYPE_RE = re.compile(r"^(Directive|Notification|Amendment|Order|Circular|Guideline|Rules?)\b",
+                         re.I)
+    CATEGORY = ((r"/storage/press_releases/", "press_release"),
+                (r"/storage/laws/", "law_order_directive"),
+                (r"/storage/draft-rules/", "draft_rule"),
+                (r"/circular/", "circular"),
+                (r"/downloads/", "download"))
+
+    def fetch(self, key: Optional[str] = None) -> Fetched:
+        return self.client.get(self.url, headers={"Accept": "text/html,application/xhtml+xml"},
+                               allow_tls_fallback=True)
+
+    def parse(self, body: bytes, key: Optional[str] = None) -> Parsed:
+        out = Parsed(self.name, truth=capability_map(self.observes))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body.decode("utf-8", "replace"), "lxml")
+        seen = set()
+        rows: List[Dict[str, Any]] = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"].strip()
+            text = a.get_text(" ", strip=True)
+            category = next((c for pat, c in self.CATEGORY if re.search(pat, href)), None)
+            if category is None:
+                continue
+            m = self.DATE_RE.match(text)
+            if not m:
+                # a document link with no date in its text: kept, date left None
+                date_str, rest = None, text
+            else:
+                date_str, rest = m.group(1), m.group(2).strip()
+            tm = self.TYPE_RE.match(rest)
+            doc_type = tm.group(1).title() if tm else None
+            title = rest[tm.end():].strip() if tm else rest
+            key_ = (href, date_str)
+            if key_ in seen:
+                continue
+            seen.add(key_)
+            rows.append({
+                "announcement_date": date_str, "announcement_type": doc_type,
+                "announcement_text": title or None, "category": category,
+                "url": href, "is_pdf": href.lower().endswith(".pdf"),
+                "link_text": text,
+            })
+        # The hero panel links the same PDFs again as bare "Discover More", with
+        # no date. Those are the same publication, so the dated row wins and the
+        # undated duplicate is folded away — an undated link to a URL that is not
+        # listed elsewhere is still kept, because then it is the only record of it.
+        dated_urls = {r["url"] for r in rows if r["announcement_date"]}
+        out.frames = [r for r in rows
+                      if r["announcement_date"] or r["url"] not in dated_urls]
+        folded = len(rows) - len(out.frames)
+        if folded:
+            out.frames.sort(key=lambda r: (r["announcement_date"] is None, r["url"]))
+        if not out.frames:
+            out.problems.append("no publication links found (layout change?)")
+        return out

@@ -19,18 +19,25 @@ Grades: **V** fetched and parsed here · **P** fetched, no committed parser yet 
 | 4 | **LankaBD** ×7 | `/Home/MarketDepthData`, `/api/datafeed/IndexLiveData/LiveStockWatchData`, `/api/Company/MkSecondDataSymbol`, `/api/datafeed/IndexLiveData/LiveDSETradeStatistics`, `/api/APIMarket/GetLatestBlockMarket`, `/Home/CircuitBreaker`, `/api/APIMarket/GetDataGrid` | anti-forgery token + session | top-N book, all-symbol L1 with exchange stamps, ~1/min cumulative tape, market totals, block prints, circuit limits | 20–3600 s | live | JSON / HTML | **V** | circuit re-verified 2026-09-08 | no order counts, no prints, no queue |
 | 5 | **DSE** `cbul.php` | `GET www.dsebd.org/cbul.php` | public HTML | 636 rows: breaker %, tick, open adj. price, lower/upper limit | 1 h | reference | HTML, 580,782 B | **V** | 2026-09-08 | broken TLS chain upstream → host-scoped fallback |
 
-## Fetched and kept raw — no committed parser yet
+## Parsed and tested — Stage 1 completion, 2026-09-08
 
-| # | Source | Channel | Access | Fields | Cadence | Raw format | Status | Last verified | Limitations |
-|---|---|---|---|---|---|---|---|---|---|
-| 6 | **Bangladesh Bank** FX | `GET www.bb.org.bd/en/index.php/econdata/exchangerate` | public HTML | USD/BDT reference rate tables | 24 h | HTML, 46,215 B | **P** | 2026-09-08 | BB re-lays-out its tables between publications; column mapping deferred to replay |
-| 7 | **Bangladesh Bank** bill rates | `GET .../monetaryactivity/bbbill` | public HTML | BB bill / policy-adjacent rates | 24 h | HTML, 49,210 B | **P** | 2026-09-08 | as above |
-| 8 | **BSEC** | `GET sec.gov.bd/` | public HTML (`robots.txt`: `Disallow:` — empty, everything allowed) | regulator publications index | 24 h | HTML, 385,303 B | **P** | 2026-09-08 | enforcement orders are largely PDF; no structured listing found yet |
-| 9 | **CDBL** | `GET www.cdbl.com.bd/` | public HTML | CDS / BO participation statistics index | 24 h | HTML, 82,085 B | **P** | 2026-09-08 | statistics pages not yet located behind the index |
+| # | Source | Channel | Fields parsed | Cadence | Raw format | Status | Limitations |
+|---|---|---|---|---|---|---|---|
+| 6 | **Bangladesh Bank** bills | `GET .../monetaryactivity/bbbill` | per auction: issue date, ISIN, tenor, bids received (count / face value Cr / yield range), bids accepted (count / face value / sale value / yield range / weighted avg price), `any_bid_accepted` | 24 h | HTML, 44,460 B | **V** | a rejected auction row is shorter than an accepted one; the parser tolerates the variable width rather than assuming a column count |
+| 7 | **BSEC** publications | `GET sec.gov.bd/` | 35 publications, 30 dated: `announcement_date`, `announcement_type` (Directive / Notification / Amendment / Order), title, category (law_order_directive / press_release / draft_rule / circular / download), PDF URL | 24 h | HTML, 385,303 B | **V** | the parser records that a publication exists, not what the PDF says. Extracting a penalty or a symbol from the PDF is a separate job and is not guessed |
+| 8 | **CDBL** statistics | `GET www.cdbl.com.bd/` | depository participants **560**, BO accounts operable **1,661,613**, enlisted ISINs **829**, CDS market value **3,115,786**, shares in CDS **105,084** | 24 h | HTML, 82,085 B | **V** | figures are label/value pairs, not a grid; every pair seen is kept so a wording change is visible rather than silently unmatched |
+| 9 | **DSE ownership** | `GET dsebd.org/displayCompany.php?name=<SYM>` | one row per as-on date: sponsor/director, govt, institution, foreign, public % | **30 d, per symbol** | HTML, ~310,000 B | **V** | DSE publishes exactly **3** as-on dates per company and keeps no archive — this cadence is the only remedy, and it pays off in months, not today |
 
-The raw-first design makes **P** a legitimate resting state: the bytes are captured from
-today onward, and a parser written next month can be re-run over every byte ever stored.
-What is *not* legitimate is inventing a column mapping for a layout nobody has studied.
+## Blocked by a bot challenge — recorded, not worked around
+
+| # | Source | Channel | What actually comes back | Status |
+|---|---|---|---|---|
+| 10 | **Bangladesh Bank** FX | `GET .../econdata/exchangerate` | **HTTP 200, 44,427 B, and the body is a CAPTCHA** — "This question is for testing whether you are a human visitor", a support ID, and an image code. Reproduced on every attempt on 2026-09-08. | **B** |
+
+This is why `bot_challenge` exists in the failure taxonomy: before it, this page counted as a
+**WORKING** source in the status file, because it answered 200 with a large HTML body. Solving
+a bot challenge is not something this system does, so `bb_exchange_rate` is registered blocked
+with that reason and `fx_rate` stays NOT_OBSERVABLE.
 
 ## Reachable but intermittently failing
 

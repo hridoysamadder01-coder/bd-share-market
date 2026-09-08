@@ -77,15 +77,32 @@ class SourceSpec:
     # would mean thousands of identical overnight requests. Sources that are
     # worth keeping overnight declare the slower cadence they should use there.
     closed_cadence_s: Optional[float] = None
+    # Run once before this source's first poll. `lankabd_tape` needs LankaBD's
+    # company-id map, which the older runner fetches at bootstrap and the engine
+    # did not — so every tape poll failed with "no company id for <symbol>", and
+    # a config gap was being reported as a connect_error.
+    bootstrap: Optional[Callable[[], Any]] = None
+    _bootstrapped: bool = False
 
     @property
     def blocked(self) -> bool:
         return self.blocked_reason is not None
 
+    # Multiplies every cadence. Exists for concurrency control (AGENTS.md §37):
+    # when another capture is already polling the same hosts, a second engine at
+    # full cadence would double the request rate on LankaBD and dsebd.org and
+    # could starve the run that matters. Scaling is honest about the trade — the
+    # sampling interval is recorded in the status file and in META.
+    cadence_scale: float = 1.0
+
     def cadence_for(self, phase: str) -> float:
         if phase == "CONTINUOUS" or self.closed_cadence_s is None:
-            return self.cadence_s
-        return self.cadence_s if phase in ("PRE_OPEN", "POST_CLOSE") else self.closed_cadence_s
+            base = self.cadence_s
+        elif phase in ("PRE_OPEN", "POST_CLOSE"):
+            base = self.cadence_s
+        else:
+            base = self.closed_cadence_s
+        return base * max(self.cadence_scale, 1e-9)
 
     def due(self, last: float, now: float, phase: str = "CONTINUOUS") -> bool:
         return (now - last) >= self.cadence_for(phase)
@@ -124,6 +141,18 @@ class PublicMarketEngine:
         t = now_utc().isoformat()
         if spec.blocked or spec.adapter is None:
             return False
+        if spec.bootstrap is not None and not spec._bootstrapped:
+            spec._bootstrapped = True
+            try:
+                info = spec.bootstrap()
+                self.store.write_meta(spec.name, {"bootstrap": "ok", "detail": info})
+            except Exception as exc:                                # noqa: BLE001
+                from .failures import Failure, CONNECT_ERROR
+                fail = Failure(CONNECT_ERROR,
+                               f"bootstrap failed: {type(exc).__name__}: {exc}"[:500])
+                h.record_failure(fail, t)
+                self.store.write_gap(spec.name, fail.code, detail=fail.detail)
+                return False
         try:
             f: Fetched = spec.adapter.fetch(key)
         except Exception as exc:                                    # noqa: BLE001
@@ -180,6 +209,7 @@ class PublicMarketEngine:
             "t_utc": now_utc().isoformat(), "session_phase": phase,
             "trading_date_dhaka": trading_date(now_utc()).isoformat(),
             "capturer_id": self.capturer_id, "out_dir": self.out_dir,
+            "cadence_scale": (self.specs[0].cadence_scale if self.specs else 1.0),
             "symbols": self.symbols, "client": dict(self.client.stats),
             "sources": rows, "by_status": by_status,
             "raw_records": sum(h.ok for h in self.health.values()),
@@ -281,6 +311,15 @@ def build_registry(client: PoliteClient, symbols: Sequence[str]) -> List[SourceS
     from .adapters import bd_public
 
     lb = lankabd.build_adapters(client)
+
+    def _load_cid_map() -> Dict[str, Any]:
+        """LankaBD's symbol -> companyID map, needed before any tape poll."""
+        cid, f = lankabd.fetch_cid_map(lb["session"])
+        if not cid:
+            raise RuntimeError(f"cid map empty (http {f.status})")
+        lb["tape"].cid_map = cid
+        return {"symbols_in_cid_map": len(cid)}
+
     specs: List[SourceSpec] = [
         # ---- DSE official -------------------------------------------------
         SourceSpec("dsebd_latest", "watch", dsebd.DSEBDLatestAdapter(client), 60.0,
@@ -293,7 +332,9 @@ def build_registry(client: PoliteClient, symbols: Sequence[str]) -> List[SourceS
         # ---- LankaBD ------------------------------------------------------
         SourceSpec("lankabd_depth", "book", lb["depth"], 20.0, per_symbol=True, phases=TRADING_PHASES),
         SourceSpec("lankabd_watch", "watch", lb["watch"], 30.0, phases=TRADING_PHASES),
-        SourceSpec("lankabd_tape", "tape", lb["tape"], 180.0, per_symbol=True, phases=TRADING_PHASES),
+        SourceSpec("lankabd_tape", "tape", lb["tape"], 180.0, per_symbol=True,
+                   phases=TRADING_PHASES, bootstrap=_load_cid_map,
+                   access_note="needs LankaBD's company-id map, fetched once at bootstrap"),
         SourceSpec("lankabd_market", "market", lb["market"], 60.0, phases=TRADING_PHASES),
         SourceSpec("lankabd_block", "block", lb["block"], 300.0, phases=TRADING_PHASES),
         SourceSpec("lankabd_circuit", "reference", lb["circuit"], 3600.0),
@@ -313,6 +354,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-gap", type=float, default=0.5, help="minimum seconds between any two requests")
     p.add_argument("--timeout", type=float, default=40.0)
     p.add_argument("--only", default="", help="comma list of source names to run (default: all)")
+    p.add_argument("--cadence-scale", type=float, default=1.0,
+                   help="multiply every source cadence (>1 = slower). Use when another "
+                        "capture is already polling the same hosts.")
     p.add_argument("--list", action="store_true", help="print the registry and exit")
     return p
 
@@ -322,6 +366,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     client = PoliteClient(min_gap_s=a.min_gap, timeout_s=a.timeout)
     symbols = [s.strip().upper() for s in a.symbols.split(",") if s.strip()]
     specs = build_registry(client, symbols)
+    if a.cadence_scale != 1.0:
+        for sp in specs:
+            sp.cadence_scale = a.cadence_scale
     if a.only:
         want = {s.strip() for s in a.only.split(",") if s.strip()}
         specs = [s for s in specs if s.name in want]

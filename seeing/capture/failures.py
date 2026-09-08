@@ -38,11 +38,12 @@ EMPTY_RESPONSE = "empty_response"         # 2xx with a zero-length or content-fr
 PARSE_ERROR = "parse_error"               # the adapter raised or could not read the body
 SCHEMA_CHANGE = "schema_change"           # parsed, but the shape no longer matches the declaration
 STALE = "stale"                           # the payload is byte-identical and older than the limit
+BOT_CHALLENGE = "bot_challenge"           # 200, but the body is a CAPTCHA / JS challenge, not data
 GAP = "gap"                               # a known hole: the poll did not happen at all
 
 CODES = (CONNECT_ERROR, TIMEOUT, TLS_ERROR, HTTP_ERROR, RATE_LIMIT, AUTH_EXPIRED,
          SOURCE_UNREACHABLE, NOT_FOUND, EMPTY_RESPONSE, PARSE_ERROR, SCHEMA_CHANGE,
-         STALE, GAP)
+         STALE, BOT_CHALLENGE, GAP)
 
 # A 200 that is really an error. Bangladeshi exchange and regulator hosts return
 # these routinely instead of a status code, so the body has to be read.
@@ -50,6 +51,24 @@ _SOFT_ERROR_RE = re.compile(
     r"service\s+suspended|site\s+is\s+under\s+maintenance|temporarily\s+unavailable|"
     r"too\s+many\s+requests|rate\s+limit|access\s+denied|request\s+blocked",
     re.I)
+# A bot challenge also arrives as HTTP 200 with a full HTML body, and without
+# this it counts as a healthy source. Bangladesh Bank's exchange-rate page does
+# exactly that: 200, 44 KB, and the body is a CAPTCHA. It is a distinct
+# condition from an outage — no amount of retrying fixes it, and solving it is
+# not something this system does — so it gets its own code.
+# Only unambiguous challenge markers. A generic "please enable JavaScript" is
+# deliberately NOT one of them: every SPA here (StockNow, BullBD) ships that
+# string in a <noscript> block, so matching it would mark healthy sources as
+# challenged. The markers below appear on a challenge page and nowhere else.
+_CHALLENGE_RE = re.compile(
+    r"this question is for testing whether you are a human visitor|"
+    r"what code is in the image|your support id is|"
+    r"checking your browser before accessing|cf-challenge|__cf_chl|"
+    r"captcha", re.I)
+# A challenge page is served instead of the content, so the marker can sit well
+# past a short head window — Bangladesh Bank puts its at byte ~6,200. Scan a
+# generous window, capped so a multi-hundred-KB data payload is not re-scanned.
+_CHALLENGE_WINDOW = 65536
 _TIMEOUT_RE = re.compile(r"timeout|timed out|ReadTimeout|ConnectTimeout", re.I)
 _CONNECT_RE = re.compile(
     r"NameResolution|Failed to resolve|getaddrinfo|Connection refused|ConnectionError|"
@@ -99,9 +118,14 @@ def classify_fetch(f: Fetched, *, empty_is_failure: bool = True) -> Optional[Fai
     if not (200 <= s < 300):
         return Failure(HTTP_ERROR, f.error or "", s)
 
-    head = f.body[:2000].decode("utf-8", "replace")
-    if _SOFT_ERROR_RE.search(head):
-        m = _SOFT_ERROR_RE.search(head)
+    head = f.body[:_CHALLENGE_WINDOW].decode("utf-8", "replace")
+    if _CHALLENGE_RE.search(head):
+        return Failure(BOT_CHALLENGE,
+                       "HTTP 200 but the body is a bot challenge, not data — retrying cannot "
+                       "fix this and the challenge is not solved", s, retryable=False)
+    head_short = head[:4000]
+    if _SOFT_ERROR_RE.search(head_short):
+        m = _SOFT_ERROR_RE.search(head_short)
         text = m.group(0).lower() if m else ""
         code = RATE_LIMIT if ("rate" in text or "many requests" in text) else SOURCE_UNREACHABLE
         return Failure(code, f"HTTP 200 but the body says: {m.group(0) if m else ''!r}", s)
