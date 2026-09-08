@@ -54,6 +54,11 @@ from .raw_store import RawStore
 ALL_PHASES = ("CLOSED", "PRE_OPEN", "CONTINUOUS", "POST_CLOSE")
 TRADING_PHASES = ("PRE_OPEN", "CONTINUOUS", "POST_CLOSE")
 
+# "this source has never been polled", as a monotonic reading. Not 0.0: on Linux
+# `time.monotonic()` counts from boot, so 0.0 means "at boot", and a source with
+# an hourly cadence stays not-due for the machine's first hour of uptime.
+NEVER_POLLED = float("-inf")
+
 
 @dataclass
 class SourceSpec:
@@ -105,6 +110,16 @@ class SourceSpec:
         return base * max(self.cadence_scale, 1e-9)
 
     def due(self, last: float, now: float, phase: str = "CONTINUOUS") -> bool:
+        """Is this source due, given the monotonic time of its last poll?
+
+        `last` is NEVER_POLLED for a source that has not run yet, which makes the
+        first poll unconditionally due. It used to be 0.0, and 0.0 is a real
+        monotonic reading: `time.monotonic()` is time since boot on Linux, so on
+        a machine that had been up 23 minutes NOTHING with an hourly cadence was
+        due, and the whole-market engine ran 6 minutes making zero requests while
+        reporting every source UNTRIED. `--once` hid the defect because it polls
+        without asking `due` at all.
+        """
         return (now - last) >= self.cadence_for(phase)
 
     def runs_in(self, phase: str) -> bool:
@@ -131,8 +146,8 @@ class PublicMarketEngine:
                                             software_version=_git_commit())
         for s in self.specs:
             self.health[s.name] = SourceHealth(s.name)
-            self._last[s.name] = 0.0
-            self._sym_last[s.name] = {sym: 0.0 for sym in self.symbols}
+            self._last[s.name] = NEVER_POLLED
+            self._sym_last[s.name] = {sym: NEVER_POLLED for sym in self.symbols}
 
     # ------------------------------------------------------------------ one poll
     def poll(self, spec: SourceSpec, key: Optional[str] = None) -> bool:
@@ -255,7 +270,7 @@ class PublicMarketEngine:
             "note": "raw-first; parse on replay only",
         })
         deadline = time.monotonic() + minutes * 60.0
-        last_hb = 0.0
+        last_hb = NEVER_POLLED           # first heartbeat lands before the first poll
         while not self.stop and time.monotonic() < deadline:
             now = time.monotonic()
             phase = session_phase(now_utc())
@@ -265,7 +280,7 @@ class PublicMarketEngine:
                     continue
                 if spec.per_symbol:
                     for sym in self.symbols:
-                        if spec.due(self._sym_last[spec.name].get(sym, 0.0), now, phase):
+                        if spec.due(self._sym_last[spec.name].get(sym, NEVER_POLLED), now, phase):
                             self.poll(spec, sym)
                             self._sym_last[spec.name][sym] = time.monotonic()
                             did = True

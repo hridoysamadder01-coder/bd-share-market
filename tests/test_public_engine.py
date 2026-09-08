@@ -3,12 +3,14 @@
 No network here — adapters are stand-ins that return canned `Fetched` objects,
 so the tests are about the engine's contract, not about any source being up.
 """
+import itertools
 import json
 import os
 
 import pytest
 
-from seeing.capture.engine import ALL_PHASES, PublicMarketEngine, SourceSpec, TRADING_PHASES
+from seeing.capture.engine import (ALL_PHASES, NEVER_POLLED, PublicMarketEngine, SourceSpec,
+                                   TRADING_PHASES)
 from seeing.capture.http_client import Fetched
 from seeing.capture.adapters.base import Parsed
 from seeing.capture.raw_store import decode_body, iter_segment, verify_store
@@ -111,6 +113,52 @@ def test_a_closed_cadence_keeps_a_source_alive_overnight_but_slower():
     assert s.due(0.0, 200.0, "CONTINUOUS") is True
     assert s.due(0.0, 200.0, "CLOSED") is False                # polite overnight
     assert s.due(0.0, 4000.0, "CLOSED") is True
+
+
+def test_a_source_that_has_never_run_is_due_even_on_a_freshly_booted_machine():
+    """"Never polled" cannot be 0.0, because 0.0 is a real monotonic reading.
+
+    `time.monotonic()` counts from boot on Linux. The whole-market engine was
+    started on a container that had been up 1359 s; every closed-market cadence
+    is 3600 s or more, so `now - 0.0` cleared none of them and the engine ran six
+    minutes making zero requests while reporting every source UNTRIED. `--once`
+    never noticed because it polls without consulting `due` at all.
+    """
+    s = SourceSpec("watch", "watch", None, 120.0, phases=TRADING_PHASES, closed_cadence_s=3600.0)
+    assert s.due(0.0, 1359.0, "CLOSED") is False               # the old initial value
+    assert s.due(NEVER_POLLED, 1359.0, "CLOSED") is True       # what "never" has to mean
+    assert s.due(NEVER_POLLED, 0.0, "CLOSED") is True          # due even at boot itself
+
+
+def test_the_engine_starts_every_source_and_symbol_as_never_polled(tmp_path):
+    eng = engine(tmp_path, [SourceSpec("s", "watch", FakeAdapter(), 3600.0),
+                            SourceSpec("d", "book", FakeAdapter(), 3600.0, per_symbol=True)],
+                 symbols=["GP", "ACI"])
+    assert eng._last["s"] == NEVER_POLLED
+    assert eng._sym_last["d"] == {"GP": NEVER_POLLED, "ACI": NEVER_POLLED}
+
+
+def test_the_cadence_loop_polls_at_once_on_a_short_uptime_clock(tmp_path, monkeypatch):
+    """The stall, end to end: a small monotonic clock must not hold the loop off.
+
+    Both an hourly whole-market source and a per-symbol one have to fire on the
+    first pass — that is the difference between a 55-minute run that captures the
+    market and one that writes nothing but heartbeats.
+    """
+    from seeing.capture import engine as engine_mod
+
+    ticks = itertools.count(1359.0, 0.001)                     # 22 minutes of uptime
+    monkeypatch.setattr(engine_mod.time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda _s: None)
+
+    watch, book = FakeAdapter(), FakeAdapter()
+    eng = engine(tmp_path,
+                 [SourceSpec("s", "watch", watch, 3600.0, phases=ALL_PHASES),
+                  SourceSpec("d", "book", book, 3600.0, per_symbol=True, phases=ALL_PHASES)],
+                 symbols=["GP", "ACI"])
+    eng.run_for(minutes=0.01)                                  # 0.6 s of the fake clock
+    assert watch.calls == [None], "an hourly source that has never run must be polled at once"
+    assert book.calls == ["GP", "ACI"], "and every symbol of a per-symbol source, once each"
 
 
 def test_a_source_without_a_closed_cadence_uses_one_cadence_everywhere():
