@@ -40,12 +40,19 @@
       "checkpoint_utc": "2026-09-08T04:42:36.368425Z",
       "checkpoint_bytes": 6807552,
       "final_checkpoint": false
+    },
+    {
+      "stage": "STARTED",
+      "at": "2026-09-08T04:58:07.934570Z",
+      "date": "2026-09-08",
+      "started_utc": "2026-09-08T04:58:07.934488Z",
+      "note": "preflight heartbeat proves push access; NOT session success"
     }
   ],
-  "stage": "CAPTURING",
-  "updated_utc": "2026-09-08T04:42:36.371717Z",
+  "stage": "STARTED",
+  "updated_utc": "2026-09-08T04:58:07.934573Z",
   "date": "2026-09-08",
-  "started_utc": "2026-09-08T03:42:28.351334Z",
+  "started_utc": "2026-09-08T04:58:07.934488Z",
   "note": "preflight heartbeat proves push access; NOT session success",
   "capture_cmd": [
     "python3",
