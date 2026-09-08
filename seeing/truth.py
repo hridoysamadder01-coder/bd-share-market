@@ -93,4 +93,36 @@ CANONICAL_FIELDS = (
     "market_trades", "market_volume", "market_value", "block_prints",
     # timestamps
     "t_source", "t_recv",
+
+    # ---- public-engine vocabulary (added 2026-09-08) -----------------------
+    # Additive only. Every name above keeps its meaning and position, because
+    # adapters, `tower/normalize.py` and committed evidence all declare against
+    # them; a rename would silently reclassify existing frames.
+    #
+    # identity / provenance
+    "source", "symbol", "exchange", "instrument_id", "company_id",
+    # time quality — how old the observation is, and whether the source admits delay
+    "trading_date", "session_phase", "freshness_ms", "delayed_flag",
+    # book shape (the counts and totals sources publish alongside the ladders)
+    "spread", "n_bid_levels", "n_ask_levels", "total_buy_volume", "total_sell_volume",
+    "buy_percentage", "sell_percentage",
+    # market breadth and indices
+    "advancing", "declining", "unchanged", "index_value", "index_change", "index_name",
+    # reference / session rules
+    "market_segment", "session_rules",
+    # block board
+    "block_trades", "block_quantity", "block_value", "block_max_price", "block_min_price",
+    # ownership (monthly-to-quarterly declarations, never a same-day signal)
+    "sponsor_director_pct", "government_pct", "institution_pct", "foreign_pct",
+    "public_pct", "free_float", "total_shares",
+    # fundamentals
+    "market_cap", "eps", "nav", "pe", "dividend", "paid_up_capital", "sector",
+    # corporate events
+    "announcement_type", "announcement_text", "announcement_date", "record_date",
+    "agm_date", "rights_ratio", "insider_transaction", "unusual_price_query",
+    # regulatory labels — context and outcome labels, never live signals
+    "enforcement_case", "investigation_period", "violation_type", "regulator_decision_date",
+    # macro / participation regime
+    "fx_rate", "policy_rate", "repo_rate", "call_money_rate", "tbill_yield",
+    "bo_accounts", "cds_market_value", "shares_in_cds",
 )
