@@ -1,6 +1,8 @@
 {
   "accepted_sessions": [],
-  "rejected_sessions": [],
+  "rejected_sessions": [
+    "2026-09-08"
+  ],
   "dev_needed": 8,
   "val_needed": 4,
   "holdout_min_sessions": 5,

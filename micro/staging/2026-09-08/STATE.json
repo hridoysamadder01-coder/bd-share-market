@@ -157,10 +157,29 @@
       "date": "2026-09-08",
       "started_utc": "2026-09-08T08:27:11.314199Z",
       "note": "preflight heartbeat proves push access; NOT session success"
+    },
+    {
+      "stage": "CAPTURE_COMPLETE",
+      "at": "2026-09-08T08:27:14.817998Z",
+      "skipped": true
+    },
+    {
+      "stage": "VERIFIED",
+      "at": "2026-09-08T08:27:33.577836Z",
+      "hash_chain_ok": true
+    },
+    {
+      "stage": "FUSED",
+      "at": "2026-09-08T08:29:23.381650Z",
+      "accepted": false,
+      "n_frames": 12369,
+      "reject_reasons": [
+        "quality"
+      ]
     }
   ],
-  "stage": "STARTED",
-  "updated_utc": "2026-09-08T08:27:11.314320Z",
+  "stage": "FUSED",
+  "updated_utc": "2026-09-08T08:29:23.381664Z",
   "date": "2026-09-08",
   "started_utc": "2026-09-08T08:27:11.314199Z",
   "note": "preflight heartbeat proves push access; NOT session success",
@@ -182,5 +201,12 @@
   "started": "2026-09-08T07:03:37.506596Z",
   "checkpoint_utc": "2026-09-08T08:04:00.269667Z",
   "checkpoint_bytes": 28102173,
-  "final_checkpoint": false
+  "final_checkpoint": false,
+  "skipped": true,
+  "hash_chain_ok": true,
+  "accepted": false,
+  "n_frames": 12369,
+  "reject_reasons": [
+    "quality"
+  ]
 }

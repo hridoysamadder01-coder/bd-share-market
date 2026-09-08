@@ -1,0 +1,14 @@
+{
+  "date": "2026-09-08",
+  "hash_chain_ok": true,
+  "n_frames": 12369,
+  "n_symbols": 14,
+  "span_hours": 4.34,
+  "quality_fail_share": 0.6871,
+  "dup_share": 0.8541,
+  "eligible": 3645,
+  "accepted": false,
+  "reject_reasons": [
+    "quality"
+  ]
+}
