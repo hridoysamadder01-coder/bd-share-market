@@ -26,6 +26,29 @@ session.
 | `bb_bill_rate`, `cdbl_stats` | `macro` | 5 | — | — | — | — |
 | `dsebd_hts` | `hts` | 1 | — | — | — | 1 connect_error |
 
+### A second reading of the same bytes
+
+`dse_ownership` fetches `displayCompany.php` once per symbol for its shareholding
+block. The rest of that page was captured and never read. Parsing it on replay —
+**no extra request, and retroactive to this store** — adds `extract/company_profile.csv`:
+
+| | symbols |
+|---|---:|
+| scrip code | 636 |
+| listing year, market category, year end, loans, reserves | 419 |
+| **cash-dividend history** | **371 symbols, 2,984 (symbol, year, percent) rows** |
+| latest dividend % and its year | 217 |
+| issuer disclosure URLs (financials, price-sensitive info) | 309 |
+
+The deepest records run to 38 years (APEXTANRY), 34 (HEIDELBCEM, MONNOCERA). The
+dividend string is kept verbatim beside the parsed pairs, because when the two
+later disagree the raw text is what settles it.
+
+The page also prints the company secretary's name, personal mobile and personal
+e-mail, plus factory address, phone and fax. **None of it is extracted** — those
+are people and premises, not market data — and a test asserts no field carries
+them.
+
 **The "missing" column is not a failure count.** 691 is every DSE *listing*, and
 roughly 230 of those are treasury bills and bonds (`TB2Y…`, `TB20Y…`), which have
 no shareholding block, no EPS and no trades. That is why the numbers cluster where

@@ -58,13 +58,29 @@ SOURCE_TABLE = {
 
 TABLES = ("books", "watch", "tape", "market", "block", "circuit", "hts", "latest",
           "fundamentals", "ownership", "instruments", "cse", "macro", "regulatory",
-          "market_history", "gaps", "heartbeats", "meta")
+          "market_history", "company_profile", "gaps", "heartbeats", "meta")
 
 # Tables whose frames may carry small lists or dicts. Those do not survive a
 # parquet round trip, so they are JSON-encoded on the way in. `books` is excluded
 # on purpose — fusion reads bid_levels/ask_levels as real Python lists.
 _JSON_ENCODED_TABLES = frozenset({"fundamentals", "ownership", "instruments", "cse",
-                                  "macro", "regulatory", "market_history"})
+                                  "macro", "regulatory", "market_history", "company_profile"})
+
+
+def _extra_parsers() -> Dict[str, List[Any]]:
+    """Second readings of bytes already captured, costing no request.
+
+    Some pages carry more than one kind of fact. `displayCompany.php` is fetched
+    once per symbol for its shareholding block, and the same bytes also hold the
+    multi-year dividend record, the right-issue history, the loan position and the
+    listing facts — none of which was being read. Parsing them here rather than
+    registering a second source means no extra traffic on dsebd.org AND that every
+    store already on disk gains the table retroactively.
+
+    Each entry is (table, parser); the parser needs only `.parse(body, key)`.
+    """
+    from .capture.adapters import bd_public
+    return {"dse_ownership": [("company_profile", bd_public.DSECompanyProfileParser())]}
 
 
 def _adapters() -> Dict[str, Any]:
@@ -109,6 +125,7 @@ def _t_recv(rec: Dict[str, Any]) -> str:
 
 def replay(root: str, sources: Optional[List[str]] = None) -> Dict[str, Any]:
     ad = _adapters()
+    extra = _extra_parsers()
     rows: Dict[str, List[Dict[str, Any]]] = {k: [] for k in TABLES}
     problems: List[str] = []
     counts: Dict[str, int] = {}
@@ -173,6 +190,21 @@ def replay(root: str, sources: Optional[List[str]] = None) -> Dict[str, Any]:
                                                    for k, v in fr.items()}})
                 else:
                     rows[table].append({**base, **fr})
+
+            # A page may hold more than one kind of fact. Read the rest of it.
+            for extra_table, parser in extra.get(src, ()):
+                try:
+                    ep = parser.parse(body, rec.get("key"))
+                except Exception as e:                          # noqa: BLE001
+                    problems.append(f"{src} seq {rec['seq']} -> {extra_table}: "
+                                    f"{type(e).__name__}: {e}")
+                    continue
+                for pr in ep.problems:
+                    problems.append(f"{extra_table} seq {rec['seq']} {rec.get('key') or ''}: {pr}")
+                for fr in ep.frames:
+                    rows[extra_table].append(
+                        {**base, **{k: (json.dumps(v) if isinstance(v, (list, dict)) else v)
+                                    for k, v in fr.items()}})
 
     out: Dict[str, Any] = {"problems": problems, "counts": counts, "root": root}
     for k, v in rows.items():

@@ -459,6 +459,106 @@ class DSEOwnershipAdapter:
         return out
 
 
+class DSECompanyProfileParser:
+    """A second reading of `displayCompany.php` — the part the ownership parser skips.
+
+    `dse_ownership` fetches this page once per symbol for its shareholding block.
+    The SAME bytes also carry a multi-year dividend record, the right-issue
+    history, the loan position, reserves, the listing year and the issuer's
+    disclosure URLs — and none of it was being read. This parser has no `fetch`
+    on purpose: it runs on replay, so it costs no request and every store already
+    on disk gains the table retroactively, the 691 pages pulled on 2026-09-08
+    included.
+
+    **What is deliberately NOT extracted.** The page also prints the company
+    secretary's name, personal mobile number and personal e-mail, plus factory
+    address, phone and fax. Those are people and premises, not market data, and a
+    research store has no use for them. Only the two disclosure URLs — financial
+    statements and price-sensitive information — are kept from that half of the
+    page, because those are what an event study actually needs.
+
+    Dividend strings arrive as `"25% 2025, 20% 2024, 40% 2023, …"`. They are kept
+    verbatim AND parsed into (year, percent) pairs, because the raw string is the
+    evidence and the pairs are the usable form; when the two disagree later, the
+    raw string is what settles it.
+    """
+
+    name = "dse_company_profile"
+    kind = "fundamentals"
+    observes = ("cash_dividend", "bonus_dividend", "right_issue", "year_end",
+                "reserve_surplus_mn", "listing_year", "market_category",
+                "short_term_loan_mn", "long_term_loan_mn", "t_recv")
+
+    # label pattern -> (field, kind) where kind is "num" | "text"
+    LABELS = (
+        (r"^cash\s+dividend$", "cash_dividend", "text"),
+        (r"^bonus\s+issue", "bonus_dividend", "text"),
+        (r"^right\s+issue$", "right_issue", "text"),
+        (r"^year\s+end$", "year_end", "text"),
+        (r"^reserve\s*&?\s*surplus", "reserve_surplus_mn", "num"),
+        (r"other\s+comprehensive\s+income", "oci_mn", "num"),
+        (r"^listing\s+year$", "listing_year", "num"),
+        (r"^market\s+category$", "market_category", "text"),
+        (r"^electronic\s+share$", "electronic_share", "text"),
+        (r"^present\s+operational\s+status$", "operational_status", "text"),
+        (r"^short-?term\s+loan", "short_term_loan_mn", "num"),
+        (r"^long-?term\s+loan", "long_term_loan_mn", "num"),
+        (r"^latest\s+dividend\s+status", "latest_dividend_raw", "text"),
+        (r"^details\s+of\s+financial\s+statement$", "financials_url", "text"),
+        (r"^price\s+sensitive\s+information$", "price_sensitive_url", "text"),
+    )
+
+    SCRIP_RE = re.compile(r"Scrip\s*Code\s*:\s*(\d+)", re.I)
+    # "25% 2025" / "3.50% 2018" / "1R:1(At Par) 1997"
+    PCT_YEAR_RE = re.compile(r"([\d.]+)\s*%\s*(\d{4})")
+    LATEST_RE = re.compile(r"([\d.]+)\s*for\s*(\d{4})", re.I)
+
+    @classmethod
+    def _pct_years(cls, s: Optional[str]) -> List[Dict[str, float]]:
+        if not s:
+            return []
+        return [{"year": int(y), "percent": float(p)} for p, y in cls.PCT_YEAR_RE.findall(s)]
+
+    def parse(self, body: bytes, key: Optional[str] = None) -> Parsed:
+        out = Parsed(self.name, truth=capability_map(self.observes))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body.decode("utf-8", "replace"), "lxml")
+
+        fr: Dict[str, Any] = {"symbol": (key or "").upper()}
+        matched = 0
+        for tr in soup.find_all("tr"):
+            cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+            # Labels sit beside their value, but not always in columns 0 and 1:
+            # the loan figures arrive as ['', 'Short-term loan (mn)', '648.2'].
+            for i in range(len(cells) - 1):
+                label, value = cells[i], cells[i + 1]
+                if not label or not value or len(label) > 70:
+                    continue
+                for pat, field, how in self.LABELS:
+                    if field in fr or not re.search(pat, label.strip(), re.I):
+                        continue
+                    fr[field] = _num(value) if how == "num" else value
+                    matched += 1
+                    break
+
+        m = self.SCRIP_RE.search(soup.get_text(" ", strip=True))
+        if m:
+            fr["scrip_code"] = m.group(1)
+
+        if not matched:
+            out.problems.append(f"no company-profile labels on the page for {key!r}")
+            return out
+
+        fr["cash_dividend_history"] = self._pct_years(fr.get("cash_dividend"))
+        fr["bonus_dividend_history"] = self._pct_years(fr.get("bonus_dividend"))
+        lm = self.LATEST_RE.search(fr.get("latest_dividend_raw") or "")
+        fr["latest_dividend_pct"] = float(lm.group(1)) if lm else None
+        fr["latest_dividend_year"] = int(lm.group(2)) if lm else None
+        fr["labels_matched"] = matched
+        out.frames.append(fr)
+        return out
+
+
 @dataclass
 class DSEMarketHistoryAdapter:
     """A rolling ~30 session-day market history from dsebd.org, no account needed.
