@@ -9,6 +9,21 @@
 
 **NONE.**
 
+## The standing position — see `VERDICT_LEDGER.md` § EVIDENCE LOCK
+
+Discovery is closed pending data. The one piece of evidence that survived every
+falsification attempt is **touch-locality of displayed order-book imbalance**
+(V-014): the information is at the touch; depth away from it is uninformative
+and, against the touch, contrarian. Two independent constructions produce it —
+the TLPI λ dose-response (AUC 0.543 → 0.694 at h4, monotone, λ = 0 *negative*)
+and the geometry ablation (`GEO_deep_only_bid` **−12.21 pp**).
+
+It is **not** a tradeable candidate and cannot become one from this data:
+one session of three required blocks (INSUFFICIENT_SAMPLE), and as a taker it
+loses to the book-derived 1.00-tick round trip by 0.602 ticks. The next unit of
+work is **capture, not analysis**; the pre-registered strengthen/falsify test is
+written down in advance at EVIDENCE LOCK Step 6 and must not be altered.
+
 ## What goes to Phase 5 — two objects, one sealed holdout, no double-dipping
 
 The holdout **2019-01-01 → 2022-07-27** (PRIMARY panel) is sealed; Phase 4.5

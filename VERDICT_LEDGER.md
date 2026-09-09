@@ -44,7 +44,7 @@ another dead candidate is **not** an answer.
 |---|---|---|---|---|
 | V-001 | `D_shallow_pullback` | MECHANICAL_ARTIFACT | overlap inflation 13.4x + low-volatility + liquidity + floor-regime confound | CLOSED |
 | V-002 | `F_at_limit` | MECHANICAL_ARTIFACT | circuit-mechanical price echo; untradeable entry | CLOSED |
-| V-003 | `CTX_xs_rank_top` | KILLED | future leakage (60 s bucket groupby) | superseded by V-004 |
+| V-003 | `CTX_xs_rank_top` **+ 5 more (amended)** | KILLED | future leakage (60 s bucket groupby) — **6 of 54 candidates, not 1** | superseded by V-004 |
 | V-004 | `E_xsrank_*` causal leadership | WEAK | no incremental value once causal | conditional |
 | V-005 | `volume_compression_activity` (SAI) | KILLED | no effect; negative t at two cutoffs | CLOSED |
 | V-006 | Pre-move abnormal activity | KILLED | reversed — echo, not lead | CLOSED |
@@ -55,6 +55,7 @@ another dead candidate is **not** an answer.
 | V-011 | `D_sell_pressure_drop` | WEAK | small, unmatched for volatility | conditional |
 | V-012 | `CHAIN_3_shock_premove_below` | WEAK | below cost; parent hypothesis dead | conditional |
 | V-013 | `B_relvol2_atbreakout` | KILLED | **duplicate of R2-1, should never have run** | CLOSED |
+| V-014 | **Touch-locality of book imbalance** — *the locked claim* | INSUFFICIENT_SAMPLE (directional) / ECONOMICALLY_UNUSABLE (taker) | 1 of 3 required session-blocks; −0.602 ticks vs a 1.00-tick round trip | **continuation — see EVIDENCE LOCK Step 6** |
 
 ---
 
@@ -160,6 +161,24 @@ It is **not** an anti-signal: MAE is *smaller* in magnitude than the control (�
 **12. DO-NOT-REPEAT NOTE** Never compute cross-sectional state with `floor(freq)` + `groupby.transform`. Any new cross-sectional feature must go through `asof_cross_section` and pass tests A–D.
 **13. DECISION IMPACT** *Research route*: all prior cross-sectional micro results are suspect until recomputed. *Confirmation layer*: no leadership term admitted.
 **14. EVIDENCE POINTERS** `results/big_move_discovery/2026-09-08-bigmove/CAUSALITY_AUDIT.md` §1–3; `research/bigmove/pit.py`; `tests/test_bigmove_pit.py`; commit `6235e34`.
+
+### AMENDMENT (Evidence-Lock audit) — the leak was never confined to one candidate
+
+The `_tbin` groupby in `research/edge_discovery/families.py` feeds six columns —
+`market_pressure`, `sector_pressure`, `share_resid`, `xs_rank`, `market_up`,
+`sector_up` — and **six of the 54 micro candidates read them**, not one:
+
+`CTX_xs_rank_top` (+21.75 pp, rank 1) · `CTX_sector_permission` (+18.14, rank 2) ·
+`CTX_market_weak_share_strong` (+16.15, rank 7) · `CTX_share_resid` (+15.14,
+rank 13) · `CTX_market_permission` (+8.05, rank 34) · `X_E1_market_noveto`
+(+6.23, rank 38).
+
+All six carried the label PROMISING; three of them held three of the top seven
+slots. **V-003's scope is hereby widened to all six.** Every one of those
+measurements is *withdrawn*, not demoted — the construction could not have been
+computed live, so there is no number left to rank. The whole `context` family
+and the `market_up` half of the `cross` family are void until rebuilt through
+`asof_cross_section`. See the EVIDENCE LOCK section, Step 1.
 
 ---
 
@@ -361,6 +380,272 @@ Response surface for +20 %/30d: **every cell carrying a pre-move filter is below
 
 ---
 
+# EVIDENCE LOCK — the position this research stands on
+
+> **Purpose of this section.** Not to find a new strategy. To identify the
+> single strongest piece of evidence that has survived every falsification
+> attempt made so far, state it exactly, state its limits exactly, and define
+> in advance what would strengthen it and what would kill it. Everything
+> outside this section is either killed, weak, or not observable. New
+> directions are not pursued from here; this claim is either strengthened or
+> falsified.
+
+## Step 1 — the purge that had to happen first
+
+Before ranking survivors, the surviving set was re-audited against V-003.
+V-003 killed one candidate — `CTX_xs_rank_top` — for computing cross-sectional
+state with `floor("60s")` + `groupby.transform`. That construction is not
+confined to one candidate. `research/edge_discovery/families.py` derives
+`market_pressure`, `sector_pressure`, `share_resid`, `xs_rank`, `market_up` and
+`sector_up` from the same `_tbin` groupby, and **six** of the 54 candidates read
+those columns:
+
+| rank at h4 (of 54) | candidate | matched lift | leaked column |
+|---:|---|---:|---|
+| 1 | `CTX_xs_rank_top` | **+21.75 pp** | `xs_rank` |
+| 2 | `CTX_sector_permission` | **+18.14 pp** | `sector_up` |
+| 7 | `CTX_market_weak_share_strong` | **+16.15 pp** | `market_pressure` |
+| 13 | `CTX_share_resid` | +15.14 pp | `share_resid` |
+| 34 | `CTX_market_permission` | +8.05 pp | `market_up` |
+| 38 | `X_E1_market_noveto` | +6.23 pp | `market_up` |
+
+All six were labelled PROMISING. Three of them held three of the top seven
+slots, including first and second place. **All six are withdrawn** — not
+demoted, withdrawn: their numbers were produced by a construction that could not
+have been computed live, so there is no number to demote. V-003's scope is
+widened from one candidate to the whole `_tbin` family; see the amendment
+appended to V-003.
+
+This is the worked example of why the ledger exists. The highest-ranked result
+in the whole run was also the most contaminated one, and it was contaminated by
+a mechanism already written down.
+
+## Step 2 — what is left, once the leak is removed
+
+The clean top of the h4 table (all 14 symbols, one session):
+
+| candidate | family | outcome | matched lift | episodes | mean fwd ticks |
+|---|---|---|---:|---:|---:|
+| `GEO_touch_dominant_ask` | geometry | down | +16.38 pp | 258 | −0.524 |
+| `GEO_broad_bid` | geometry | up | +16.22 pp | 247 | +0.155 |
+| `GEO_touch_dominant_bid` | geometry | up | +16.18 pp | 210 | +0.287 |
+| `X_E1_and_TLPI1` | cross | up | +16.18 pp | 279 | +0.152 |
+| `E1` | reference | up | +15.78 pp | 312 | +0.135 |
+| `DYN_A_level` | dynamics | up | +15.78 pp | 312 | +0.135 |
+| `TLPI_l8` | tlpi | up | +15.43 pp | 309 | +0.128 |
+| `TLPI_l8_rank` | tlpi_rank_ablation | up | +15.43 pp | 309 | +0.128 |
+| `TLPI_l1` | tlpi | up | +15.28 pp | 262 | +0.110 |
+| `TLPI_l4_rank` | tlpi_rank_ablation | up | +14.71 pp | 310 | +0.127 |
+
+**These are not ten findings. They are one finding under ten names**, and two
+pairs are not even different measurements:
+
+- `E1` and `DYN_A_level` are byte-identical — `DYN_A_level` is defined as
+  `P > θ`, and `P` is `E1`. Same 312 episodes, same 0.32313 hit rate, same ticks.
+- `TLPI_l8` and `TLPI_l8_rank` are byte-identical — at λ = 8 the rank twin
+  partitions the frames exactly as the level does.
+- `GEO_*` are touch-versus-deep restatements of the same imbalance.
+- `X_E1_and_TLPI1` is the conjunction of two forms of the same measure.
+
+Counting them separately as ten PROMISING candidates was itself a kind of
+double-count. The honest statement is that **one measurable thing** survived.
+
+## Step 3 — the locked claim, and the two independent lines that produce it
+
+> **THE LOCK.** In this market's displayed book, the directionally informative
+> quantity is order-book imbalance **at the touch**. Quantity resting away from
+> the touch does not add information, and when it points against the touch it
+> is actively wrong. The information is *local*, not *aggregate*.
+
+Two constructions, built in different families and not designed as one test,
+say this:
+
+**Line 1 — the continuous dose-response (TLPI λ).**
+`TLPI(λ) = Σ q·exp(−λ·|p − mid| / tick)`, so λ is exactly a distance-discount
+knob: λ = 0 weights all five displayed levels equally (≡ `imb_all`), and large λ
+concentrates weight on level 1 (→ `E1`).
+
+| λ | matched lift (h4) | AUC (h4) | episodes |
+|---:|---:|---:|---:|
+| 0 | **−4.68 pp** | 0.543 | 133 |
+| 0.25 | +4.92 pp | 0.604 | 205 |
+| 0.5 | +11.45 pp | 0.641 | 237 |
+| 1 | +15.28 pp | 0.675 | 262 |
+| 2 | +14.18 pp | **0.693** | 294 |
+| 4 | +14.10 pp | **0.694** | 309 |
+| 8 | +15.43 pp | 0.693 | 309 |
+
+AUC is **monotone increasing in λ and then plateaus at λ ≈ 2–4**. The
+undiscounted whole book at λ = 0 is *negative*. A dose-response curve with a
+sign change at one end is a far stronger object than any single threshold
+result, because it cannot be produced by picking a lucky cutoff.
+
+**Line 2 — the discrete geometry ablation.**
+Independently, the geometry family splits the book into touch (`L1`) and
+depth (`top5`, `T5`) and tests the three combinations directly:
+
+| state | definition | outcome | matched lift |
+|---|---|---|---:|
+| touch and depth agree | `L1 > θ and T5 > θ` | up | +16.22 pp |
+| touch dominates depth | `L1 > θ and L1 − T5 > θ` | up | +16.18 pp |
+| **depth only, touch not** | `T5 > θ and L1 ≤ θ` | up | **−12.21 pp** |
+| touch dominates depth (ask) | `L1 < −θ and L1 − T5 < −θ` | down | +16.38 pp |
+| touch and depth agree (ask) | `L1 < −θ and T5 < −θ` | down | +8.94 pp |
+| **depth only, touch not (ask)** | `T5 < −θ and L1 ≥ −θ` | down | **−0.18 pp** |
+
+`GEO_deep_only_bid` at **−12.21 pp** is the discrete twin of the λ = 0 result:
+strip the touch out and what remains is worse than nothing. Two different
+parameterisations of the same physical question, run in different families,
+land on the same answer with the same sign structure. **That convergence is
+the reason this, and not any single lift number, is what gets locked.**
+
+## Step 4 — what the lock is NOT
+
+Stated plainly, so that no later reading inflates it:
+
+1. **It is not tradeable, and that is settled, not pending.** Against the
+   book-derived cost model (median round trip **1.00 tick** at 500 shares), the
+   best rule in the whole run — `E1 AND flow > 0` at h4, +0.398 ticks — nets
+   **−0.602 ticks**. Bare `E1` nets −0.865. Even a *perfect* exit at the maximum
+   favourable excursion, which requires knowing the future, reaches only +0.061
+   ticks at h8. As a taker this is dead by a factor of ~2.5, not by a hair.
+2. **It is not a between-session claim.** One session. 14 symbols. 210–312
+   episodes at h4 (~180 s). The prereg's independent block is a *whole session*.
+3. **It is not a price-prediction claim.** AUC 0.69 on a 180-second horizon on
+   the *up* label is a statement about short-horizon direction of the mid, not
+   about profit, and rule D forbids reading one as the other.
+4. **It is not a claim about hidden intent.** The touch is what is displayed.
+   Nothing here observes who posted it or why.
+
+## Step 5 — can it be strengthened today? No.
+
+`SPLITS.csv` returns **48 INSUFFICIENT_SAMPLE and 3 NOT_OBSERVABLE**, every one
+carrying the same recorded note:
+
+> *"1 independent block(s); the prereg's block is a whole session and 3 are
+> needed before any between-session statement exists. The interval shown is
+> over rows within the session and does not generalise. NOT a kill."*
+
+There is exactly **one** independent block. The prereg requires three. The
+2026-09-09 capture that would have been the second was lost to a runner that
+persisted only at the end of the session (fixed in `6caf84f`; the data itself
+is unrecoverable). Therefore:
+
+- **No re-mining of the existing session can strengthen this.** Splitting one
+  session into pieces produces more rows, not more blocks, and the note above
+  says so in advance.
+- **No new candidate family can strengthen this.** Adding an eleventh name for
+  the same measurement is the double-count of Step 2, repeated.
+- **The only thing that strengthens or kills it is more independent sessions.**
+
+The correct action today is to hold the position and capture. Not to search.
+
+## Step 6 — the pre-registered strengthen / falsify test
+
+Written before the data exists, so it cannot be fitted afterwards. Evaluated on
+sessions 2 and 3, each as its own block, each analysed **before** pooling.
+
+**STRENGTHENS the lock** — all four must hold:
+1. `AUC(λ)` at h4 is monotone non-decreasing from λ = 0 to λ = 2 in each new
+   session taken separately.
+2. The AUC plateau stays in **λ ∈ [2, 4]** — i.e. the argmax does not move to a
+   different λ in each session.
+3. λ = 0 stays at or below chance (lift ≤ 0 or AUC ≤ 0.55).
+4. `GEO_deep_only_bid` stays negative.
+
+**FALSIFIES the lock** — any one is sufficient:
+1. The λ optimum **wanders** — session 2 peaks at λ = 0.5, session 3 at λ = 8.
+   A wandering optimum means the curve was fitted to one session's noise, not a
+   structural property of the book. *This is the single most important test in
+   this section.*
+2. λ = 0 turns positive in a later session — the "depth is contrarian" half of
+   the claim fails.
+3. `GEO_deep_only_bid` turns positive while touch states hold.
+4. AUC at the plateau falls to ≤ 0.55 out of session.
+
+**Explicitly NOT a falsification:** a smaller lift in a quieter session, or a
+session with too few episodes. Those return INSUFFICIENT_SAMPLE, which under
+rule B means wait, not kill.
+
+**Explicitly forbidden while waiting:** re-tuning θ = 0.20, re-tuning the λ
+grid, adding levels beyond the displayed five, or touching the sealed holdout.
+The knob settings are now part of the hypothesis; changing them changes the
+hypothesis and forfeits the test.
+
+---
+
+## V-014 — Touch-locality of displayed order-book imbalance *(the locked claim)*
+
+**1. NAME** Touch-locality. Carried in `results/edge_discovery/2026-09-08-calibration/`
+as `E1` / `DYN_A_level` / `TLPI_l{0.25…8}` / `TLPI_l*_rank` / `GEO_*` /
+`X_E1_and_TLPI1` — one finding under ten names.
+
+**2. ORIGINAL CLAIM** Order-book imbalance predicts short-horizon mid direction.
+**Refined by the evidence to:** imbalance *at the touch* carries the information;
+depth away from the touch does not, and against the touch is contrarian.
+
+**3. EXACT DEFINITION** `E1 = (bid_qty1 − ask_qty1)/(bid_qty1 + ask_qty1) > θ`,
+θ = 0.20 preregistered (`MICRO_PREREG.json`, sha256 `169935bd…c01d`, unmodified).
+Generalised: `TLPI(λ) = Σ q·exp(−λ·|p − mid|/tick)` over the five displayed
+levels, `TLPI(0) ≡ imb_all`, `TLPI(∞) → E1`. Geometry twin: `L1` vs `T5` on the
+same θ. Outcome: P(up) over h = 4 frames ≈ 180 s, matched controls drawn **with
+replacement**, `CONTROL_DRAWS = 20`, episode-de-overlapped.
+
+**4. DATA USED** Micro frames, **14 symbols, one session (2026-09-06)**,
+1,636–2,136 valid signal rows depending on λ, 133–312 independent episodes at
+h4. Sealed holdout untouched. No future micro HOLDOUT session used.
+
+**5. PRIMARY RESULT** λ dose-response at h4: lift −4.68 → +15.43 pp;
+**AUC 0.543 → 0.604 → 0.641 → 0.675 → 0.693 → 0.694 → 0.693**, monotone,
+plateau λ ≈ 2–4. Independently, geometry: touch-dominant +16.18 pp (bid) /
++16.38 pp (ask); **depth-only −12.21 pp (bid)**.
+
+**6. ADVERSARIAL CHECKS** Leak audit against V-003 (passed — no candidate in the
+lock reads a `_tbin` column); matched controls with volatility/liquidity strata;
+episode de-overlap; rank-vs-level ablation (identical, so the effect is not a
+scaling artifact); direction ablation (ask side scored on P(down), and it holds);
+the depth-only ablation, which is a designed falsification and *did* return the
+predicted negative; the full economic test against the book-derived cost model.
+
+**7. FAILURE MECHANISM** None found for the *directional* claim. The
+*economic* claim fails outright: −0.602 ticks net at best against a 1.00-tick
+round trip.
+
+**8. VERDICT** `INSUFFICIENT_SAMPLE` for any between-session statement —
+directionally the strongest surviving evidence in this project, and
+`ECONOMICALLY_UNUSABLE` as a taker rule.
+
+**9. WHAT EXACTLY IS KILLED** Taker execution of this signal, at any threshold.
+Also killed: treating the ten names above as ten independent candidates.
+
+**10. WHAT REMAINS ALIVE** The dose-response curve itself, as the position this
+research stands on; and the one direction the arithmetic permits — **posting at
+the touch rather than crossing**, which removes the 1.00-tick cost but requires
+a fill / adverse-selection model that does not yet exist and is measurable from
+this same data.
+
+**11. REOPEN CONDITION** Not a reopening — a **continuation**: sessions 2 and 3,
+evaluated against Step 6 above, unchanged.
+
+**12. DO-NOT-REPEAT NOTE** Do not add another imbalance-family candidate. Do not
+re-split the single existing session to manufacture blocks. Do not re-tune θ or
+the λ grid before the pre-registered test has run.
+
+**13. DECISION IMPACT** *Research route*: discovery is **closed** pending data;
+the next unit of work is capture, not analysis. *Execution*: no taker rule is
+adopted; the only live question is the maker/fill model. *Process*: candidate
+counts must be reported after collapsing identical measurements.
+
+**14. EVIDENCE POINTERS** `results/edge_discovery/2026-09-08-calibration/`
+— `TLPI_RESPONSE_CURVE.csv`, `CANDIDATE_RANKING.csv`, `SPLITS.csv`,
+`DISCOVERY_REPORT.md` §"A cost model that came for free" and §"The economic
+test"; `research/edge_discovery/families.py` lines 199–210 (geometry),
+170–176 (TLPI + rank ablation), 180 (`DYN_A_level`), 231–243 + 252 (the
+withdrawn `context` family and `X_E1_market_noveto`), 95–113 (the `_tbin`
+construction itself).
+
+---
+
 ## Cross-cutting method rules established by these verdicts
 
 1. **Volatility must be in the matching strata** for any candidate selecting on range, pullback depth, or distance-to-high (V-001).
@@ -370,3 +655,7 @@ Response surface for +20 %/30d: **every cell carrying a pre-move filter is below
 5. **A conditioned candidate reports its within-parent incremental test**, not only lift vs base (V-007).
 6. **`t_nw_date` and `lift` answer different questions** — t compares to the population, lift to matched controls. Never read one as corroborating the other (V-001 §defects).
 7. **The ledger search precedes candidate generation** (V-013).
+8. **A defective construction is audited across the whole codebase, not just the candidate that exposed it.** One leaking column killed one candidate; the same column fed five more that stayed PROMISING for a full run (V-003 amendment).
+9. **Identical measurements are collapsed before candidates are counted or ranked.** `E1` ≡ `DYN_A_level` and `TLPI_l8` ≡ `TLPI_l8_rank` are byte-identical; ten names in the clean top ten were one finding (V-014).
+10. **A dose-response curve outranks any single threshold result.** A monotone response with a sign change at one end cannot be produced by a lucky cutoff; a wandering optimum across blocks means it was fitted (V-014, Step 6).
+11. **More rows are not more blocks.** Re-splitting one session cannot lift INSUFFICIENT_SAMPLE; only new independent sessions can (V-014, Step 5).
