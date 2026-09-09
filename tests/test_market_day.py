@@ -153,3 +153,76 @@ def test_the_window_covers_the_session_and_a_margin_past_the_close():
     span_min = (w["end_utc"] - w["start_utc"]).total_seconds() / 60
     assert 260 < span_min < 300, "09:45 through 14:15 Dhaka, about 4.5 hours"
     assert w["start_utc"] < w["end_utc"]
+
+
+# ------------------------------------------------------------------ durability
+def test_run_signature_carries_the_checkpoint_contract():
+    """The 2026-09-09 loss: a 4.5-hour run that persisted only at the end."""
+    import inspect
+    from research.bigmove import panel  # noqa: F401  (keeps import order stable)
+    from seeing.capture.market_day import run
+    sig = inspect.signature(run)
+    assert "checkpoint_minutes" in sig.parameters
+    assert "push_branch" in sig.parameters
+    assert sig.parameters["checkpoint_minutes"].default == 30.0
+    assert sig.parameters["push_branch"].default is None, \
+        "pushing is opt-in; a local run must not touch a remote by default"
+
+
+def test_a_checkpoint_refuses_a_path_inside_the_experiment(tmp_path):
+    from seeing.capture.market_day import checkpoint
+    with pytest.raises(ValueError, match="pre-registered"):
+        from seeing.capture.market_day import assert_safe_out
+        assert_safe_out("micro/sessions")
+    # and the checkpoint itself tolerates an empty store rather than crashing
+    out = checkpoint(str(tmp_path), universe=["ACI"], push_branch=None)
+    assert "out_dir" in out
+
+
+def test_a_checkpoint_without_a_branch_never_invokes_git(tmp_path, monkeypatch):
+    """Durability is opt-in, but a local run must not silently push."""
+    import subprocess as sp
+    from seeing.capture import market_day as MD
+    called = []
+    monkeypatch.setattr(MD.subprocess, "run",
+                        lambda *a, **k: called.append(a) or sp.CompletedProcess(a, 0, "", ""))
+    MD.checkpoint(str(tmp_path), universe=["ACI"], push_branch=None)
+    assert called == [], "no branch means no git"
+
+
+def test_git_persist_retries_a_failed_push_and_never_forces(tmp_path, monkeypatch):
+    import subprocess as sp
+    from seeing.capture import market_day as MD
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append(list(args))
+        if args[:2] == ("git", "status") or args[1] == "status":
+            return sp.CompletedProcess(args, 0, " M x\n", "")
+        if args[1] == "push":
+            n = sum(1 for c in calls if c[1] == "push")
+            return sp.CompletedProcess(args, 0 if n >= 3 else 1, "", "rejected")
+        return sp.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(MD.subprocess, "run", fake_run)
+    monkeypatch.setattr(MD.time, "sleep", lambda s: None)
+    res = MD._git_persist(str(tmp_path), "some-branch", log=lambda *a, **k: None)
+    assert res["push"] == "ok"
+    pushes = [c for c in calls if c[1] == "push"]
+    assert len(pushes) == 3, "it retried with backoff"
+    assert not any("--force" in c or "-f" in c for c in calls), "never force-push"
+
+
+def test_git_persist_reports_failure_rather_than_pretending(tmp_path, monkeypatch):
+    import subprocess as sp
+    from seeing.capture import market_day as MD
+
+    def always_fail(args, **kw):
+        if args[1] == "status":
+            return sp.CompletedProcess(args, 0, " M x\n", "")
+        return sp.CompletedProcess(args, 1, "", "no upstream")
+
+    monkeypatch.setattr(MD.subprocess, "run", always_fail)
+    monkeypatch.setattr(MD.time, "sleep", lambda s: None)
+    res = MD._git_persist(str(tmp_path), "b", log=lambda *a, **k: None)
+    assert res["push"] == "failed" and "no upstream" in res["push_error"]

@@ -33,7 +33,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -215,9 +217,78 @@ def plan(symbols: Sequence[str], min_gap: float, cadence_scale: float = 1.0,
             "sources": sorted(rows, key=lambda r: -r["budget_share"])}
 
 
+def checkpoint(out_dir: str, universe: Sequence[str], push_branch: Optional[str] = None,
+               log=print) -> Dict[str, Any]:
+    """Turn what is on disk into something that survives losing this container.
+
+    A capture session's raw store lives on an ephemeral disk. On 2026-09-09 the
+    first scheduled whole-market run captured the full 03:40-08:18 UTC session and
+    pushed **nothing**: the runner blocked for 4.5 hours and persisted only at the
+    very end, so when the session ended without completing its git steps, an
+    entire trading day of order-book data — unrepeatable, because a market session
+    happens once — was lost with the container.
+
+    So durability cannot wait for the end. This closes the store (which finalises
+    every segment's sha256 and writes MANIFEST.json), extracts the tables, and
+    optionally commits and pushes them. The caller then reopens the store; the
+    per-source hash chain continues across the new epoch.
+    """
+    from ..extract import extract as run_extract
+    out: Dict[str, Any] = {"out_dir": out_dir}
+    try:
+        rep = run_extract(out_dir, os.path.join(out_dir, "extract"),
+                          universe=list(universe), verify=False)
+        out["tables"] = {k: v["rows"] for k, v in rep.get("tables", {}).items()}
+    except Exception as exc:                                    # noqa: BLE001
+        out["extract_error"] = f"{type(exc).__name__}: {exc}"
+        log(f"  checkpoint extract failed: {out['extract_error']}")
+
+    if push_branch:
+        out.update(_git_persist(out_dir, push_branch, log))
+    return out
+
+
+def _git_persist(out_dir: str, branch: str, log=print) -> Dict[str, Any]:
+    """Commit and push the durable part of the store. Never force, never fail loudly.
+
+    The raw segments are git-ignored by design (a session is ~100 MB); what goes
+    to the remote is MANIFEST.json, SOURCE_STATUS.json and extract/ — enough to
+    know exactly what was captured and to use it, even if the container dies.
+    """
+    res: Dict[str, Any] = {}
+    def sh(*args, check=False):
+        return subprocess.run(args, capture_output=True, text=True, check=check)
+    try:
+        sh("git", "add", "-A", out_dir)
+        st = sh("git", "status", "--porcelain", out_dir)
+        if not st.stdout.strip():
+            res["push"] = "nothing to commit"
+            return res
+        stamp = now_utc().strftime("%Y-%m-%dT%H:%MZ")
+        sh("git", "commit", "-q", "-m",
+           f"capture: whole-market intraday checkpoint {stamp}\n\n"
+           f"Incremental checkpoint written during the session so that losing the "
+           f"container costs at most one interval, not the whole day.")
+        for attempt, wait in enumerate((2, 4, 8, 16, 0)):
+            p = sh("git", "push", "origin", f"HEAD:{branch}")
+            if p.returncode == 0:
+                res["push"] = "ok"
+                return res
+            res["push_error"] = (p.stderr or "").strip()[:300]
+            if wait:
+                log(f"  push failed, retrying in {wait}s: {res['push_error'][:120]}")
+                time.sleep(wait)
+        res["push"] = "failed"
+    except Exception as exc:                                    # noqa: BLE001
+        res["push"] = f"error: {type(exc).__name__}: {exc}"
+    return res
+
+
 def run(out_dir: str, symbols: Sequence[str], minutes: float, min_gap: float,
         cadence_scale: float = 1.0, universe_note: Optional[Dict[str, Any]] = None,
-        only: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+        only: Optional[Sequence[str]] = None, checkpoint_minutes: float = 30.0,
+        push_branch: Optional[str] = None, log=print) -> Dict[str, Any]:
+    """Capture in checkpointed chunks so an interruption costs one interval, not the day."""
     assert_safe_out(out_dir)
     os.makedirs(out_dir, exist_ok=True)
     client = PoliteClient(min_gap_s=min_gap, timeout_s=40.0)
@@ -228,13 +299,43 @@ def run(out_dir: str, symbols: Sequence[str], minutes: float, min_gap: float,
     if cadence_scale != 1.0:
         for sp in specs:
             sp.cadence_scale = cadence_scale
-    eng = PublicMarketEngine(out_dir, specs, symbols=list(symbols), client=client)
-    eng.store.write_meta("market_day", {
-        "universe": universe_note or {}, "n_symbols": len(symbols),
-        "plan": plan(symbols, min_gap, cadence_scale, only),
-        "note": "whole-market intraday sweep; public sources only; writes nothing under micro/",
-    })
-    return eng.run_for(minutes)
+
+    meta = {"universe": universe_note or {}, "n_symbols": len(symbols),
+            "plan": plan(symbols, min_gap, cadence_scale, only),
+            "checkpoint_minutes": checkpoint_minutes, "push_branch": push_branch,
+            "note": "whole-market intraday sweep; public sources only; writes nothing under micro/"}
+
+    deadline = time.monotonic() + minutes * 60.0
+    # Cadence state is carried across chunks so a checkpoint does not make every
+    # source due again — otherwise an hourly source would be re-polled every chunk.
+    last_src: Dict[str, float] = {}
+    last_sym: Dict[str, Dict[str, float]] = {}
+    health: Dict[str, Any] = {}
+    status: Dict[str, Any] = {}
+    n_chunks = 0
+
+    while True:
+        remaining = (deadline - time.monotonic()) / 60.0
+        if remaining <= 0.05:
+            break
+        chunk = min(checkpoint_minutes, remaining)
+        eng = PublicMarketEngine(out_dir, specs, symbols=list(symbols), client=client)
+        eng._last.update(last_src)
+        for k, v in last_sym.items():
+            eng._sym_last.setdefault(k, {}).update(v)
+        for k, v in health.items():
+            eng.health[k] = v
+        if n_chunks == 0:
+            eng.store.write_meta("market_day", meta)
+        status = eng.run_for(chunk)                 # run_for closes the store at the end
+        last_src, last_sym, health = eng._last, eng._sym_last, eng.health
+        n_chunks += 1
+        cp = checkpoint(out_dir, symbols, push_branch, log)
+        log(f"  checkpoint {n_chunks}: raw={status['raw_records']} "
+            f"tables={cp.get('tables')} push={cp.get('push')}", flush=True)
+
+    status["checkpoints"] = n_chunks
+    return status
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -256,6 +357,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="comma list of sources to run (default: the intraday set). Every "
                         "per-symbol source shares one request budget, so naming fewer buys "
                         "resolution back. Pass 'all' to run everything the phase allows")
+    p.add_argument("--checkpoint-minutes", type=float, default=30.0,
+                   help="extract and (with --push-branch) push every N minutes, so an\n                        interruption costs one interval instead of the whole session")
+    p.add_argument("--push-branch", default="",
+                   help="branch to commit and push each checkpoint to. Without it the\n                        capture is only as durable as this container")
     p.add_argument("--plan-only", action="store_true",
                    help="print what the sweep would cost and exit without fetching")
     return p
@@ -287,10 +392,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     out_dir = os.path.join(a.out_root, win["trading_date"])
     pl = plan(syms, a.min_gap, a.cadence_scale, only)
-    st = run(out_dir, syms, minutes, a.min_gap, a.cadence_scale, universe_note=uni, only=only)
+    st = run(out_dir, syms, minutes, a.min_gap, a.cadence_scale, universe_note=uni,
+             only=only, checkpoint_minutes=a.checkpoint_minutes,
+             push_branch=(a.push_branch or None))
     print(json.dumps({"trading_date": win["trading_date"], "out": out_dir,
                       "n_symbols": len(syms), "book_frame_s": pl["book_frame_s"],
                       "by_status": st["by_status"],
+                      "checkpoints": st.get("checkpoints"),
                       "raw_records": st["raw_records"]}, indent=1))
     return 0
 
