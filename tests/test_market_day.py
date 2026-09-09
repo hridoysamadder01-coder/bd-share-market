@@ -159,7 +159,6 @@ def test_the_window_covers_the_session_and_a_margin_past_the_close():
 def test_run_signature_carries_the_checkpoint_contract():
     """The 2026-09-09 loss: a 4.5-hour run that persisted only at the end."""
     import inspect
-    from research.bigmove import panel  # noqa: F401  (keeps import order stable)
     from seeing.capture.market_day import run
     sig = inspect.signature(run)
     assert "checkpoint_minutes" in sig.parameters
