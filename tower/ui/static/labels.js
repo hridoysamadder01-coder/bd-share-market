@@ -14,7 +14,7 @@
      cross-checked against
              evidence/public/2026-09-06/normalized/
              dse_sector_wise_company_list.parquet
-             (https://www.dsebd.org/by_industrylisting.php, truth=OBSERVED)
+             (dsebd.org/by_industrylisting.php, truth=OBSERVED)
      StockNow's numbering == the DSE alphabetical industry list with the
      G-SEC (T.Bond) row removed, plus three StockNow-only buckets (22, 23, 25).
    ========================================================================= */

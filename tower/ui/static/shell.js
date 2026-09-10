@@ -79,6 +79,9 @@ const F = {
 /* -------------------------------- fetch --------------------------------- */
 const CACHE = new Map();
 async function get(path, ttl) {
+  /* a frozen snapshot build embeds the API responses on the page; the live
+     server sets nothing, so this is a no-op there */
+  if (typeof PREFETCH !== 'undefined' && PREFETCH && PREFETCH[path] !== undefined) return PREFETCH[path];
   const now = Date.now(), hit = CACHE.get(path);
   if (hit && now - hit.t < (ttl || 60000)) return hit.v;
   const r = await fetch(path, { headers: { accept: 'application/json' } });
