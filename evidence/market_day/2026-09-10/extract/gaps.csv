@@ -1,0 +1,3 @@
+t_recv,source,key,reason,detail,status
+2026-09-10 07:53:59.931184+00:00,lankabd_tape,KAY&QUE,connect_error,no company id for KAY&QUE,
+2026-09-10 07:54:54.240365+00:00,lankabd_tape,SEMLIBBLSF,empty_response,parsed cleanly but produced no frames,

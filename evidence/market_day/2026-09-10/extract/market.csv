@@ -1,0 +1,2 @@
+source,t_recv,seq,epoch,body_sha256,http_status,elapsed_ms,market_trades,market_volume,market_value_mn,symbols_traded,up,down,flat,t_source_str,t_source_utc
+lankabd_market,2026-09-10 07:55:19.101790+00:00,1,615fcdbc546d4cda8f1815a78b44ca3a,bd22509f5583b883cf0389cd4dabde5188a0eed4708528e327d3606c9af345b4,200,353,142306.0,198494709.0,4963.866,388.0,117.0,214.0,57.0,2026-09-10 13:55:11,2026-09-10T07:55:11+00:00
