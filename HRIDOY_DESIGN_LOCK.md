@@ -130,3 +130,29 @@ Reset phrase again: `মামা, ডিজাইন লক।`
 ---
 
 _This is the design contract. Follow Hridoy, not the template._
+
+---
+
+## 8. Permission gate — tenant / production systems
+
+Never build, mock, redesign, extend, or render the UI of any of Hridoy's
+production / tenant-facing repositories without an explicit, per-task
+instruction from him naming the surface. This applies to at least:
+`pharmacy-os`, `hs-os`, `oyshe`, `HS-OS`, `Exness-Engeen`, and the
+`খাতা` / PR #304 project.
+
+Never render real tenant names, tenant IDs, real revenue, alert counts,
+or any other content sourced from those systems' live databases into any
+third-party surface — that includes Claude artifacts, chat messages,
+screenshots, or any file outside the source repo. If a demo of the design
+pattern is called for, use placeholder rows drawn from nowhere, and label
+them PLACEHOLDER.
+
+"End-to-end finish the design" is a compressed instruction. It does not
+by itself grant permission to touch any specific repo. Ask which surface;
+never assume the most recently discussed one.
+
+Owner override: this permission gate is lifted for a single task ONLY when
+Hridoy writes, in the same turn, the repo name AND the surface name (e.g.
+"pharmacy-os founder cockpit — build it"). Lifting for one task does not
+lift for the next.
