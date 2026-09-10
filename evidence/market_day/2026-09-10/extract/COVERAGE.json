@@ -3,7 +3,7 @@
  "tables": {
   "books": {
    "path": "books.csv",
-   "rows": 1015,
+   "rows": 2455,
    "columns": [
     "source",
     "t_recv",
@@ -35,11 +35,11 @@
     "zero_fields",
     "dup_payload"
    ],
-   "bytes": 990006
+   "bytes": 2371745
   },
   "watch": {
    "path": "watch.csv",
-   "rows": 808,
+   "rows": 1616,
    "columns": [
     "source",
     "t_recv",
@@ -76,7 +76,7 @@
     "feed_timestamp_utc",
     "t_source"
    ],
-   "bytes": 319353
+   "bytes": 639312
   },
   "tape": {
    "path": "tape.csv",
@@ -106,7 +106,7 @@
   },
   "market": {
    "path": "market.csv",
-   "rows": 1,
+   "rows": 2,
    "columns": [
     "source",
     "t_recv",
@@ -125,7 +125,7 @@
     "t_source_str",
     "t_source_utc"
    ],
-   "bytes": 412
+   "bytes": 667
   },
   "block": {
    "path": "block.csv",
@@ -175,7 +175,7 @@
   },
   "latest": {
    "path": "latest.csv",
-   "rows": 1419,
+   "rows": 1814,
    "columns": [
     "source",
     "t_recv",
@@ -233,7 +233,7 @@
     "tV22",
     "beta"
    ],
-   "bytes": 486805
+   "bytes": 583243
   },
   "gaps": {
    "path": "gaps.csv",
@@ -250,23 +250,23 @@
   },
   "heartbeats": {
    "path": "heartbeats.csv",
-   "rows": 21,
+   "rows": 42,
    "columns": [
     "t_recv",
     "seq"
    ],
-   "bytes": 758
+   "bytes": 1505
   },
   "meta": {
    "path": "meta.csv",
-   "rows": 14,
+   "rows": 21,
    "columns": [
     "t_recv",
     "source",
     "seq",
     "payload"
    ],
-   "bytes": 16832
+   "bytes": 25231
   }
  },
  "coverage": {
@@ -274,9 +274,9 @@
   "sources": {
    "lankabd_depth": {
     "table": "books",
-    "rows": 1015,
+    "rows": 2455,
     "symbols_returned": 384,
-    "polls": 1015,
+    "polls": 1440,
     "gap_reasons": {},
     "universe_covered": 384,
     "universe_missing": 0,
@@ -284,7 +284,7 @@
    },
    "lankabd_watch": {
     "table": "watch",
-    "rows": 808,
+    "rows": 1616,
     "symbols_returned": 404,
     "polls": 2,
     "gap_reasons": {},
@@ -310,7 +310,7 @@
    },
    "lankabd_market": {
     "table": "market",
-    "rows": 1,
+    "rows": 2,
     "symbols_returned": 0,
     "polls": 1,
     "gap_reasons": {}
@@ -365,7 +365,7 @@
    },
    "dsebd_latest": {
     "table": "latest",
-    "rows": 790,
+    "rows": 1185,
     "symbols_returned": 395,
     "polls": 2,
     "gap_reasons": {},
@@ -388,11 +388,11 @@
  "problems": [],
  "n_problems": 0,
  "raw_records_by_source": {
-  "dsebd_latest": 2,
-  "lankabd_depth": 1015,
-  "lankabd_watch": 2,
+  "dsebd_latest": 3,
+  "lankabd_depth": 2455,
+  "lankabd_watch": 4,
   "lankabd_tape": 383,
-  "lankabd_market": 1,
+  "lankabd_market": 2,
   "lankabd_block": 1,
   "lankabd_circuit": 1,
   "lankabd_grid": 1
