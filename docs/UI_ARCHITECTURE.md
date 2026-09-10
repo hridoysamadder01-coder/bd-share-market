@@ -61,6 +61,73 @@ Enforced by `HRIDOY_DESIGN_LOCK.md`:
 * **Command palette** at `⌘K` / `Ctrl-K` / `/` — jump to any symbol, screen, or
   scanner lens.
 
+## Presentation law (rebuild, 2026-09-10)
+
+The presentation layer was rebuilt to one rule: within five seconds a person
+must be able to answer *is the market open, is it strong or weak, which sectors,
+which stocks need attention, and why*. Nothing in the engine, the API, the
+routes or the data contracts changed.
+
+Screen order is the information hierarchy, on every route and both widths:
+
+    L1  MARKET STATE       one dominant verdict block, largest type on the page
+    L2  INDEX + BREADTH    DSEX, fell / rose / unchanged, turnover
+    L3  SECTOR STATE       human sector names, turnover-weighted
+    L4  STOCKS TO WATCH    real symbols, plain reason on every row
+    L5  RAW EVIDENCE       the numbers, quietest, opt-in
+
+Rules the layer enforces:
+
+* **Never LIVE on stale or closed data.** The phase chip reads `MARKET CLOSED ·
+  Last session data — <date>` whenever the feed's `session_phase` is not open.
+* **Human mode is the default** and shows no feature name, no z-score and no
+  internal id. Research mode adds `rel_volume_z = 3.42` back beside the plain
+  sentence. Both read the same stored feature row.
+* **Mobile is a separate design**, not a shrunk desktop: labelled bottom tab bar,
+  single-column hero, two-up sector cards, and a row list instead of the wide
+  table (the desktop table hid price and change off-screen). The treemap is a
+  desktop-only device.
+* **No internal ids as a label, anywhere.**
+
+### Reading the delivered data correctly
+
+Three things about the real feed that the presentation layer handles, without
+touching the API:
+
+1. `/api/market/universe` ships every symbol **twice** (946 rows, 473 unique) —
+   de-duplicated by symbol before any count or sum.
+2. A row with `ltp == 0` did not trade; its `change_pct` arrives as `-100.0`.
+   Those rows are excluded from breadth, from sector change and from the movers
+   lists, and the count is disclosed on the Every Stock screen.
+3. Corporate bonds, debentures, treasury bonds and the three index rows
+   (`DSEX`, `DS30`, `DSES`) carry a `sector` id but are not company shares, so
+   they never enter equity breadth, equity turnover or the sector map. `DSEX`
+   is read from the universe because `/api/market/summary` returns `dsex: null`.
+
+### Sector id → human name (`tower/ui/static/labels.js`)
+
+Presentation mapping only — no engine or API change. Derived by joining
+StockNow's numeric `sector_id` (`extract/instruments.csv`) with BullBD's text
+`sector` (`extract/fundamentals.csv`) on `symbol`: **406 symbols matched, 0
+conflicts, every id resolved to exactly one name.** Cross-checked against
+`evidence/public/<date>/normalized/dse_sector_wise_company_list.parquet`
+(`dsebd.org/by_industrylisting.php`, truth `OBSERVED`) — StockNow's numbering is
+the DSE alphabetical industry list with the G-SEC (T.Bond) row removed, plus
+three StockNow-only buckets (22 Treasury Bond, 23 Market Index, 25 Life
+Insurance); 22 and 23 are marked INFERRED in the file.
+
+Sector **change and turnover** are not averaged from stocks — they are DSE's own
+sector aggregate rows (`BANK`, `TEXTILE`, …), which the universe feed carries
+with `sector = null`. Per-sector up/down counts come from the equities, mapped
+through the table above.
+
+### Attention rules
+
+Seven rules over the existing feature table, each with a fixed plain-language
+reason: quiet accumulation, heavy selling, abnormal volume, abnormal for days,
+range squeezed, thin and fragile, activity without follow-through. They emit an
+observation and a symbol — never a buy, a sell, a target or a stop.
+
 ## Run
 
     PYTHONPATH=. python3 -m tower.ui.server --port 8765
