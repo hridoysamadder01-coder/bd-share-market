@@ -1,5 +1,5 @@
 {
- "t_utc": "2026-09-10T08:03:39.916070+00:00",
+ "t_utc": "2026-09-10T08:04:39.969375+00:00",
  "session_phase": "POST_CLOSE",
  "trading_date_dhaka": "2026-09-10",
  "capturer_id": "engine-vm",
@@ -392,7 +392,7 @@
   "ZEALBANGLA"
  ],
  "client": {
-  "requests": 1917,
+  "requests": 2067,
   "errors": 0,
   "tls_fallbacks": 1
  },
@@ -427,12 +427,12 @@
   {
    "source": "lankabd_depth",
    "status": "WORKING",
-   "attempts": 1522,
-   "ok": 1522,
+   "attempts": 1672,
+   "ok": 1672,
    "success_rate": 1.0,
    "failures": {},
    "consecutive_failures": 0,
-   "last_ok_utc": "2026-09-10T08:03:39.504313+00:00",
+   "last_ok_utc": "2026-09-10T08:04:39.538275+00:00",
    "last_failure_utc": null,
    "last_failure_code": null,
    "last_failure_detail": null,
@@ -621,5 +621,5 @@
  "by_status": {
   "WORKING": 8
  },
- "raw_records": 1914
+ "raw_records": 2064
 }
