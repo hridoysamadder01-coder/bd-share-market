@@ -1,0 +1,142 @@
+{
+ "t_utc": "2026-09-06T08:20:13.394352+00:00",
+ "phase": "CLOSED",
+ "ages_s": {
+  "lankabd_cidmap": 15881.7,
+  "lankabd_watch": 1.1,
+  "lankabd_circuit": 1452.7,
+  "dsebd_latest": 1449.8,
+  "dsebd_hts": 1448.8,
+  "lankabd_market": 0.8,
+  "lankabd_block": 0.0,
+  "lankabd_tape": 5.2,
+  "lankabd_depth": 13.1,
+  "dsebd_depth": 12.0
+ },
+ "counts": {
+  "lankabd_cidmap": {
+   "ok": 1,
+   "err": 0,
+   "unchanged": 0
+  },
+  "lankabd_watch": {
+   "ok": 463,
+   "err": 0,
+   "unchanged": 25
+  },
+  "lankabd_circuit": {
+   "ok": 5,
+   "err": 0,
+   "unchanged": 0
+  },
+  "dsebd_latest": {
+   "ok": 5,
+   "err": 0,
+   "unchanged": 0
+  },
+  "dsebd_hts": {
+   "ok": 5,
+   "err": 0,
+   "unchanged": 0
+  },
+  "lankabd_market": {
+   "ok": 238,
+   "err": 0,
+   "unchanged": 13
+  },
+  "lankabd_block": {
+   "ok": 51,
+   "err": 0,
+   "unchanged": 16
+  },
+  "lankabd_tape": {
+   "ok": 1167,
+   "err": 0,
+   "unchanged": 155
+  },
+  "lankabd_depth": {
+   "ok": 4254,
+   "err": 1,
+   "unchanged": 2405
+  },
+  "dsebd_depth": {
+   "ok": 3796,
+   "err": 459,
+   "unchanged": 2048
+  }
+ },
+ "client": {
+  "requests": 10456,
+  "errors": 460,
+  "tls_fallbacks": 3916
+ },
+ "backoff_s": 0.0,
+ "token_refreshes": 11,
+ "symbols": [
+  "MALEKSPIN",
+  "SHARPIND",
+  "SAIHAMCOT",
+  "SAIHAMTEX",
+  "BXPHARMA",
+  "PTL",
+  "LOVELLO",
+  "BRACBANK",
+  "BEXIMCO",
+  "GP",
+  "SQURPHARMA",
+  "IPDC",
+  "POWERGRID",
+  "ORIONPHARM"
+ ],
+ "changed_payloads": {
+  "lankabd_cidmap:None": 1,
+  "lankabd_watch:None": 438,
+  "lankabd_circuit:None": 5,
+  "dsebd_latest:None": 5,
+  "dsebd_hts:None": 5,
+  "lankabd_market:None": 225,
+  "lankabd_block:None": 35,
+  "lankabd_tape:MALEKSPIN": 77,
+  "lankabd_tape:SHARPIND": 79,
+  "lankabd_tape:SAIHAMCOT": 78,
+  "lankabd_tape:SAIHAMTEX": 74,
+  "lankabd_tape:BXPHARMA": 72,
+  "lankabd_tape:PTL": 79,
+  "lankabd_tape:LOVELLO": 79,
+  "lankabd_tape:BRACBANK": 78,
+  "lankabd_tape:BEXIMCO": 79,
+  "lankabd_tape:GP": 72,
+  "lankabd_tape:SQURPHARMA": 77,
+  "lankabd_tape:IPDC": 75,
+  "lankabd_tape:POWERGRID": 35,
+  "lankabd_tape:ORIONPHARM": 58,
+  "lankabd_depth:MALEKSPIN": 133,
+  "dsebd_depth:MALEKSPIN": 124,
+  "lankabd_depth:SHARPIND": 138,
+  "dsebd_depth:SHARPIND": 128,
+  "lankabd_depth:SAIHAMCOT": 136,
+  "dsebd_depth:SAIHAMCOT": 134,
+  "lankabd_depth:SAIHAMTEX": 128,
+  "dsebd_depth:SAIHAMTEX": 122,
+  "lankabd_depth:BXPHARMA": 136,
+  "dsebd_depth:BXPHARMA": 128,
+  "lankabd_depth:PTL": 137,
+  "dsebd_depth:PTL": 126,
+  "lankabd_depth:LOVELLO": 132,
+  "dsebd_depth:LOVELLO": 124,
+  "lankabd_depth:BRACBANK": 135,
+  "dsebd_depth:BRACBANK": 128,
+  "lankabd_depth:BEXIMCO": 138,
+  "lankabd_depth:GP": 133,
+  "dsebd_depth:GP": 124,
+  "lankabd_depth:SQURPHARMA": 135,
+  "dsebd_depth:SQURPHARMA": 127,
+  "lankabd_depth:IPDC": 133,
+  "dsebd_depth:IPDC": 127,
+  "lankabd_depth:POWERGRID": 105,
+  "dsebd_depth:POWERGRID": 102,
+  "lankabd_depth:ORIONPHARM": 130,
+  "dsebd_depth:ORIONPHARM": 126,
+  "dsebd_depth:BEXIMCO": 128
+ }
+}
