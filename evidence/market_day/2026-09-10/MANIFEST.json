@@ -1,9 +1,9 @@
 {
  "schema_version": 1,
  "capturer_id": "engine-vm",
- "epoch": "a64a998b32c9463bb26069c1f881f54a",
- "software_version": "072387930a31f3c35b9ab53e3e74dbffd0f4d644",
- "opened_utc": "2026-09-10T08:00:08.564815+00:00",
+ "epoch": "73ab960204964a7482367aa8cdfa4c3f",
+ "software_version": "00a21fd385d736c0262167415d832a4abed13757",
+ "opened_utc": "2026-09-10T08:10:14.901758+00:00",
  "segments": [
   {
    "source": "market_day",
@@ -191,13 +191,39 @@
    "bytes": 725344,
    "epoch": "a64a998b32c9463bb26069c1f881f54a",
    "closed_utc": "2026-09-10T08:10:09.056917+00:00"
+  },
+  {
+   "source": "engine",
+   "path": "segments/engine__engine-vm__73ab9602__20260910T08__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "8fa140dbd7470437fe609ed6364cb02899c7ed53efbe87c54c9d52d20f841a86",
+   "bytes": 6211,
+   "epoch": "73ab960204964a7482367aa8cdfa4c3f",
+   "closed_utc": "2026-09-10T08:15:01.666485+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__engine-vm__73ab9602__20260910T08__00000000.jsonl",
+   "records": 13,
+   "first_seq": 0,
+   "last_seq": 12,
+   "sha256": "dff75d88c715448c578aefc282c64b665f1570d1b6b319e6210df3250adc3db7",
+   "bytes": 95536,
+   "epoch": "73ab960204964a7482367aa8cdfa4c3f",
+   "closed_utc": "2026-09-10T08:15:01.670215+00:00"
   }
  ],
  "previous_epochs": [
   {
    "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
    "opened_utc": "2026-09-10T07:49:59.626336+00:00"
+  },
+  {
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "opened_utc": "2026-09-10T08:00:08.564815+00:00"
   }
  ],
- "closed_utc": "2026-09-10T08:10:09.058178+00:00"
+ "closed_utc": "2026-09-10T08:15:01.671178+00:00"
 }

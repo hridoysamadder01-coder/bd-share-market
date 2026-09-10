@@ -250,23 +250,23 @@
   },
   "heartbeats": {
    "path": "heartbeats.csv",
-   "rows": 42,
+   "rows": 53,
    "columns": [
     "t_recv",
     "seq"
    ],
-   "bytes": 1505
+   "bytes": 1892
   },
   "meta": {
    "path": "meta.csv",
-   "rows": 21,
+   "rows": 24,
    "columns": [
     "t_recv",
     "source",
     "seq",
     "payload"
    ],
-   "bytes": 25231
+   "bytes": 32522
   }
  },
  "coverage": {
