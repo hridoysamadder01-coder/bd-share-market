@@ -1,6 +1,6 @@
 {
- "t_utc": "2026-09-10T07:59:59.927766+00:00",
- "session_phase": "CONTINUOUS",
+ "t_utc": "2026-09-10T08:01:08.964306+00:00",
+ "session_phase": "POST_CLOSE",
  "trading_date_dhaka": "2026-09-10",
  "capturer_id": "engine-vm",
  "out_dir": "evidence/market_day/2026-09-10",
@@ -392,7 +392,7 @@
   "ZEALBANGLA"
  ],
  "client": {
-  "requests": 1408,
+  "requests": 1554,
   "errors": 0,
   "tls_fallbacks": 1
  },
@@ -427,12 +427,12 @@
   {
    "source": "lankabd_depth",
    "status": "WORKING",
-   "attempts": 1015,
-   "ok": 1015,
+   "attempts": 1161,
+   "ok": 1161,
    "success_rate": 1.0,
    "failures": {},
    "consecutive_failures": 0,
-   "last_ok_utc": "2026-09-10T07:59:59.505285+00:00",
+   "last_ok_utc": "2026-09-10T08:01:08.606387+00:00",
    "last_failure_utc": null,
    "last_failure_code": null,
    "last_failure_detail": null,
@@ -621,5 +621,5 @@
  "by_status": {
   "WORKING": 8
  },
- "raw_records": 1405
+ "raw_records": 1551
 }
