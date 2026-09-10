@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BD Market Intelligence OS</title>
+<link rel="stylesheet" href="/static/shell.css">
+</head>
+<body>
+<div class="app">
+  <!-- ========== TOP BAR ========== -->
+  <header class="topbar">
+    <div class="brand">BD MARKET<span class="os"> · OS</span></div>
+    <div class="ticker" id="ticker">
+      <div class="t-item"><span class="k">DSEX</span><span class="v" id="tk-dsex">—</span></div>
+      <div class="t-item"><span class="k">Δ</span><span class="v" id="tk-dsex-chg">—</span></div>
+      <div class="t-item"><span class="k">PHASE</span><span class="v" id="tk-phase">—</span></div>
+      <div class="t-item"><span class="k">DATE</span><span class="v" id="tk-date">—</span></div>
+      <div class="t-item"><span class="k">TRADES</span><span class="v" id="tk-trades">—</span></div>
+      <div class="t-item"><span class="k">VOL</span><span class="v" id="tk-volume">—</span></div>
+      <div class="t-item"><span class="k">TURN</span><span class="v" id="tk-value">—</span></div>
+      <div class="t-item"><span class="k">A</span><span class="v pos" id="tk-adv">—</span>
+        <span class="k">D</span><span class="v neg" id="tk-dec">—</span>
+        <span class="k">U</span><span class="v" id="tk-unch">—</span></div>
+    </div>
+    <div class="grow"></div>
+    <div class="cmd-input" id="cmd-open">
+      <span>⌘</span><span class="placeholder">Search symbol · sector · scanner …</span><kbd>Ctrl K</kbd>
+    </div>
+    <button class="theme-btn" id="theme-btn" title="cycle theme (system → light → dark)">
+      <span id="theme-label">system</span>
+    </button>
+  </header>
+
+  <!-- ========== NAV RAIL ========== -->
+  <nav class="rail">
+    <div class="nav-group">
+      <div class="nav-heading">Overview</div>
+      <a href="#/home"      class="nav" data-route="home"><span class="glyph">◉</span><span class="lbl">Mission Control</span><span></span></a>
+      <a href="#/market"    class="nav" data-route="market"><span class="glyph">▤</span><span class="lbl">Market</span><span></span></a>
+      <a href="#/radar"     class="nav" data-route="radar"><span class="glyph">◎</span><span class="lbl">Radar</span><span></span></a>
+      <a href="#/sectors"   class="nav" data-route="sectors"><span class="glyph">⌘</span><span class="lbl">Sectors</span><span></span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-heading">Focus</div>
+      <a href="#/watchlist" class="nav" data-route="watchlist"><span class="glyph">☆</span><span class="lbl">Watchlist</span><span class="badge" id="wl-count"></span></a>
+      <a href="#/alerts"    class="nav" data-route="alerts"><span class="glyph">!</span><span class="lbl">Alerts</span><span class="badge" id="al-count"></span></a>
+      <a href="#/events"    class="nav" data-route="events"><span class="glyph">§</span><span class="lbl">Events</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-heading">Trust</div>
+      <a href="#/evidence"  class="nav" data-route="evidence"><span class="glyph">◈</span><span class="lbl">Evidence</span></a>
+      <a href="#/trust"     class="nav" data-route="trust"><span class="glyph">☰</span><span class="lbl">Data Trust</span></a>
+      <a href="/observe"    class="nav"><span class="glyph">◐</span><span class="lbl">Observe (Tower)</span></a>
+    </div>
+    <div class="rail-foot">
+      <div id="rail-time">—</div>
+      <div id="rail-src">— sources · —</div>
+    </div>
+  </nav>
+
+  <!-- ========== MAIN ========== -->
+  <main class="main" id="view"></main>
+
+  <!-- ========== STATUS BAR ========== -->
+  <footer class="statusbar">
+    <div class="s-item"><span class="k">API</span><span class="v" id="sb-api">—</span></div>
+    <div class="s-item"><span class="k">FEAT</span><span class="v" id="sb-feat">—</span></div>
+    <div class="s-item"><span class="k">STATE</span><span class="v" id="sb-state">—</span></div>
+    <div class="s-item"><span class="k">SRC</span><span class="v" id="sb-src">—</span></div>
+    <div class="grow"></div>
+    <div class="s-item"><span class="k">RUN</span><span class="v" id="sb-commit">—</span></div>
+    <div class="s-item"><span class="k">MODE</span><span class="v" id="sb-mode">HUMAN</span></div>
+    <div class="s-item"><span class="k">TIME</span><span class="v" id="sb-time">—</span></div>
+  </footer>
+</div>
+
+<!-- ========== TEMPLATES ========== -->
+<template id="tpl-loading">
+  <div class="section"><h1><span class="n">—</span> Loading <span class="sub">reading engine artefacts…</span></h1>
+    <div class="panel"><div class="prov">read <span class="dot">·</span> tower/ui/server.py <span class="dot">·</span> <span class="fresh">just now</span></div></div>
+  </div>
+</template>
+
+<script src="/static/shell.js" defer></script>
+</body>
+</html>

@@ -47,6 +47,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from ..events import utc
+from . import market_api
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 MAX_POINTS = 2000
@@ -496,10 +497,38 @@ class StoreReader:
         }
 
 
-def create_app(store: str) -> FastAPI:
-    reader = StoreReader(store)
+def create_app(store: Optional[str] = None) -> FastAPI:
     app = FastAPI(title="DSE Observation Tower", version="1.0")
+    reader = StoreReader(store) if store else None
     app.state.reader = reader
+
+    # tower routes only mount when an observation-tower store exists
+    if reader is None:
+        market_api.attach_market_api(app)
+        @app.get("/")
+        def _index():
+            return FileResponse(os.path.join(STATIC_DIR, "shell.html"), media_type="text/html")
+        @app.get("/observe")
+        def _observe_nostore():
+            # observation-tower needs a store; explain
+            return Response(content=(
+                "<!doctype html><meta charset=utf-8><title>observe</title>"
+                "<body style='background:#0b1017;color:#d7e0ea;font:12.5px system-ui;padding:24px'>"
+                "<h1 style='font-family:monospace;letter-spacing:.16em;color:#4fc3f7'>OBSERVE</h1>"
+                "<p>The single-symbol observation tower requires a state store. "
+                "Restart the server with <code>--store DIR</code> pointing at a replay or live-tail store.</p>"
+                "<p><a href='/' style='color:#5eead4'>← back to Mission Control</a></p>"
+            ), media_type="text/html")
+        @app.get("/favicon.ico")
+        def _fav():
+            svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#0b1017"/>'
+                   '<rect x="6" y="2" width="4" height="12" fill="#4fc3f7"/><rect x="3" y="12" width="10" height="2" fill="#4fc3f7"/></svg>')
+            return Response(content=svg, media_type="image/svg+xml")
+        app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+        @app.exception_handler(HTTPException)
+        async def _http_err_ns(_req: Any, exc: HTTPException) -> JSONResponse:
+            return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+        return app
 
     @app.get("/api/symbols")
     def api_symbols() -> Any:
@@ -583,6 +612,12 @@ def create_app(store: str) -> FastAPI:
 
     @app.get("/")
     def index() -> Any:
+        # BD Market Intelligence OS shell (market-wide) — new default landing
+        return FileResponse(os.path.join(STATIC_DIR, "shell.html"), media_type="text/html")
+
+    @app.get("/observe")
+    def observe() -> Any:
+        # single-symbol Observation Tower — unchanged legacy UI
         return FileResponse(os.path.join(STATIC_DIR, "index.html"), media_type="text/html")
 
     @app.get("/favicon.ico")
@@ -591,6 +626,7 @@ def create_app(store: str) -> FastAPI:
                '<rect x="6" y="2" width="4" height="12" fill="#4fc3f7"/><rect x="3" y="12" width="10" height="2" fill="#4fc3f7"/></svg>')
         return Response(content=svg, media_type="image/svg+xml")
 
+    market_api.attach_market_api(app)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     @app.exception_handler(HTTPException)
@@ -602,7 +638,7 @@ def create_app(store: str) -> FastAPI:
 
 def main(argv: Optional[List[str]] = None) -> None:
     ap = argparse.ArgumentParser(description="DSE Observation Tower UI server")
-    ap.add_argument("--store", required=True, help="state store directory written by tower.replay / tower.live")
+    ap.add_argument("--store", default=None, help="state store directory written by tower.replay / tower.live")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--host", default="127.0.0.1")
     args = ap.parse_args(argv)
