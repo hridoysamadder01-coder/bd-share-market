@@ -1,24 +1,22 @@
-"""Preset-free outcome relation discovery using one domain-neutral criterion: MDL.
+"""Intent-driven raw relation discovery with no supplied outcome labels.
+
+The user supplies an intent.  Raw public observations then arrive in causal
+order.  The watcher keeps only information that has actually arrived, resolves
+whether an earlier anchor satisfied the user's intent only when the intent's
+future horizon has elapsed, and asks MDL which raw point-in-time fields shorten
+the description of those intent occurrences.
 
 HARD LOCK
 =========
 No market rule, indicator, trading pattern, hand-made feature combination,
 fixed pair/triple search, top-k ranking, probability threshold, BUY/SELL logic,
-or historical template exists in this file.
+or historical template exists here.
 
-The ONLY relation criterion is Minimum Description Length (MDL):
-a relation is accepted only when describing the observed outcomes using a
-data-derived partition of raw point-in-time fields shortens the total
-description length versus leaving that node unsplit.
-
-Important:
-- Candidate split values come only from observed raw values.
-- No fixed cutoff is used. "Strictly shorter MDL" is the entire acceptance law.
-- Relations can involve any number of fields through recursive paths.
-- Outcomes update the discoverer only when they are explicitly revealed.
-- Raw observations are immutable and hashed.
+The ONLY relation acceptance criterion is Minimum Description Length (MDL).
+Numeric boundaries come only from observed values.  Recursive tree paths are
+whatever raw fields MDL selects; no pair/triple structure is predeclared.
+There is no ``outcome`` packet and no caller-supplied outcome label.
 """
-
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -26,7 +24,9 @@ from hashlib import sha256
 import json
 import math
 import os
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+
+from .intent import IntentProgram
 
 
 Json = Any
@@ -37,7 +37,11 @@ JsonMap = Dict[str, Any]
 class ObservationPacket:
     observation_id: str
     time: str
+    order: int
     entity: str
+    source: str
+    scope: str
+    advance: bool
     data: JsonMap
     data_sha256: str
 
@@ -46,54 +50,46 @@ class ObservationPacket:
 
 
 @dataclass(frozen=True)
-class OutcomePacket:
+class IntentCase:
     observation_id: str
-    ready_time: str
-    outcome: Json
-    outcome_sha256: str
-
-    def to_dict(self) -> JsonMap:
-        return asdict(self)
-
-
-@dataclass(frozen=True)
-class SettledCase:
-    observation_id: str
-    time: str
+    anchor_time: str
+    resolved_time: str
     entity: str
     data: JsonMap
-    outcome: Json
-    outcome_key: str
+    intent_matched: bool
+    intent_evidence: JsonMap
 
     def to_dict(self) -> JsonMap:
         return {
             "observation_id": self.observation_id,
-            "time": self.time,
+            "anchor_time": self.anchor_time,
+            "resolved_time": self.resolved_time,
             "entity": self.entity,
             "data": _json_copy(self.data),
-            "outcome": _json_copy(self.outcome),
-            "outcome_key": self.outcome_key,
+            "intent_matched": self.intent_matched,
+            "intent_evidence": _json_copy(self.intent_evidence),
         }
 
 
+@dataclass(frozen=True)
+class _StatePoint:
+    observation_id: str
+    time: str
+    state: JsonMap
+
+
 class MDLRelationDiscoverer:
-    """Discover raw-data relations to outcomes with MDL and nothing else.
+    """Discover raw-data paths that compress occurrences of the user's intent."""
 
-    The model is rebuilt from all *revealed* settled cases whenever a new
-    outcome arrives. This makes the state at every replay instant reproducible.
+    VERSION = 2
 
-    Tree paths are not predeclared combinations. They are whatever sequence of
-    raw fields MDL itself selects from the evidence available at that instant.
-    """
-
-    VERSION = 1
-
-    def __init__(self) -> None:
-        self._cases: List[SettledCase] = []
+    def __init__(self, intent: IntentProgram) -> None:
+        self.intent = intent
+        self._cases: List[IntentCase] = []
         self._tree: JsonMap = self._leaf([], field_count=0)
         self._field_order: List[str] = []
 
-    def add_case(self, case: SettledCase) -> None:
+    def add_case(self, case: IntentCase) -> None:
         self._cases.append(case)
         self._rebuild()
 
@@ -101,38 +97,29 @@ class MDLRelationDiscoverer:
         return {
             "criterion": "minimum_description_length",
             "version": self.VERSION,
-            "settled_cases": len(self._cases),
+            "intent": self.intent.to_dict(),
+            "resolved_cases": len(self._cases),
             "raw_fields_seen": list(self._field_order),
             "relation_tree": _json_copy(self._tree),
+            "relation_paths": _relation_paths(self._tree),
         }
 
-    # ------------------------------ model build ------------------------------
-
     def _rebuild(self) -> None:
-        fields = sorted(
-            {
-                str(k)
-                for case in self._cases
-                for k in case.data.keys()
-            }
-        )
+        fields = sorted({str(k) for case in self._cases for k in case.data.keys()})
         self._field_order = fields
-        indexes = list(range(len(self._cases)))
-        self._tree = self._build(indexes, fields)
+        self._tree = self._build(list(range(len(self._cases))), fields)
 
     def _build(self, indexes: List[int], fields: List[str]) -> JsonMap:
         base = self._leaf(indexes, field_count=len(fields))
-        if len(indexes) <= 1 or len(base["outcomes"]) <= 1 or not fields:
+        if len(indexes) <= 1 or base["intent_true"] in {0, len(indexes)} or not fields:
             return base
 
         best: Optional[Tuple[float, JsonMap, List[Tuple[str, List[int]]], str]] = None
-
         for field in fields:
             candidate = self._best_split_for_field(indexes, field, len(fields))
             if candidate is None:
                 continue
             total_bits, spec, branches = candidate
-            # No arbitrary epsilon or threshold: only exact strict MDL improvement.
             if total_bits < base["mdl_bits"]:
                 if best is None or total_bits < best[0]:
                     best = (total_bits, spec, branches, field)
@@ -142,15 +129,10 @@ class MDLRelationDiscoverer:
 
         total_bits, spec, branches, field = best
         remaining = [f for f in fields if f != field]
-        children = []
-        for branch_name, branch_indexes in branches:
-            children.append(
-                {
-                    "branch": branch_name,
-                    "node": self._build(branch_indexes, remaining),
-                }
-            )
-
+        children = [
+            {"branch": name, "node": self._build(branch_indexes, remaining)}
+            for name, branch_indexes in branches
+        ]
         return {
             "type": "relation",
             "criterion": "minimum_description_length",
@@ -170,241 +152,247 @@ class MDLRelationDiscoverer:
         field_count: int,
     ) -> Optional[Tuple[float, JsonMap, List[Tuple[str, List[int]]]]]:
         values = [(i, self._cases[i].data.get(field, _MISSING)) for i in indexes]
-
         nonmissing = [(i, v) for i, v in values if v is not _MISSING and v is not None]
         missing = [i for i, v in values if v is _MISSING or v is None]
         if not nonmissing:
             return None
-
         if all(_is_number(v) for _, v in nonmissing):
-            return self._best_numeric_split(indexes, field, nonmissing, missing, field_count)
-
-        return self._categorical_split(indexes, field, values, field_count)
+            return self._best_numeric_split(nonmissing, missing, field_count)
+        return self._categorical_split(values, field_count)
 
     def _best_numeric_split(
         self,
-        indexes: List[int],
-        field: str,
         nonmissing: List[Tuple[int, Any]],
         missing: List[int],
         field_count: int,
     ) -> Optional[Tuple[float, JsonMap, List[Tuple[str, List[int]]]]]:
-        unique = sorted({float(v) for _, v in nonmissing})
-        if len(unique) <= 1:
+        ordered = sorted((float(v), i) for i, v in nonmissing)
+        unique_count = 1 + sum(1 for j in range(1, len(ordered)) if ordered[j][0] != ordered[j - 1][0])
+        if unique_count <= 1:
             return None
+        candidate_count = unique_count - 1
 
-        # Every boundary comes from the observed values themselves. No preset cutoff.
-        cuts = [(unique[i] + unique[i + 1]) / 2.0 for i in range(len(unique) - 1)]
+        missing_true = sum(1 for i in missing if self._cases[i].intent_matched)
+        missing_false = len(missing) - missing_true
+        total_true = sum(1 for _, i in ordered if self._cases[i].intent_matched)
+        total_false = len(ordered) - total_true
+        prefix_true = 0
+        prefix_false = 0
+
         best: Optional[Tuple[float, JsonMap, List[Tuple[str, List[int]]]]] = None
-
-        for cut_index, cut in enumerate(cuts):
-            left = [i for i, v in nonmissing if float(v) <= cut]
-            right = [i for i, v in nonmissing if float(v) > cut]
-            if not left or not right:
+        candidate_index = -1
+        for pos in range(len(ordered) - 1):
+            _, idx = ordered[pos]
+            if self._cases[idx].intent_matched:
+                prefix_true += 1
+            else:
+                prefix_false += 1
+            left_value = ordered[pos][0]
+            right_value = ordered[pos + 1][0]
+            if left_value == right_value:
                 continue
 
-            branches: List[Tuple[str, List[int]]] = [
-                (f"<= {repr(cut)}", left),
-                (f"> {repr(cut)}", right),
-            ]
-            if missing:
-                branches.append(("MISSING", list(missing)))
-
-            bits = self._split_mdl(
-                indexes=indexes,
-                branches=branches,
-                field_count=field_count,
-                candidate_count=len(cuts),
-                candidate_index=cut_index,
+            candidate_index += 1
+            right_true = total_true - prefix_true
+            right_false = total_false - prefix_false
+            branch_count = 2 + (1 if missing else 0)
+            bits = (
+                1.0
+                + _index_code_bits(field_count)
+                + _index_code_bits(candidate_count)
+                + _integer_code_bits(branch_count)
+                + _empirical_binary_bits(prefix_true, prefix_false)
+                + _empirical_binary_bits(right_true, right_false)
             )
-            spec = {
-                "kind": "numeric_boundary_from_observed_values",
-                "value": cut,
-                "candidate_count_from_data": len(cuts),
-            }
-            if best is None or bits < best[0]:
-                best = (bits, spec, branches)
+            if missing:
+                bits += _empirical_binary_bits(missing_true, missing_false)
 
+            cut = (left_value + right_value) / 2.0
+            if best is None or bits < best[0]:
+                left = [i for v, i in ordered if v <= cut]
+                right = [i for v, i in ordered if v > cut]
+                branches: List[Tuple[str, List[int]]] = [
+                    (f"<= {repr(cut)}", left),
+                    (f"> {repr(cut)}", right),
+                ]
+                if missing:
+                    branches.append(("MISSING", list(missing)))
+                best = (
+                    bits,
+                    {
+                        "kind": "numeric_boundary_from_observed_values",
+                        "value": cut,
+                        "candidate_count_from_data": candidate_count,
+                    },
+                    branches,
+                )
         return best
 
     def _categorical_split(
         self,
-        indexes: List[int],
-        field: str,
         values: List[Tuple[int, Any]],
         field_count: int,
     ) -> Optional[Tuple[float, JsonMap, List[Tuple[str, List[int]]]]]:
         groups: Dict[str, List[int]] = {}
-        raw_values: Dict[str, Any] = {}
-
-        for i, v in values:
-            key = "__MISSING__" if v is _MISSING or v is None else _canonical(v)
+        exemplars: Dict[str, Any] = {}
+        for i, value in values:
+            key = "__MISSING__" if value is _MISSING or value is None else _canonical(value)
             groups.setdefault(key, []).append(i)
-            raw_values.setdefault(key, None if key == "__MISSING__" else _json_copy(v))
-
+            exemplars.setdefault(key, None if key == "__MISSING__" else _json_copy(value))
         if len(groups) <= 1:
             return None
 
-        ordered = sorted(groups)
+        ordered_keys = sorted(groups)
         branches = [
-            (
-                "MISSING" if key == "__MISSING__" else _canonical(raw_values[key]),
-                groups[key],
-            )
-            for key in ordered
+            ("MISSING" if key == "__MISSING__" else _canonical(exemplars[key]), groups[key])
+            for key in ordered_keys
         ]
-
-        bits = self._split_mdl(
-            indexes=indexes,
-            branches=branches,
-            field_count=field_count,
-            candidate_count=1,
-            candidate_index=0,
-        )
-        spec = {
-            "kind": "exact_observed_value_partition",
-            "values": [raw_values[k] for k in ordered],
-        }
-        return bits, spec, branches
-
-    def _split_mdl(
-        self,
-        *,
-        indexes: List[int],
-        branches: List[Tuple[str, List[int]]],
-        field_count: int,
-        candidate_count: int,
-        candidate_index: int,
-    ) -> float:
-        # Structural code: leaf/split flag + field identity + candidate identity
-        # + number of branches. There are no tunable coefficients.
-        structure_bits = (
-            1.0
-            + _index_code_bits(field_count)
-            + _index_code_bits(candidate_count)
-            + _integer_code_bits(len(branches))
-        )
-
-        outcome_bits = 0.0
+        bits = 1.0 + _index_code_bits(field_count) + _integer_code_bits(len(branches))
         for _, branch_indexes in branches:
-            outcome_bits += _empirical_outcome_bits(
-                [self._cases[i].outcome_key for i in branch_indexes]
-            )
-
-        # Exact branch membership itself does not get encoded again; the split
-        # rule and raw field values determine membership deterministically.
-        return structure_bits + outcome_bits
+            t = sum(1 for i in branch_indexes if self._cases[i].intent_matched)
+            bits += _empirical_binary_bits(t, len(branch_indexes) - t)
+        return (
+            bits,
+            {"kind": "exact_observed_value_partition", "values": [exemplars[k] for k in ordered_keys]},
+            branches,
+        )
 
     def _leaf(self, indexes: List[int], field_count: int) -> JsonMap:
-        keys = [self._cases[i].outcome_key for i in indexes] if indexes else []
-        counts: Dict[str, int] = {}
-        exemplars: Dict[str, Any] = {}
-        for i in indexes:
-            key = self._cases[i].outcome_key
-            counts[key] = counts.get(key, 0) + 1
-            exemplars.setdefault(key, _json_copy(self._cases[i].outcome))
-
+        true_count = sum(1 for i in indexes if self._cases[i].intent_matched)
+        false_count = len(indexes) - true_count
         return {
             "type": "leaf",
             "criterion": "minimum_description_length",
             "cases": len(indexes),
-            "mdl_bits": 1.0 + _empirical_outcome_bits(keys),
-            "outcomes": [
-                {
-                    "value": exemplars[key],
-                    "count": counts[key],
-                }
-                for key in sorted(counts)
-            ],
+            "intent_true": true_count,
+            "intent_false": false_count,
+            "mdl_bits": 1.0 + _empirical_binary_bits(true_count, false_count),
         }
 
 
 class RelationWatcher:
-    """Point-in-time evidence watcher + autonomous MDL relation discoverer."""
+    """Causal raw-state watcher + autonomous intent relation discoverer.
 
-    STATE_VERSION = 3
+    ``advance=False`` lets any raw/public source update the point-in-time context
+    without creating a new anchor.  ``advance=True`` marks an authoritative
+    anchor stream.  This distinction is wiring, not a research rule: it prevents
+    unrelated source polling cadence from silently redefining the user's intent
+    horizon.
+    """
+
+    STATE_VERSION = 4
 
     def __init__(
         self,
         *,
+        intent: IntentProgram,
         forbidden_keys: Sequence[str] = (),
     ) -> None:
+        self.intent = intent
         self.forbidden_keys = {str(k) for k in forbidden_keys}
         self.observations: Dict[str, ObservationPacket] = {}
-        self.outcomes: Dict[str, OutcomePacket] = {}
-        self.discoverer = MDLRelationDiscoverer()
+        self.global_state: JsonMap = {}
+        self.entity_state: Dict[str, JsonMap] = {}
+        self.entity_history: Dict[str, List[_StatePoint]] = {}
+        self.cases: List[IntentCase] = []
+        self.discoverer = MDLRelationDiscoverer(intent)
         self._sequence = 0
 
     def observe(
         self,
         *,
         time: Any,
-        entity: Any,
+        order: int,
+        source: Any,
         data: Mapping[str, Any],
+        entity: Any = "",
+        scope: str = "entity",
+        advance: bool = True,
         observation_id: Optional[str] = None,
     ) -> ObservationPacket:
+        if scope not in {"entity", "global"}:
+            raise ValueError("scope must be 'entity' or 'global'")
         clean = _json_copy(dict(data))
         _guard_forbidden_keys(clean, self.forbidden_keys)
-
         t = str(time)
-        e = str(entity)
+        src = str(source)
+        ent = str(entity)
+        if scope == "entity" and not ent:
+            raise ValueError("entity observation requires entity")
+        if scope == "global" and advance:
+            raise ValueError("global context may not advance an entity intent horizon")
+
         if observation_id is None:
             observation_id = "obs:" + _hash_json(
                 {
                     "time": t,
-                    "entity": e,
+                    "order": int(order),
+                    "entity": ent,
+                    "scope": scope,
+                    "source": src,
                     "sequence": self._sequence,
                     "data": clean,
                 }
             )[:24]
-
         if observation_id in self.observations:
             raise ValueError(f"duplicate observation_id: {observation_id}")
 
         packet = ObservationPacket(
             observation_id=observation_id,
             time=t,
-            entity=e,
+            order=int(order),
+            entity=ent,
+            source=src,
+            scope=scope,
+            advance=bool(advance),
             data=clean,
             data_sha256=_hash_json(clean),
         )
         self.observations[observation_id] = packet
         self._sequence += 1
+
+        flat = _flatten(clean, prefix=("global." if scope == "global" else "") + src)
+        if scope == "global":
+            self.global_state.update(flat)
+            return packet
+
+        current = self.entity_state.setdefault(ent, {})
+        current.update(flat)
+        if not advance:
+            return packet
+
+        snapshot = dict(self.global_state)
+        snapshot.update(current)
+        history = self.entity_history.setdefault(ent, [])
+        history.append(_StatePoint(observation_id=observation_id, time=t, state=_json_copy(snapshot)))
+        self._resolve_newly_decidable(ent)
         return packet
 
-    def settle(
-        self,
-        *,
-        observation_id: str,
-        ready_time: Any,
-        outcome: Any,
-    ) -> OutcomePacket:
-        if observation_id not in self.observations:
-            raise KeyError(f"unknown observation_id: {observation_id}")
-        if observation_id in self.outcomes:
-            raise ValueError(f"outcome already settled: {observation_id}")
+    def _resolve_newly_decidable(self, entity: str) -> None:
+        history = self.entity_history[entity]
+        h = self.intent.horizon_steps
+        current_index = len(history) - 1
+        anchor_index = current_index - h
+        if anchor_index < 0:
+            return
 
-        clean_outcome = _json_copy(outcome)
-        packet = OutcomePacket(
-            observation_id=observation_id,
-            ready_time=str(ready_time),
-            outcome=clean_outcome,
-            outcome_sha256=_hash_json(clean_outcome),
+        anchor = history[anchor_index]
+        future = history[anchor_index + 1 : current_index + 1]
+        self.intent.validate_against_schema(anchor.state.keys())
+        for row in future:
+            self.intent.validate_against_schema(row.state.keys())
+        result = self.intent.evaluate(anchor=anchor.state, window=[x.state for x in future])
+        case = IntentCase(
+            observation_id=anchor.observation_id,
+            anchor_time=anchor.time,
+            resolved_time=history[current_index].time,
+            entity=entity,
+            data=_json_copy(anchor.state),
+            intent_matched=result.matched,
+            intent_evidence=result.evidence,
         )
-        self.outcomes[observation_id] = packet
-
-        obs = self.observations[observation_id]
-        self.discoverer.add_case(
-            SettledCase(
-                observation_id=observation_id,
-                time=obs.time,
-                entity=obs.entity,
-                data=_json_copy(obs.data),
-                outcome=clean_outcome,
-                outcome_key=_canonical(clean_outcome),
-            )
-        )
-        return packet
+        self.cases.append(case)
+        self.discoverer.add_case(case)
 
     def intelligence_snapshot(self) -> JsonMap:
         return self.discoverer.snapshot()
@@ -413,11 +401,12 @@ class RelationWatcher:
         return {
             "state_version": self.STATE_VERSION,
             "criterion": "minimum_description_length",
+            "intent": self.intent.to_dict(),
             "observation_count": len(self.observations),
-            "outcome_count": len(self.outcomes),
+            "resolved_case_count": len(self.cases),
             "forbidden_keys": sorted(self.forbidden_keys),
             "observations": {k: v.to_dict() for k, v in self.observations.items()},
-            "outcomes": {k: v.to_dict() for k, v in self.outcomes.items()},
+            "cases": [c.to_dict() for c in self.cases],
             "intelligence": self.intelligence_snapshot(),
         }
 
@@ -436,8 +425,6 @@ class RelationWatcher:
         os.replace(tmp, path)
 
 
-# -------------------------------- utilities --------------------------------
-
 class _Missing:
     pass
 
@@ -445,24 +432,64 @@ class _Missing:
 _MISSING = _Missing()
 
 
-def _is_number(v: Any) -> bool:
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(float(v))
+def _flatten(value: Any, prefix: str) -> JsonMap:
+    out: JsonMap = {}
+
+    def walk(node: Any, path: str) -> None:
+        if isinstance(node, dict):
+            for key in sorted(node, key=lambda x: str(x)):
+                child = node[key]
+                child_path = f"{path}.{key}" if path else str(key)
+                walk(child, child_path)
+            return
+        if isinstance(node, (list, tuple)):
+            for i, child in enumerate(node):
+                walk(child, f"{path}[{i}]")
+            return
+        if node is None or isinstance(node, (str, int, float, bool)):
+            out[path] = _json_copy(node)
+
+    walk(value, prefix)
+    return out
 
 
-def _canonical(v: Any) -> str:
-    return json.dumps(
-        _json_copy(v),
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    )
+def _relation_paths(tree: JsonMap) -> List[JsonMap]:
+    out: List[JsonMap] = []
+
+    def walk(node: JsonMap, conditions: List[JsonMap]) -> None:
+        if node.get("type") == "leaf":
+            out.append(
+                {
+                    "conditions": _json_copy(conditions),
+                    "cases": node.get("cases", 0),
+                    "intent_true": node.get("intent_true", 0),
+                    "intent_false": node.get("intent_false", 0),
+                }
+            )
+            return
+        field = node.get("field")
+        for child in node.get("children", []):
+            walk(
+                child["node"],
+                conditions + [{"field": field, "branch": child["branch"], "split": node.get("split")}],
+            )
+
+    walk(tree, [])
+    return out
 
 
-def _json_copy(v: Any) -> Any:
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+
+
+def _canonical(value: Any) -> str:
+    return json.dumps(_json_copy(value), ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _json_copy(value: Any) -> Any:
     return json.loads(
         json.dumps(
-            v,
+            value,
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
@@ -472,27 +499,27 @@ def _json_copy(v: Any) -> Any:
     )
 
 
-def _json_default(v: Any) -> Any:
-    if hasattr(v, "isoformat"):
-        return v.isoformat()
-    if hasattr(v, "item"):
+def _json_default(value: Any) -> Any:
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if hasattr(value, "item"):
         try:
-            return v.item()
+            return value.item()
         except Exception:
             pass
-    raise TypeError(f"unsupported evidence type: {type(v).__name__}")
+    raise TypeError(f"unsupported evidence type: {type(value).__name__}")
 
 
-def _hash_json(v: Any) -> str:
-    return sha256(_canonical(v).encode("utf-8")).hexdigest()
+def _hash_json(value: Any) -> str:
+    return sha256(_canonical(value).encode("utf-8")).hexdigest()
 
 
 def _guard_forbidden_keys(value: Any, forbidden: set[str], path: str = "") -> None:
     if isinstance(value, dict):
-        for k, child in value.items():
-            key = str(k)
-            here = f"{path}.{key}" if path else key
-            if key in forbidden:
+        for key, child in value.items():
+            name = str(key)
+            here = f"{path}.{name}" if path else name
+            if name in forbidden:
                 raise ValueError(f"forbidden/future field reached watcher input: {here}")
             _guard_forbidden_keys(child, forbidden, here)
     elif isinstance(value, list):
@@ -500,26 +527,19 @@ def _guard_forbidden_keys(value: Any, forbidden: set[str], path: str = "") -> No
             _guard_forbidden_keys(child, forbidden, f"{path}[{i}]")
 
 
-def _empirical_outcome_bits(keys: Sequence[str]) -> float:
-    n = len(keys)
-    if n <= 1:
+def _empirical_binary_bits(true_count: int, false_count: int) -> float:
+    n = true_count + false_count
+    if n <= 1 or true_count == 0 or false_count == 0:
         return 0.0
-
-    counts: Dict[str, int] = {}
-    for k in keys:
-        counts[k] = counts.get(k, 0) + 1
-
     bits = 0.0
-    for count in counts.values():
-        p = count / n
-        bits -= count * math.log2(p)
-
-    # Encode how many distinct outcome values exist at the node.
-    return _integer_code_bits(len(counts)) + bits
+    for count in (true_count, false_count):
+        if count:
+            p = count / n
+            bits -= count * math.log2(p)
+    return _integer_code_bits(2) + bits
 
 
 def _integer_code_bits(n: int) -> float:
-    """Self-delimiting positive-integer codelength, no tunable parameter."""
     n = max(1, int(n))
     return 1.0 + math.log2(n)
 
@@ -530,9 +550,8 @@ def _index_code_bits(count: int) -> float:
 
 
 __all__ = [
+    "IntentCase",
     "MDLRelationDiscoverer",
     "ObservationPacket",
-    "OutcomePacket",
     "RelationWatcher",
-    "SettledCase",
 ]
