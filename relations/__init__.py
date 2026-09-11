@@ -1,17 +1,11 @@
-"""Package marker for the relation watcher and its replay.
+"""Intent-driven relation discovery and exact causal replay."""
 
-Placement wiring only. `relation_replay.py` imports `.relation_watcher`, which
-requires this directory to be a package. Both modules are placed verbatim and
-are not modified, wrapped or extended here; this file only re-exports the names
-those modules already declare in their own `__all__`.
-"""
-
+from .intent import IntentProgram, IntentResult
 from .relation_watcher import (
+    IntentCase,
     MDLRelationDiscoverer,
     ObservationPacket,
-    OutcomePacket,
     RelationWatcher,
-    SettledCase,
 )
 from .relation_replay import (
     HistoricalReplay,
@@ -19,15 +13,19 @@ from .relation_replay import (
     ReplayFrame,
     events_from_rows,
 )
+from .source_bridge import raw_row_to_replay, tower_event_to_replay
 
 __all__ = [
     "HistoricalReplay",
+    "IntentCase",
+    "IntentProgram",
+    "IntentResult",
     "MDLRelationDiscoverer",
     "ObservationPacket",
-    "OutcomePacket",
     "RelationWatcher",
     "ReplayEvent",
     "ReplayFrame",
-    "SettledCase",
     "events_from_rows",
+    "raw_row_to_replay",
+    "tower_event_to_replay",
 ]
