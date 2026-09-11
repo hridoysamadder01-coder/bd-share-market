@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BD Market Intelligence</title>
+<link rel="stylesheet" href="/static/shell.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">BD MARKET<span class="os"> · OS</span></div>
+    <div class="tb-state is-closed" id="tb-state"><span class="dot"></span><span id="tb-state-text">LOADING</span></div>
+    <div class="tb-sub" id="tb-sub">reading engine artefacts…</div>
+    <div class="grow"></div>
+    <button class="tb-btn tb-search" id="cmd-open" type="button">Search stock<kbd>Ctrl K</kbd></button>
+    <button class="tb-btn on" id="mode-btn" type="button" title="Human mode hides raw feature names">Human</button>
+    <button class="tb-btn" id="theme-btn" type="button" title="cycle theme">Theme</button>
+  </header>
+
+  <div class="body">
+    <nav class="rail">
+      <div class="nav-heading">OVERVIEW</div>
+      <a href="#/home"      class="nav" data-route="home">Mission Control</a>
+      <a href="#/market"    class="nav" data-route="market">Every Stock</a>
+      <a href="#/sectors"   class="nav" data-route="sectors">Sector Map</a>
+      <a href="#/radar"     class="nav" data-route="radar">Unusual Activity</a>
+      <div class="nav-heading">FOCUS</div>
+      <a href="#/watchlist" class="nav" data-route="watchlist">Watchlist<span class="badge" id="wl-count"></span></a>
+      <a href="#/alerts"    class="nav" data-route="alerts">Needs Attention<span class="badge" id="al-count"></span></a>
+      <a href="#/events"    class="nav" data-route="events">Engine Events</a>
+      <div class="nav-heading">EVIDENCE</div>
+      <a href="#/evidence"  class="nav" data-route="evidence">Raw Evidence</a>
+      <a href="#/trust"     class="nav" data-route="trust">Where Data Comes From</a>
+      <a href="/observe"    class="nav">Observation Tower</a>
+      <div class="rail-foot">
+        <div id="rail-time">—</div>
+        <div id="rail-src">—</div>
+      </div>
+    </nav>
+
+    <main class="main" id="view"></main>
+  </div>
+
+  <footer class="statusbar">
+    <span><b>DATA</b> <span id="sb-data">—</span></span>
+    <span><b>STOCKS</b> <span id="sb-count">—</span></span>
+    <span><b>ENGINE</b> <span id="sb-feat">—</span></span>
+    <span class="grow"></span>
+    <span><b>RUN</b> <span id="sb-commit">—</span></span>
+    <span><b>MODE</b> <span id="sb-mode">HUMAN</span></span>
+  </footer>
+
+  <nav class="tabbar" id="tabbar">
+    <a href="#/home"    data-route="home"><span class="g">◉</span>Market</a>
+    <a href="#/alerts"  data-route="alerts"><span class="g">!</span>Attention</a>
+    <a href="#/sectors" data-route="sectors"><span class="g">▦</span>Sectors</a>
+    <a href="#/market"  data-route="market"><span class="g">▤</span>Stocks</a>
+    <a href="#/trust"   data-route="trust"><span class="g">◈</span>Sources</a>
+  </nav>
+</div>
+
+<script src="/static/labels.js" defer></script>
+<script src="/static/shell.js" defer></script>
+</body>
+</html>

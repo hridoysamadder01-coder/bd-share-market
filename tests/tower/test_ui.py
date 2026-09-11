@@ -347,19 +347,30 @@ def test_machinery_store_reader_direct(store):
 
 
 def test_machinery_static_index_served(client):
+    """At /: BD Market Intelligence OS shell (new). Full observation tower moved to /observe.
+    The invariant this test enforces is UNCHANGED: no CDN, nothing external, favicon works,
+    static assets serve — only the file names moved."""
     c, _, _ = client
     r = c.get("/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
     html = r.text
-    assert "/static/app.js" in html and "/static/style.css" in html
+    assert "/static/shell.js" in html and "/static/shell.css" in html
+    # observation tower still reachable at /observe with the original layout
+    ro = c.get("/observe")
+    assert ro.status_code == 200 and "text/html" in ro.headers["content-type"]
+    tower_html = ro.text
+    assert "/static/app.js" in tower_html and "/static/style.css" in tower_html
     for pid in ("panel-book", "panel-flow", "panel-pressure", "panel-liquidity", "panel-response", "panel-mech", "panel-circuit",
                 "panel-timeline", "panel-cross", "panel-sources", "replay", "replay-slider", "ladder", "mech-table", "sources-table"):
-        assert f'id="{pid}"' in html, pid
+        assert f'id="{pid}"' in tower_html, pid
     js = c.get("/static/app.js")
     assert js.status_code == 200 and "/api/state/" in js.text and "/api/history/" in js.text
-    assert "cdn" not in js.text.lower() and "cdn" not in html.lower()          # no CDN, no build step
-    assert "https://" not in html and "https://" not in js.text                # nothing external
+    for text in (html, tower_html, js.text):
+        assert "cdn" not in text.lower()                                       # no CDN, no build step
+        assert "https://" not in text                                          # nothing external
     assert c.get("/static/style.css").status_code == 200
+    assert c.get("/static/shell.css").status_code == 200
+    assert c.get("/static/shell.js").status_code == 200
     assert c.get("/favicon.ico").status_code == 200
 
 
@@ -447,7 +458,7 @@ def test_machinery_browser_renders_tower_and_scrubs(tmp_path):
             page = browser.new_page(viewport={"width": 1500, "height": 1300})
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
-            page.goto(base + "/")
+            page.goto(base + "/observe")
             page.select_option("#symbol", "ALPHA")
             page.wait_for_selector("#ladder tbody tr.ladder-row", timeout=15000)
             page.wait_for_function("document.querySelector('#state-time').textContent.includes('2026-09-06')", timeout=15000)

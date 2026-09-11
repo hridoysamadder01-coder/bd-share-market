@@ -1,0 +1,229 @@
+{
+ "schema_version": 1,
+ "capturer_id": "engine-vm",
+ "epoch": "73ab960204964a7482367aa8cdfa4c3f",
+ "software_version": "00a21fd385d736c0262167415d832a4abed13757",
+ "opened_utc": "2026-09-10T08:10:14.901758+00:00",
+ "segments": [
+  {
+   "source": "market_day",
+   "path": "segments/market_day__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "d499ef2ddad213468841aeedd33f270b0e76109b9831c5d00e611fcfe639f903",
+   "bytes": 6900,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.929643+00:00"
+  },
+  {
+   "source": "engine",
+   "path": "segments/engine__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "53e23c952604fc354c45ce1140d05fdfc99999f2a3a19a8c1491297af4398455",
+   "bytes": 6146,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.930556+00:00"
+  },
+  {
+   "source": "dsebd_latest",
+   "path": "segments/dsebd_latest__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 4,
+   "first_seq": 0,
+   "last_seq": 3,
+   "sha256": "79c2e1ed5e8d7622001eca4f04316b60b537b7e73203c536222d0735eaffc59b",
+   "bytes": 1447727,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.933785+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 23,
+   "first_seq": 0,
+   "last_seq": 22,
+   "sha256": "abb0574b495b18bf6c5090354aec982b0c3ba2b10d5cd049a6356c7fd8d05bde",
+   "bytes": 179116,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.935104+00:00"
+  },
+  {
+   "source": "lankabd_depth",
+   "path": "segments/lankabd_depth__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 1017,
+   "first_seq": 0,
+   "last_seq": 1016,
+   "sha256": "beae9994e1a5a75bd7f4682f6b3c6fc45381427a1764d6149fcc6f39c06da77a",
+   "bytes": 5441691,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.942174+00:00"
+  },
+  {
+   "source": "lankabd_watch",
+   "path": "segments/lankabd_watch__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 4,
+   "first_seq": 0,
+   "last_seq": 3,
+   "sha256": "dfe4ac90fae8b4324ae5a50ed2fdc69fc96c54d91d45b5f1534e2fad4eebb320",
+   "bytes": 817382,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.944338+00:00"
+  },
+  {
+   "source": "lankabd_tape",
+   "path": "segments/lankabd_tape__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 388,
+   "first_seq": 0,
+   "last_seq": 387,
+   "sha256": "547beb55c9821105629427c23086d27eb808b42069e8df2d1b5c6e47563fc20c",
+   "bytes": 2048063,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.947753+00:00"
+  },
+  {
+   "source": "lankabd_market",
+   "path": "segments/lankabd_market__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "ea841a77f4244bde38b303b92cf1be027d52a0cb5e628c5231622b9cd5ecc8ac",
+   "bytes": 2831,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.948906+00:00"
+  },
+  {
+   "source": "lankabd_block",
+   "path": "segments/lankabd_block__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "dcc7c6ed8408faf8b3796269e542d143c4fddd1864e2b0327dcd34f7f106e669",
+   "bytes": 18232,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.949868+00:00"
+  },
+  {
+   "source": "lankabd_circuit",
+   "path": "segments/lankabd_circuit__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "1b3edc98948d31278206dd15ded4e2759e510bb2f31a33a9184c487267ba631b",
+   "bytes": 1549527,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.960145+00:00"
+  },
+  {
+   "source": "lankabd_grid",
+   "path": "segments/lankabd_grid__engine-vm__615fcdbc__20260910T07__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "c2284bf0afd7d824c737df0e468ee02b99c1452894a8594bb3f8900acf917298",
+   "bytes": 721815,
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "closed_utc": "2026-09-10T07:59:59.962804+00:00"
+  },
+  {
+   "source": "engine",
+   "path": "segments/engine__engine-vm__a64a998b__20260910T08__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "56bc30b90910c0c9cafb0665c74d3812411fc41593badc171d3901e5f483a0b1",
+   "bytes": 6209,
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "closed_utc": "2026-09-10T08:10:09.039309+00:00"
+  },
+  {
+   "source": "lankabd_depth",
+   "path": "segments/lankabd_depth__engine-vm__a64a998b__20260910T08__00000000.jsonl",
+   "records": 1442,
+   "first_seq": 0,
+   "last_seq": 1441,
+   "sha256": "cc0907a260eed5a1760a3d847369a61e1cd369e39b002f62b4fac8cd17fec2df",
+   "bytes": 7734545,
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "closed_utc": "2026-09-10T08:10:09.050977+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__engine-vm__a64a998b__20260910T08__00000000.jsonl",
+   "records": 23,
+   "first_seq": 0,
+   "last_seq": 22,
+   "sha256": "d82ed6d2b41816b666701411bb5994e083eb3dbbd9ce9bf97079f4891cf3a83e",
+   "bytes": 181805,
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "closed_utc": "2026-09-10T08:10:09.052335+00:00"
+  },
+  {
+   "source": "lankabd_watch",
+   "path": "segments/lankabd_watch__engine-vm__a64a998b__20260910T08__00000000.jsonl",
+   "records": 4,
+   "first_seq": 0,
+   "last_seq": 3,
+   "sha256": "5fd31d0fef6b7dcf358ba2fc90cc9a16185d3f1a152ab5e71090b05c94b03b38",
+   "bytes": 819299,
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "closed_utc": "2026-09-10T08:10:09.054142+00:00"
+  },
+  {
+   "source": "lankabd_market",
+   "path": "segments/lankabd_market__engine-vm__a64a998b__20260910T08__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "a92b6eba3dfee34a9bb80d0812a603e29d817b5a323e1004002bd8c064182a39",
+   "bytes": 2894,
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "closed_utc": "2026-09-10T08:10:09.055174+00:00"
+  },
+  {
+   "source": "dsebd_latest",
+   "path": "segments/dsebd_latest__engine-vm__a64a998b__20260910T08__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "51352743447952cee7245502313175348fcb8d748639e2ec7d9bb394fa731ff3",
+   "bytes": 725344,
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "closed_utc": "2026-09-10T08:10:09.056917+00:00"
+  },
+  {
+   "source": "engine",
+   "path": "segments/engine__engine-vm__73ab9602__20260910T08__00000000.jsonl",
+   "records": 3,
+   "first_seq": 0,
+   "last_seq": 2,
+   "sha256": "8fa140dbd7470437fe609ed6364cb02899c7ed53efbe87c54c9d52d20f841a86",
+   "bytes": 6211,
+   "epoch": "73ab960204964a7482367aa8cdfa4c3f",
+   "closed_utc": "2026-09-10T08:15:01.666485+00:00"
+  },
+  {
+   "source": "heartbeat",
+   "path": "segments/heartbeat__engine-vm__73ab9602__20260910T08__00000000.jsonl",
+   "records": 13,
+   "first_seq": 0,
+   "last_seq": 12,
+   "sha256": "dff75d88c715448c578aefc282c64b665f1570d1b6b319e6210df3250adc3db7",
+   "bytes": 95536,
+   "epoch": "73ab960204964a7482367aa8cdfa4c3f",
+   "closed_utc": "2026-09-10T08:15:01.670215+00:00"
+  }
+ ],
+ "previous_epochs": [
+  {
+   "epoch": "615fcdbc546d4cda8f1815a78b44ca3a",
+   "opened_utc": "2026-09-10T07:49:59.626336+00:00"
+  },
+  {
+   "epoch": "a64a998b32c9463bb26069c1f881f54a",
+   "opened_utc": "2026-09-10T08:00:08.564815+00:00"
+  }
+ ],
+ "closed_utc": "2026-09-10T08:15:01.671178+00:00"
+}
