@@ -13,6 +13,7 @@ from .relation_replay import (
     ReplayFrame,
     events_from_rows,
 )
+from .source_bridge import raw_row_to_replay, tower_event_to_replay
 
 __all__ = [
     "HistoricalReplay",
@@ -25,4 +26,6 @@ __all__ = [
     "ReplayEvent",
     "ReplayFrame",
     "events_from_rows",
+    "raw_row_to_replay",
+    "tower_event_to_replay",
 ]
