@@ -398,6 +398,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .truth.OBSERVED { background: var(--pos-bg); color: var(--pos); }
 .truth.INFERRED { background: var(--warn-bg); color: var(--warn); }
 .truth.NOT_OBSERVABLE { background: var(--neg-bg); color: var(--neg); }
+/* a source that declares no truth class renders as UNKNOWN — it must never
+   be mistaken for OBSERVED, so it is deliberately the quietest badge */
+.truth.UNKNOWN { background: var(--raised); color: var(--ink-3); border: 1px solid var(--line); }
 
 /* =========================== stock command center ======================= */
 .stk-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 26px; }
