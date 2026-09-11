@@ -207,18 +207,21 @@ const FEATURES = {
            : 'No sustained trading difficulty.',
   },
   volume_price_divergence: {
-    label: 'Activity without price follow-through',
+    label: 'Volume vs price-move mismatch',
     band: 'z',
-    say: v => v >= 2 ? 'Heavy trading with almost no price change — the two disagree.'
-           : v >= 1 ? 'More trading than the price move would explain.'
-           : 'Trading and price move together as expected.',
+    say: v => v >= 2 ? 'Volume was high while the price change was small.'
+           : v >= 1 ? 'Volume ran ahead of the size of the price change.'
+           : 'Volume and price change are in their usual proportion.',
   },
   accumulation_proxy: {
-    label: 'Quiet buying signature',
+    /* RENAMED 2026-09-11. The old label asserted a mechanism ("quiet buying")
+       that REJECTED_CANDIDATES.md P45-1 tested and rejected. It is a ratio,
+       nothing more, and is described as one. */
+    label: 'Volume weighted toward up-closes vs down-closes',
     band: 'unit',
-    say: v => v >= 0.5 ? 'The pattern looks like steady buying without pushing the price.'
-           : v <= -0.5 ? 'The pattern looks like steady selling without breaking the price.'
-           : 'No clear one-sided pattern.',
+    say: v => v >= 0.5 ? 'More of the recent volume printed on up-closes than down-closes.'
+           : v <= -0.5 ? 'More of the recent volume printed on down-closes than up-closes.'
+           : 'Recent volume is split evenly between up-closes and down-closes.',
   },
   ret_autocorr_1: {
     label: 'Whether moves keep going',
@@ -309,75 +312,111 @@ const FEATURE_GROUPS = [
 ];
 
 /* ---------------------------------------------------------------------------
-   ATTENTION RULES — the plain reasons behind "what needs attention now".
-   Each rule reads engine features that already exist. It never invents a
-   price target, a buy, or a sell. `why` is the sentence a person reads.
+   OBSERVATIONS — measurements only.
+
+   HARD RULE, added 2026-09-11 after Hridoy caught this layer inventing research:
+   the UI states WHAT WAS MEASURED. It never names a mechanism, never tells a
+   causal story, never implies a forward outcome. Every row carries the research
+   ledger's verdict on that shape so a reader can never mistake a measurement
+   for a finding.
+
+   WHAT THE LEDGER ACTUALLY SAYS (SURVIVING_RESEARCH_LEADS.md, 2026-09-06):
+     Tradeable candidates: NONE.
+     Explicitly NOT carried (REJECTED_CANDIDATES.md §Phase 4.5):
+       quiet accumulation, absorption / dip-recovered, closing strength,
+       persistence, idiosyncratic moves, every v1 down-door candidate,
+       every limit-up footprint.
+     Carried, both UNVALIDATED, both awaiting the sealed holdout:
+       Lead A  sustained volume departure -> NEGATIVE mean market-relative
+               return over h=5-10. Use, if it ever survives, is an AVOIDANCE
+               filter. Not a buy signal.
+       Lead B  F07: rel_volume_z >= 2 on a day when <=5% of names are
+               abnormal-volume -> abnormal up-move within 3 sessions.
+               5.60% vs 2.59%. Fails 94% of the time. Margin over plain
+               abnormal volume NOT established (t = 0.7).
+               The ledger states plainly: "not accumulation (price is not
+               calm - the calm variant is weaker)".
    ------------------------------------------------------------------------ */
-const ATTENTION_RULES = [
+
+const LEDGER = {
+  headline: 'Research verdict: 0 tradeable candidates. Nothing below is a signal.',
+  source: 'SURVIVING_RESEARCH_LEADS.md · REJECTED_CANDIDATES.md · 2026-09-06',
+  REJECTED: 'REJECTED — this shape was tested and carries no information',
+  UNVALIDATED: 'UNVALIDATED — carried to the sealed holdout, not yet tested there',
+  NOT_TESTED: 'NOT TESTED — measured, never put through the falsification battery',
+};
+
+/* Each entry restates one measured number. `say` must contain no mechanism,
+   no intent, no forward claim. `verdict` is what research says about the
+   SHAPE, not about this stock. */
+const OBSERVATIONS = [
   {
-    id: 'accumulation',
-    w: 9,
-    tag: 'Quiet accumulation',
+    id: 'vol_departure',
+    tag: 'Volume far from its own normal',
     tone: 'info',
-    test: f => num(f.rel_volume_z) >= 2 && Math.abs(num(f.ret_1, 9)) <= 0.01,
-    why: () => 'Heavy trading but the price barely moved — size is changing hands quietly.',
-    raw: ['rel_volume_z', 'ret_1', 'volume_price_divergence'],
+    test: f => num(f.rel_volume_z) >= 2,
+    rank: f => num(f.rel_volume_z, 0),
+    say: f => `Traded well above this stock's own trailing normal (${F2(f.rel_volume_z)} in log-space robust z).`,
+    verdict: 'UNVALIDATED',
+    note: 'Closest carried lead is F07 — the same threshold, but only on days when ≤5% of the market is abnormal, and it fails 94% of the time.',
+    raw: ['rel_volume_z', 'rel_turnover_z', 'baseline_active_days'],
   },
   {
-    id: 'distribution',
-    w: 8,
-    tag: 'Heavy selling',
-    tone: 'neg',
-    test: f => num(f.rel_volume_z) >= 2 && num(f.ret_1, 0) <= -0.03,
-    why: () => 'Far more trading than normal, and the price fell hard with it.',
-    raw: ['rel_volume_z', 'ret_1', 'close_location'],
-  },
-  {
-    id: 'volume_departure',
-    w: 3,
-    tag: 'Abnormal volume',
-    tone: 'warn',
-    test: f => num(f.rel_volume_z) >= 2.5,
-    why: f => `Traded far above this stock’s own normal level${num(f.xs_rank_rel_volume) >= 0.98 ? ', and it is among the busiest in the whole market' : ''}.`,
-    raw: ['rel_volume_z', 'xs_volume_abnormality', 'xs_rank_rel_volume'],
-  },
-  {
-    id: 'persistent',
-    w: 4,
-    tag: 'Abnormal for days',
-    tone: 'warn',
-    test: f => num(f.abnormal_persistence) >= 3,
-    why: f => `Has stayed abnormal for ${Math.round(num(f.abnormal_persistence))} sessions in a row.`,
-    raw: ['abnormal_persistence', 'bars_since_abnormal'],
-  },
-  {
-    id: 'compression',
-    w: 5,
-    tag: 'Range squeezed',
+    id: 'xs_standout',
+    tag: 'Stands out across the market',
     tone: 'info',
-    test: f => num(f.range_compression) >= 1.5,
-    why: () => 'The daily range has squeezed unusually tight — the stock is coiling.',
-    raw: ['range_compression', 'range_z', 'realized_vol'],
+    test: f => num(f.xs_volume_abnormality) >= 1.5,
+    rank: f => num(f.xs_volume_abnormality, 0),
+    say: f => `Its activity sits ${F2(f.xs_volume_abnormality)} above the cross-sectional norm for today's session.`,
+    verdict: 'NOT_TESTED',
+    note: 'Cross-sectional rank was measured, never run through the falsification battery on its own.',
+    raw: ['xs_volume_abnormality', 'xs_rank_rel_volume', 'xs_symbols_at_ts'],
   },
   {
-    id: 'fragile',
-    w: 6,
-    tag: 'Thin and fragile',
-    tone: 'neg',
+    id: 'price_impact',
+    tag: 'Large price move per taka traded',
+    tone: 'warn',
     test: f => num(f.amihud_z) >= 2,
-    why: () => 'A small amount of money is moving the price a long way — hard to get out of.',
+    rank: f => num(f.amihud_z, 0),
+    say: f => `The price moved far for the money that changed hands (Amihud impact ${F2(f.amihud_z)} above its own normal).`,
+    verdict: 'NOT_TESTED',
+    note: 'A liquidity measurement. No research claim attaches to it.',
     raw: ['amihud_z', 'hl_spread_proxy', 'illiquidity_persistence'],
   },
   {
-    id: 'divergence',
-    w: 7,
-    tag: 'Activity without follow-through',
+    id: 'range_wide',
+    tag: 'Unusually wide day',
     tone: 'info',
-    test: f => num(f.volume_price_divergence) >= 2,
-    why: () => 'Trading and price are telling different stories — activity is not showing up in the price.',
-    raw: ['volume_price_divergence', 'rel_volume_z', 'ret_1'],
+    test: f => num(f.range_z) >= 2,
+    rank: f => num(f.range_z, 0),
+    say: f => `High-to-low travel was ${F2(f.range_z)} above this stock's own normal range.`,
+    verdict: 'NOT_TESTED',
+    note: 'Descriptive. The compression variant (P45-7) was UNMEASURABLE at 213 occurrences.',
+    raw: ['range_z', 'range_pct', 'realized_vol'],
+  },
+  {
+    id: 'big_move',
+    tag: 'Large price change',
+    tone: 'neg',
+    test: f => Math.abs(num(f.ret_1, 0)) >= 0.05,
+    rank: f => Math.abs(num(f.ret_1, 0)) * 40,
+    say: f => `Closed ${num(f.ret_1, 0) > 0 ? 'up' : 'down'} ${(Math.abs(f.ret_1) * 100).toFixed(2)}% on the session.`,
+    verdict: 'OBSERVED',
+    note: 'The published close against the published previous close. Nothing inferred.',
+    raw: ['ret_1', 'market_relative_ret', 'close_location'],
   },
 ];
+
+/* Shapes this UI is FORBIDDEN to display as findings. Kept in code so the ban
+   is greppable and a future edit cannot quietly reintroduce them under a new
+   name. Hridoy's rule: a rejected idea may not return wearing a new label. */
+const FORBIDDEN_CLAIMS = [
+  'quiet accumulation', 'accumulation', 'absorption', 'dip recovered',
+  'closing strength', 'abnormal persistence', 'distribution',
+  'buildup', 'smart money', 'institutional buying', 'breakout',
+];
+
+function F2(v) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '—'; }
 
 function num(v, dflt) {
   return (typeof v === 'number' && isFinite(v)) ? v : (dflt === undefined ? -Infinity : dflt);

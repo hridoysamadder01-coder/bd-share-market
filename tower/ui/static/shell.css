@@ -556,3 +556,35 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================================
+   TRUTH BOUNDARY (added 2026-09-11)
+   The UI reports engine measurements and ledger verdicts. It never presents an
+   interpretation as a finding. These styles exist to make the distinction
+   impossible to miss.
+   ========================================================================= */
+.ledger-banner {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 11px 14px; margin-bottom: 10px;
+  border: 1px solid var(--warn); border-left-width: 4px; border-radius: 10px;
+  background: var(--warn-bg);
+}
+.ledger-banner b { font-size: 13px; color: var(--warn); letter-spacing: .01em; }
+.ledger-banner span { font-size: 12.5px; color: var(--ink-2); }
+.ledger-banner .src { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+.tag.verdict {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  font-weight: 700; margin-left: 4px; border-color: transparent;
+}
+.tag.verdict.v-OBSERVED     { background: var(--pos-bg);  color: var(--pos); }
+.tag.verdict.v-UNVALIDATED  { background: var(--warn-bg); color: var(--warn); }
+.tag.verdict.v-NOT_TESTED   { background: var(--raised);  color: var(--ink-3); border-color: var(--line); }
+.tag.verdict.v-REJECTED     { background: var(--neg-bg);  color: var(--neg); }
+
+.lead-chip.warn-chip { border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+.lead-chip.warn-chip b { color: var(--warn); }
+
+.rule-note {
+  margin: 0 0 8px; font-size: 12px; color: var(--ink-3); max-width: 88ch;
+}
