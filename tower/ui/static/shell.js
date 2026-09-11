@@ -768,6 +768,8 @@ function renderStock() {
         ${w.verdict ? `<span class="tag verdict v-${w.verdict}">${F.esc(w.verdict.replace('_', ' '))}</span>` : ''}</span></li>`).join('')}</ul>
     </section>` : ''}
 
+    ${historySection()}
+
     <section class="sec">
       <div class="sec-head"><h2>THIS SESSION</h2></div>
       <div class="card"><div class="kv">
@@ -809,6 +811,198 @@ function renderStock() {
   </div>`;
 }
 
+
+/* ------------------------------ DAILY HISTORY ------------------------------
+   Draws this stock's own daily spine, read from the engine's stored files. It
+   states no mechanism and makes no forward claim; a percentile is a rank over
+   observed numbers and is labelled as one.
+
+   Three things this drawing refuses to do, because doing them would state
+   something the data does not:
+     · it never draws a line across a coverage gap — the line breaks;
+     · it shades the floor era, so a price that was not allowed to fall is
+       never read as a price that chose not to;
+     · it shades the tail the QA pass has not reached, because there the flags
+       are UNKNOWN, not false.
+   -------------------------------------------------------------------------- */
+
+function historySection() {
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!H || !H.rows || !H.rows.length) {
+    return `<section class="sec">
+      <div class="sec-head"><h2>ITS OWN HISTORY</h2></div>
+      <div class="card"><div class="empty">${F.esc((H && H.reason) || 'No stored daily history for this stock.')}</div></div>
+    </section>`;
+  }
+  const c = H.coverage || {}, pos = H.position || {};
+  const years = c.calendar_days ? (c.calendar_days / 365.25).toFixed(1) : F.dash;
+
+  const pct = (v) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(1) + '%' : F.dash;
+  const marks = [];
+  if (c.floor_era_sessions)   marks.push(`<span class="hm hm-floor"></span>${F.int(c.floor_era_sessions)} floor-era sessions`);
+  if (c.locked_sessions)      marks.push(`<span class="hm hm-locked"></span>${F.int(c.locked_sessions)} locked bars`);
+  if (c.unannotated_sessions) marks.push(`<span class="hm hm-unchecked"></span>${F.int(c.unannotated_sessions)} sessions not QA-checked yet`);
+  if (c.gaps_over_10_days)    marks.push(`<span class="hm hm-gap"></span>${F.int(c.gaps_over_10_days)} coverage gap${c.gaps_over_10_days === 1 ? '' : 's'} over 10 days`);
+  if (c.qa_excluded_sessions) marks.push(`<span class="hm hm-excl"></span>${F.int(c.qa_excluded_sessions)} QA-excluded sessions`);
+
+  return `<section class="sec">
+    <div class="sec-head"><h2>ITS OWN HISTORY</h2>
+      <span class="note">${F.int(c.sessions)} sessions · ${F.esc(c.first || '')} → ${F.esc(c.last || '')} · ${years} years</span></div>
+
+    <div class="card">
+      <div class="hist-wrap">
+        <canvas id="hist-canvas" class="hist-canvas"></canvas>
+      </div>
+      ${marks.length ? `<div class="hist-legend">${marks.join('')}</div>` : ''}
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="kv">
+        <div><div class="k">CLOSE ON ${F.esc(pos.as_of || '')}</div><div class="v">${F.n(pos.close)}</div></div>
+        <div><div class="k">HIGHER THAN</div><div class="v">${pct(pos.close_pct_rank)}<span class="muted" style="font-size:11px"> of its own ${F.int(pos.close_ranked_over)} sessions</span></div></div>
+        <div><div class="k">SHARES THAT DAY</div><div class="v">${F.qty(pos.volume)}</div></div>
+        <div><div class="k">HIGHER THAN</div><div class="v">${pct(pos.volume_pct_rank)}<span class="muted" style="font-size:11px"> of its own ${F.int(pos.volume_ranked_over)} sessions</span></div></div>
+      </div>
+      ${c.longest_gap ? `<p class="rule-note">Longest coverage gap: ${F.esc(c.longest_gap.from)} → ${F.esc(c.longest_gap.to)}, ${F.int(c.longest_gap.days)} days. The line is broken there rather than drawn through it.</p>` : ''}
+      ${c.annotated_last && c.unannotated_sessions ? `<p class="rule-note">The QA pass reaches ${F.esc(c.annotated_last)}. After that the floor-era and locked-bar flags are not known, so those sessions are shaded and their flags are served as unknown, never as false.</p>` : ''}
+      ${provLine('a rank over this stock’s own stored closes and volumes — a measurement, not a prediction', 'results/dse_eod_bars_annotated.parquet · data/raw/dse_eod_extended.parquet', 'OBSERVED', null)}
+    </div>
+  </section>`;
+}
+
+function drawHistory() {
+  const cv = document.getElementById('hist-canvas');
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!cv || !H || !H.rows || !H.rows.length) return;
+
+  const css = getComputedStyle(document.documentElement);
+  const pick = (n, f) => (css.getPropertyValue(n) || '').trim() || f;
+  const ink = pick('--ink-1', '#111'), ink3 = pick('--ink-3', '#888'),
+        line = pick('--line', '#ddd'), accent = pick('--accent', '#2f6fd0'),
+        warn = pick('--warn', '#b26b00'), neg = pick('--neg', '#c0392b');
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(280, cv.parentElement.clientWidth);
+  const h = w < 560 ? 220 : 300;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+
+  const rows = H.rows;
+  const padL = 46, padR = 8, padT = 10, padB = 22;
+  const volH = Math.round(h * 0.22);
+  const priceH = h - padT - padB - volH - 6;
+  const plotW = w - padL - padR;
+
+  const ms = rows.map(r => Date.parse(r.t));
+  const t0 = ms[0], t1 = ms[ms.length - 1] || (t0 + 1);
+  const X = t => padL + plotW * (t - t0) / Math.max(1, t1 - t0);
+
+  const cl = rows.map(r => r.c).filter(v => typeof v === 'number' && isFinite(v));
+  if (!cl.length) return;
+  let lo = Math.min.apply(null, cl), hi = Math.max.apply(null, cl);
+  if (hi === lo) { hi = lo + 1; lo = lo - 1; }
+  const padv = (hi - lo) * 0.06; lo -= padv; hi += padv;
+  const Y = v => padT + priceH * (1 - (v - lo) / (hi - lo));
+
+  const vols = rows.map(r => r.v).filter(v => typeof v === 'number' && isFinite(v));
+  const vmax = vols.length ? Math.max.apply(null, vols) : 1;
+  const volTop = padT + priceH + 6;
+  const VY = v => volTop + volH * (1 - (v / (vmax || 1)));
+
+  /* 1. shaded regions, drawn under everything: contiguous runs of a flag */
+  function band(test, fill) {
+    let start = null;
+    for (let i = 0; i <= rows.length; i++) {
+      const on = i < rows.length && test(rows[i]);
+      if (on && start === null) start = i;
+      if (!on && start !== null) {
+        const x0 = X(ms[start]), x1 = X(ms[Math.max(start, i - 1)]);
+        g.fillStyle = fill;
+        g.fillRect(x0, padT, Math.max(1, x1 - x0), priceH + 6 + volH);
+        start = null;
+      }
+    }
+  }
+  band(r => r.floor === true, hexA(warn, 0.16));
+  band(r => r.annotated === false, hexA(ink3, 0.10));
+
+  /* 2. grid + price labels */
+  g.strokeStyle = line; g.lineWidth = 1; g.font = '10px ui-monospace, monospace';
+  g.fillStyle = ink3; g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let i = 0; i <= 3; i++) {
+    const v = lo + (hi - lo) * i / 3, y = Math.round(Y(v)) + 0.5;
+    g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+    g.fillText(v >= 1000 ? Math.round(v).toString() : v.toFixed(1), padL - 5, y);
+  }
+
+  /* 3. volume bars */
+  const bw = Math.max(0.5, plotW / rows.length * 0.8);
+  g.fillStyle = hexA(ink3, 0.45);
+  for (let i = 0; i < rows.length; i++) {
+    const v = rows[i].v;
+    if (typeof v !== 'number' || !isFinite(v)) continue;
+    const y = VY(v);
+    g.fillRect(X(ms[i]) - bw / 2, y, bw, volTop + volH - y);
+  }
+
+  /* 4. the close line — BROKEN at any gap over 10 calendar days, and at any
+        session whose close is missing. Never interpolated. */
+  const GAP_MS = 10 * 864e5;
+  g.strokeStyle = accent; g.lineWidth = 1.4; g.lineJoin = 'round';
+  g.beginPath();
+  let pen = false;
+  for (let i = 0; i < rows.length; i++) {
+    const v = rows[i].c;
+    if (typeof v !== 'number' || !isFinite(v)) { pen = false; continue; }
+    if (i > 0 && (ms[i] - ms[i - 1]) > GAP_MS) pen = false;
+    const x = X(ms[i]), y = Y(v);
+    if (!pen) { g.moveTo(x, y); pen = true; } else { g.lineTo(x, y); }
+  }
+  g.stroke();
+
+  /* 5. locked bars as ticks on the axis floor */
+  g.fillStyle = hexA(neg, 0.55);
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].locked !== true) continue;
+    g.fillRect(X(ms[i]) - 0.5, padT + priceH - 3, 1, 3);
+  }
+
+  /* 6. year labels */
+  g.fillStyle = ink3; g.textAlign = 'center'; g.textBaseline = 'top';
+  const y0 = new Date(t0).getUTCFullYear(), y1 = new Date(t1).getUTCFullYear();
+  const step = (y1 - y0) > 10 ? 3 : ((y1 - y0) > 5 ? 2 : 1);
+  for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) {
+    const t = Date.UTC(y, 0, 1);
+    if (t < t0 || t > t1) continue;
+    const x = X(t);
+    g.strokeStyle = hexA(ink3, 0.25);
+    g.beginPath(); g.moveTo(x, padT); g.lineTo(x, volTop + volH); g.stroke();
+    g.fillText(String(y), x, volTop + volH + 4);
+  }
+
+  /* 7. the latest close, marked */
+  const lastIdx = (() => { for (let i = rows.length - 1; i >= 0; i--) if (typeof rows[i].c === 'number' && isFinite(rows[i].c)) return i; return -1; })();
+  if (lastIdx >= 0) {
+    g.fillStyle = ink;
+    g.beginPath(); g.arc(X(ms[lastIdx]), Y(rows[lastIdx].c), 2.5, 0, Math.PI * 2); g.fill();
+  }
+}
+
+/* a CSS colour plus an alpha, without assuming the token is hex */
+function hexA(col, a) {
+  const c = String(col).trim();
+  const m = c.match(/^#([0-9a-f]{6})$/i);
+  if (m) {
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  const r = c.match(/^rgba?\(([^)]+)\)$/i);
+  if (r) { const p = r[1].split(',').map(x => x.trim()); return `rgba(${p[0]},${p[1]},${p[2]},${a})`; }
+  return c;
+}
 
 /* --------------------------- RESEARCH VERDICT ---------------------------- */
 /* Reads the committed ledger documents. The UI reports these verdicts; it does
@@ -921,6 +1115,11 @@ async function render() {
   if (S.route === 'stock' && S.param && (!S.stock || S.stock.__sym !== S.param)) {
     try { const d = await get('/api/stock/' + encodeURIComponent(S.param), 120000); d.__sym = S.param; S.stock = d; }
     catch (e) { S.stock = { __sym: S.param }; }
+    /* the daily spine is a separate read-only endpoint; a failure here must not
+       take the rest of the stock page down with it */
+    try { S.hist = await get('/api/stock/' + encodeURIComponent(S.param) + '/history', 120000); }
+    catch (e) { S.hist = null; }
+    if (S.hist) S.hist.__sym = S.param;
   }
   try { view.innerHTML = ROUTES[S.route](); }
   catch (e) { view.innerHTML = `<div class="wrap"><div class="card"><div class="empty">Could not draw this view: ${F.esc(e.message)}</div></div></div>`; }
@@ -930,6 +1129,18 @@ async function render() {
 }
 
 function wireView() {
+  if (S.route === 'stock') {
+    drawHistory();
+    if (!S._histResize) {
+      S._histResize = true;
+      let tmr = null;
+      window.addEventListener('resize', () => {
+        clearTimeout(tmr);
+        tmr = setTimeout(() => { if (S.route === 'stock') drawHistory(); }, 120);
+      });
+    }
+  }
+
   const wb = document.getElementById('watch-btn');
   if (wb) wb.onclick = () => {
     const i = S.watch.indexOf(S.param);

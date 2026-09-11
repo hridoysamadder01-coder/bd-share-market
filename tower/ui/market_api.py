@@ -80,6 +80,26 @@ def _find_features_parquet() -> Optional[str]:
     )
 
 
+def _find_bars_annotated_parquet() -> Optional[str]:
+    """The QA-annotated daily spine. Carries the flags that say when a printed
+    price was not a freely traded price (floor era, locked bar)."""
+    return _newest(
+        [
+            os.path.join(REPO_ROOT, "results/dse_eod_bars_annotated.parquet"),
+        ]
+    )
+
+
+def _find_eod_raw_parquet() -> Optional[str]:
+    """The raw extended daily file. Runs later than the annotated spine, but
+    carries no QA flags, so anything only it knows is served with flags null."""
+    return _newest(
+        [
+            os.path.join(REPO_ROOT, "data/raw/dse_eod_extended.parquet"),
+        ]
+    )
+
+
 def _find_state_events_parquet() -> Optional[str]:
     return _newest(
         [
@@ -550,6 +570,198 @@ def _build_stock(sym: str) -> Dict[str, Any]:
     })
 
 
+# ─────────────────────────────────────────────── daily history (read-only)
+#
+# READ-ONLY ADDITION. Nothing here computes a research quantity, and the shape of
+# `/api/stock/{sym}` is unchanged — this is a new endpoint beside it.
+#
+# Two files, deliberately not blended into one undifferentiated line:
+#
+#   results/dse_eod_bars_annotated.parquet  the QA-annotated spine. Carries
+#       flag_floor_era / flag_locked_bar / flag_zero_volume / qa_exclude, which
+#       are the difference between "the price did not move" and "the price was
+#       not allowed to move". 13.9% of its rows are floor-era.
+#   data/raw/dse_eod_extended.parquet       runs later than the spine. Carries no
+#       flags. Rows only it knows are served with every flag null (UNKNOWN) and
+#       annotated=false, never as false, so the UI can shade them as unchecked.
+#
+# Sessions the exchange did not hold are simply absent. They are never filled in,
+# and the response reports the gaps so the caller can break the line instead of
+# drawing through them.
+
+_HIST_CACHE: Dict[str, Any] = {}
+
+_ANN_COLS = [
+    "symbol", "ts", "open", "high", "low", "close", "volume", "turnover",
+    "flag_floor_era", "flag_locked_bar", "flag_zero_volume", "qa_exclude",
+]
+_RAW_COLS = ["symbol", "ts", "open", "high", "low", "close", "volume", "turnover"]
+
+
+def _hist_frames():
+    """Load both daily files once, column-pruned, and keep them for the process."""
+    if "frames" in _HIST_CACHE:
+        return _HIST_CACHE["frames"]
+    import pandas as pd
+
+    ann = raw = None
+    ap = _find_bars_annotated_parquet()
+    if ap:
+        try:
+            ann = pd.read_parquet(ap, columns=_ANN_COLS)
+            ann["symbol"] = ann["symbol"].astype(str).str.upper()
+        except Exception:
+            ann = None
+    rp = _find_eod_raw_parquet()
+    if rp:
+        try:
+            raw = pd.read_parquet(rp, columns=_RAW_COLS)
+            raw["symbol"] = raw["symbol"].astype(str).str.upper()
+        except Exception:
+            raw = None
+    _HIST_CACHE["frames"] = (ann, raw, ap, rp)
+    return _HIST_CACHE["frames"]
+
+
+def _f(v):
+    """A number, or None. Never a substituted zero."""
+    try:
+        if v is None:
+            return None
+        f = float(v)
+        return f if math.isfinite(f) else None
+    except Exception:
+        return None
+
+
+def _b(v):
+    """A flag as a real boolean, or None when the source does not carry it."""
+    if v is None:
+        return None
+    try:
+        if isinstance(v, float) and not math.isfinite(v):
+            return None
+    except Exception:
+        pass
+    return bool(v)
+
+
+def _build_stock_history(sym: str) -> Dict[str, Any]:
+    sym = (sym or "").upper()
+    ann, raw, ap, rp = _hist_frames()
+    if ann is None and raw is None:
+        return {
+            "symbol": sym, "rows": [], "coverage": None, "position": None,
+            "truth": "UNKNOWN", "source": None,
+            "reason": "no daily history file is present in this checkout",
+        }
+
+    import pandas as pd
+
+    rows: List[Dict[str, Any]] = []
+    ann_last = None
+
+    if ann is not None:
+        a = ann[ann["symbol"] == sym].sort_values("ts")
+        for r in a.itertuples(index=False):
+            rows.append({
+                "t": pd.Timestamp(r.ts).strftime("%Y-%m-%d"),
+                "o": _f(r.open), "h": _f(r.high), "l": _f(r.low), "c": _f(r.close),
+                "v": _f(r.volume), "turnover": _f(r.turnover),
+                "floor": _b(r.flag_floor_era), "locked": _b(r.flag_locked_bar),
+                "zero_volume": _b(r.flag_zero_volume), "qa_exclude": _b(r.qa_exclude),
+                "annotated": True,
+            })
+        if rows:
+            ann_last = rows[-1]["t"]
+
+    # the tail the annotated spine has not reached yet — flags stay UNKNOWN
+    unannotated = 0
+    if raw is not None:
+        b = raw[raw["symbol"] == sym].sort_values("ts")
+        for r in b.itertuples(index=False):
+            t = pd.Timestamp(r.ts).strftime("%Y-%m-%d")
+            if ann_last is not None and t <= ann_last:
+                continue
+            rows.append({
+                "t": t,
+                "o": _f(r.open), "h": _f(r.high), "l": _f(r.low), "c": _f(r.close),
+                "v": _f(r.volume), "turnover": _f(r.turnover),
+                "floor": None, "locked": None, "zero_volume": None, "qa_exclude": None,
+                "annotated": False,
+            })
+            unannotated += 1
+
+    if not rows:
+        return {
+            "symbol": sym, "rows": [], "coverage": None, "position": None,
+            "truth": "OBSERVED", "source": ap or rp,
+            "reason": "no daily rows for this symbol",
+        }
+
+    rows.sort(key=lambda r: r["t"])
+
+    # gaps: calendar distance between consecutive sessions. Weekends and holidays
+    # are ordinary; a long run is a coverage break and the caller must not draw
+    # a line through it.
+    gaps = []
+    prev = None
+    for r in rows:
+        d = pd.Timestamp(r["t"])
+        if prev is not None:
+            days = int((d - prev).days)
+            if days > 10:
+                gaps.append({"from": prev.strftime("%Y-%m-%d"), "to": r["t"], "days": days})
+        prev = d
+    gaps.sort(key=lambda g: -g["days"])
+
+    n = len(rows)
+    coverage = {
+        "first": rows[0]["t"],
+        "last": rows[-1]["t"],
+        "sessions": n,
+        "annotated_last": ann_last,
+        "unannotated_sessions": unannotated,
+        "floor_era_sessions": sum(1 for r in rows if r["floor"] is True),
+        "locked_sessions": sum(1 for r in rows if r["locked"] is True),
+        "zero_volume_sessions": sum(1 for r in rows if r["zero_volume"] is True),
+        "qa_excluded_sessions": sum(1 for r in rows if r["qa_exclude"] is True),
+        "calendar_days": int((pd.Timestamp(rows[-1]["t"]) - pd.Timestamp(rows[0]["t"])).days) + 1,
+        "gaps_over_10_days": len(gaps),
+        "longest_gap": gaps[0] if gaps else None,
+        "gaps": gaps[:8],
+    }
+
+    # where the latest session sits inside this stock's own history. A rank over
+    # observed numbers, nothing more — no forward claim attaches to it. Rows the
+    # QA marked excluded are left out of the comparison, and the count that the
+    # rank was taken over is reported so it can be checked.
+    def _rank(key):
+        vals = [r[key] for r in rows if r.get("qa_exclude") is not True and r[key] is not None]
+        cur = rows[-1][key]
+        if cur is None or len(vals) < 2:
+            return None, None
+        below = sum(1 for v in vals if v < cur)
+        return round(100.0 * below / len(vals), 1), len(vals)
+
+    c_pct, c_n = _rank("c")
+    v_pct, v_n = _rank("v")
+    position = {
+        "close": rows[-1]["c"], "close_pct_rank": c_pct, "close_ranked_over": c_n,
+        "volume": rows[-1]["v"], "volume_pct_rank": v_pct, "volume_ranked_over": v_n,
+        "as_of": rows[-1]["t"],
+    }
+
+    return _scrub({
+        "symbol": sym,
+        "rows": rows,
+        "coverage": coverage,
+        "position": position,
+        "truth": "OBSERVED",
+        "source": " + ".join([p for p in (ap, rp) if p]),
+    })
+
+
 # ────────────────────────────────────────────────────────────── attach
 def attach_market_api(app) -> None:
     from fastapi import HTTPException, Query
@@ -573,6 +785,10 @@ def attach_market_api(app) -> None:
     @app.get("/api/features/latest")
     def _features():
         return _cached("features", _build_features_latest)
+
+    @app.get("/api/stock/{sym}/history")
+    def _stock_history(sym: str):
+        return _cached("hist:" + sym.upper(), lambda: _build_stock_history(sym))
 
     @app.get("/api/stock/{sym}")
     def _stock(sym: str):
