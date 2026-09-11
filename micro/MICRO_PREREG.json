@@ -1,0 +1,321 @@
+{
+  "mission": "DSE MICROSTRUCTURE ADVANTAGE - fused order-book + order-flow + market-context engine, prospective validation",
+  "primary_question": "Does fused order-book + order-flow + market-context information predict the next market move better than the STRONGEST standalone book/flow baseline, repeatedly, on unseen live sessions?",
+  "frozen_at_utc": "2026-09-06T22:40:00Z",
+  "frozen_before": "any frame of any NEW (post-2026-09-06) live session was read",
+  "calibration_evidence_only": {
+    "session": "2026-09-06",
+    "status": "ALREADY SEEN. Used for engineering/calibration and pipeline smoke-test ONLY. NEVER counted as DEV, VALIDATION or HOLDOUT. Never used as prospective validation.",
+    "what_it_informed": "column availability, frame cadence (median 43.7 s), quality-gate rates, sane hyperparameter defaults. No outcome-driven tuning."
+  },
+  "repository": {
+    "policy": "READ-ONLY. No commits, no pushes. Repo code untouched.",
+    "reused_modules": [
+      "seeing/capture/*",
+      "seeing/features/micro.py",
+      "seeing/fusion/state.py",
+      "seeing/state_machine/machine.py",
+      "tower/state.py",
+      "tower/live.py",
+      "tower/experiment.py",
+      "tower/truth_map.py",
+      "tower/mechanics/*"
+    ],
+    "new_code_location": "/tmp/dse_micro_advantage/"
+  },
+  "universe_14": [
+    "BEXIMCO",
+    "BRACBANK",
+    "BXPHARMA",
+    "GP",
+    "IPDC",
+    "LOVELLO",
+    "MALEKSPIN",
+    "ORIONPHARM",
+    "POWERGRID",
+    "PTL",
+    "SAIHAMCOT",
+    "SAIHAMTEX",
+    "SHARPIND",
+    "SQURPHARMA"
+  ],
+  "universe_source": "the exact 14 symbols of the existing live experiment (results/seeing/2026-09-06/DENOMINATOR.json). Held FIXED for the whole prospective test; not re-selected per session.",
+  "session_window_utc": {
+    "start": "03:50",
+    "end": "08:20"
+  },
+  "observability_contract": {
+    "OBSERVED": [
+      "displayed bid/ask levels",
+      "best bid/ask",
+      "spread",
+      "depth",
+      "microprice",
+      "level quantity changes",
+      "cumulative trades/volume/value",
+      "LTP/OHLC/yclose",
+      "circuit limits",
+      "market breadth and totals",
+      "all-symbol L1",
+      "two-book-sensor agreement"
+    ],
+    "INFERRED_LABELLED": [
+      "signed interval flow",
+      "quote-rule trade direction",
+      "consumed/cancelled/replenished proxy",
+      "OFI",
+      "sweep proxy",
+      "depletion",
+      "replenishment",
+      "resilience",
+      "pressure",
+      "state"
+    ],
+    "NEVER_CLAIMED": [
+      "queue position",
+      "order IDs",
+      "individual orders",
+      "exact add/cancel decomposition",
+      "hidden liquidity",
+      "participant identity or intention"
+    ]
+  },
+  "frozen_features": {
+    "BOOK": {
+      "imb_l1": "imb_l1",
+      "imb_top5": "imb_top5",
+      "imb_weighted": "imb_weighted",
+      "micro_disp_ticks": "(microprice - mid) / tick_size",
+      "spread_ticks": "spread_ticks",
+      "depth_ratio": "log1p(bid_depth_top5) - log1p(ask_depth_top5)",
+      "wall_concentration": "largest_wall_share signed +1 bid / -1 ask",
+      "touch_depletion": "ev_bid_touch_consumed - ev_ask_touch_consumed, normalised by liquidity_top5",
+      "replenishment": "ev_bid_replenish - ev_ask_replenish",
+      "multi_level_transition": "multi_level_transition (bool -> int)",
+      "resilience": "ask_replenished_after_depletion minus bid analogue, and resilience_frames"
+    },
+    "FLOW": {
+      "int_d_trades": "int_d_trades",
+      "int_d_volume": "int_d_volume",
+      "int_d_value_mn": "coalesce(tape_d_value_mn, snap_d_value_mn)",
+      "signed_flow_w": "rolling sum of signed_int_volume over W_FLOW frames, normalised by rolling volume",
+      "ofi_w": "rolling sum of (ev_bid_add_qty - ev_bid_reduce_qty) - (ev_ask_add_qty - ev_ask_reduce_qty) over W_FLOW, normalised by liquidity_top5",
+      "trade_intensity": "int_d_trades / frame_dt_s",
+      "trade_acceleration": "trade_intensity minus its W_FLOW-frame rolling mean",
+      "sweep_proxy": "ev_sweeps normalised by liquidity_top5",
+      "book_pressure": "one_frame_pressure",
+      "trade_pressure": "signed_int_volume / (int_d_volume + 1)"
+    },
+    "CONTEXT": {
+      "mkt_breadth": "(mkt_up - mkt_down) / max(mkt_n,1)",
+      "mkt_stat_breadth": "(mkt_stat_up - mkt_stat_down) / max(mkt_stat_up+mkt_stat_down+mkt_stat_flat,1)",
+      "mkt_pressure": "cross-sectional mean of one_frame_pressure over the universe at the nearest timestamp",
+      "xs_pressure_rank": "within-timestamp percentile rank of this symbol's one_frame_pressure across the universe",
+      "tod_bucket": "tod_bucket",
+      "circuit_dist_up": "(upper_limit - ltp) / (tick_size * 100)",
+      "circuit_dist_dn": "(ltp - lower_limit) / (tick_size * 100)",
+      "liquidity_state": "log1p(liquidity_top5)",
+      "liquidity_change_w": "liquidity_change_w",
+      "mkt_move": "log(market_value_mn + 1)",
+      "freshness": "watch_age_s, market_age_s",
+      "sensor_agreement": "book_agree, book_diff"
+    },
+    "W_FLOW_frames": 6,
+    "no_future_field_rule": "every feature is computed from information at or before frame t. No fwd_* column, no forward timestamp, no session-level aggregate that spans t may enter the feature matrix."
+  },
+  "quality_gates_input_only": {
+    "exclude_frame_if": [
+      "bad_book",
+      "stale_book",
+      "one_sided",
+      "crossed",
+      "empty",
+      "mid is null",
+      "tick_size is null or <= 0",
+      "watch_age_s > 120"
+    ],
+    "degrade_not_exclude": [
+      "book_agree missing or book_diff large (second sensor unavailable or disagreeing)",
+      "market_age_s > 300"
+    ],
+    "rule": "quality flags are INPUT GATES. They are never used as predictors and never appear in the feature matrix.",
+    "robustness_removal_flags": [
+      "r_dup (duplicate book payload)",
+      "stale_book",
+      "crossed or locked",
+      "largest wall"
+    ]
+  },
+  "outcomes": {
+    "reuse": "the existing seeing/tower semantics: forward MID move measured in ticks. Not silently redefined.",
+    "definition": "fwd_mid_ticks_H = (mid[t_fwd] - mid[t]) / tick_size, where t_fwd is the FIRST frame of the SAME symbol in the SAME session with t_fwd >= t + H seconds",
+    "up_H": "fwd_mid_ticks_H > 0",
+    "down_H": "fwd_mid_ticks_H < 0",
+    "flat_H": "fwd_mid_ticks_H == 0",
+    "valid_H": "t_fwd exists in-session AND (t_fwd - t) <= 2*H seconds (no stretching across a capture gap) AND mid present at both ends",
+    "horizons_seconds": [
+      60,
+      180,
+      600
+    ],
+    "primary_horizon_seconds": 180,
+    "horizon_note": "the mission specifies horizons in SECONDS; median frame cadence is 43.7 s, so horizons are anchored by timestamp, not by a fixed frame count. The up/down semantics are unchanged from the repo.",
+    "timestamp_anchoring": "(t_frame - session start).dt.total_seconds(); forward frame found by searchsorted on those seconds"
+  },
+  "model_family": {
+    "target": "3-class {DOWN, FLAT, UP} at the primary horizon, giving p_down / p_flat / p_up directly",
+    "M1": {
+      "kind": "multinomial logistic regression, L2",
+      "C": 1.0,
+      "solver": "lbfgs",
+      "max_iter": 2000,
+      "class_weight": "balanced",
+      "standardise": "z-score, mean/std fit on DEV ONLY"
+    },
+    "M2": {
+      "kind": "HistGradientBoostingClassifier",
+      "max_depth": 3,
+      "learning_rate": 0.05,
+      "max_iter": 300,
+      "min_samples_leaf": 50,
+      "l2_regularization": 1.0,
+      "early_stopping": false,
+      "random_state": 7
+    },
+    "forbidden": [
+      "neural networks",
+      "hyperparameter search beyond the two frozen configurations above",
+      "feature selection driven by outcomes",
+      "any refit after FINAL_MODEL_LOCK"
+    ]
+  },
+  "baselines_to_beat": {
+    "B1_imb_l1": "imb_l1",
+    "B2_imb_top5": "imb_top5",
+    "B3_imb_weighted": "imb_weighted",
+    "B4_micro_disp": "(microprice - mid)/tick_size",
+    "B5_one_frame_pressure": "one_frame_pressure",
+    "B6_signed_flow": "signed_int_volume / (int_d_volume + 1)",
+    "B7_ofi": "ofi_w as defined above",
+    "B8_book_pressure": "existing book pressure = one_frame_pressure smoothed over W_FLOW frames",
+    "B9_trade_pressure": "rolling signed flow over W_FLOW frames normalised by rolling volume",
+    "B10_combined_rule": "existing rule-based composite: sign(imb_top5) when |imb_top5| > theta_imb(0.20) and persistent_bid_pressure or its mirror, else 0",
+    "scoring": "each baseline is a directional SCORE (positive = up). All baselines and the fused model are scored with the IDENTICAL metric on the IDENTICAL eligible rows.",
+    "pass_rule": "the fused engine must beat the STRONGEST baseline, not the average."
+  },
+  "primary_metric": {
+    "metric": "AUC-ROC for discriminating UP vs DOWN at the primary horizon (FLAT rows excluded from AUC), on eligible rows",
+    "model_score_for_auc": "p_up - p_down",
+    "incremental": "AUC(fused) - AUC(best baseline on the same rows)",
+    "secondary": [
+      "episode-level directional hit rate at the locked confidence threshold",
+      "lift = p_up(signal) - p_up(base) at the locked threshold"
+    ],
+    "inference": "block bootstrap, block = one whole SESSION, 2000 replicates, seed 7, 95% CI on the incremental AUC"
+  },
+  "episodes": {
+    "definition": "an episode begins at the first frame where the locked model emits a non-NEUTRAL direction for a symbol while no episode of the same direction is active for that symbol",
+    "cooldown_seconds": 300,
+    "anchor": "the episode's FIRST frame supplies the single outcome; later frames of the same episode are not counted again",
+    "purpose": "independence - repeated same-direction pressure on one symbol collapses into one episode"
+  },
+  "session_acceptance": {
+    "hash_chain_verifies": true,
+    "min_fused_frames": 2000,
+    "min_symbols_present": 12,
+    "min_capture_span_hours": 3.0,
+    "max_quality_gate_failure_share": 0.4,
+    "rule": "a session failing ANY criterion is REJECTED and does not consume a DEV/VAL/HOLDOUT slot; the rejection and its reason are recorded."
+  },
+  "splits_whole_sessions_only": {
+    "never_random_split_frames": true,
+    "DEV": "the first 8 ACCEPTED untouched sessions",
+    "VALIDATION": "the next 4 ACCEPTED untouched sessions",
+    "FINAL_HOLDOUT": "all subsequent ACCEPTED untouched sessions until BOTH >= 100 independent pressure episodes AND >= 5 accepted holdout sessions",
+    "holdout_seal": "FINAL_HOLDOUT outcomes MUST NOT be read until the denominator is complete"
+  },
+  "selection": {
+    "DEV": "fit M1 and M2. No claims.",
+    "VALIDATION": "select exactly ONE fused model and ONE confidence threshold, by best 180 s incremental AUC against the strongest baseline. Threshold grid is frozen: [0.05,0.10,0.15,0.20,0.25] on |p_up - p_down|.",
+    "then": "write /tmp/dse_micro_advantage/FINAL_MODEL_LOCK.json and SHA256 it. No further fitting or tuning."
+  },
+  "final_holdout_pass_requires_ALL": {
+    "A": "denominator satisfied (>= 100 independent episodes AND >= 5 accepted holdout sessions)",
+    "B": "fused 180 s directional effect has the correct sign",
+    "C": "fused model beats EACH of B1-B10 on the same eligible holdout rows",
+    "D": "block-bootstrap 95% CI for incremental AUC vs the BEST baseline excludes zero",
+    "E": "effect in the same direction in >= 75% of holdout sessions",
+    "F": "no single symbol contributes > 25% of total incremental success",
+    "G": "60 s and 600 s show no strong opposite-sign effect",
+    "H": "mirror test behaves correctly (mirrored signal predicts DOWN)",
+    "I": "timestamp permutation destroys the effect",
+    "J": "side-flip falsification fails as expected",
+    "no_new_gate_after_results": true
+  },
+  "execution_assumptions": {
+    "signal_available": "only AFTER frame t is fully received",
+    "earliest_action": "the next FRESH observable quote (next frame with a new body_sha256) for that symbol",
+    "latency": "measured capture latency (elapsed_ms) is added; no zero-latency fills",
+    "spread": "crossing the spread is charged at entry and exit",
+    "brokerage": "0.008 round trip (repo config BROKERAGE_ROUND_TRIP_VERIFIED); capital-gains tax UNKNOWN, modelled 0; slippage beyond spread UNKNOWN, not modelled - so every net figure is OPTIMISTIC",
+    "not_executable": "frames where locked, crossed, at circuit limit, one_sided, or the next fresh quote never arrives",
+    "no_same_frame_fill": true
+  },
+  "classification": {
+    "MARKET_READING_EDGE": "fused pressure beats the strongest baseline on the sealed holdout under all of A-J",
+    "TRADEABLE_ADVANTAGE": "MARKET_READING_EDGE and realistic execution simulation remains positive",
+    "INFORMATION_ADVANTAGE_ONLY": "prediction survives but execution does not",
+    "NO_INCREMENTAL_EDGE_OVER_BEST_BASELINE": "fused engine fails to beat the strongest baseline",
+    "BLOCKED_BY_DATA": "genuine observability/execution/denominator failure"
+  },
+  "forbidden_after_this_hash": [
+    "threshold changes",
+    "feature additions or removals",
+    "model or hyperparameter changes",
+    "outcome redefinition",
+    "universe changes",
+    "split changes",
+    "new gates",
+    "any rescue attempt"
+  ],
+  "version": "v2 (FINAL FREEZE)",
+  "amendment_record": {
+    "v1_sha256": "2c8ed7b1d934e3e76fae480cda2960a87c5efdb5b702e65659e0a17dc6842c02",
+    "v1_file": "MICRO_PREREG_v1_superseded.json (kept verbatim)",
+    "amended_before": "ANY frame of ANY new (post-2026-09-06) session was read. Zero prospective outcomes existed at amendment time.",
+    "why_this_is_not_a_rescue": "Neither change is outcome-driven. No prospective data exists yet; both defects were found by the pipeline smoke-test on the 2026-09-06 CALIBRATION session, which this prereg explicitly designates for engineering calibration.",
+    "changes": [
+      {
+        "id": "A1",
+        "kind": "OUTRIGHT CODE BUG",
+        "what": "forward-horizon timestamps were computed as datetime64[us].astype(int64)/1e9, i.e. microseconds divided by 1e9",
+        "effect": "a 15,811 s session measured as 15.81 s, so NO frame ever had a forward frame: valid_H was 0.0% at every horizon and the eligible set was empty",
+        "fix": "anchor with (t_frame - t_frame.iloc[0]).dt.total_seconds()",
+        "after": "valid 73.3% / 82.2% / 81.3% at 60/180/600 s"
+      },
+      {
+        "id": "A2",
+        "kind": "GATE MIS-SPECIFIED AGAINST THE REUSED STACK",
+        "what": "dup_payload was listed as a hard input gate",
+        "effect": "56.5% of frames carry a duplicate book payload, so the hard gate excluded 61.4% of frames and would have REJECTED essentially every session under this prereg's own 40% acceptance rule - the denominator was unreachable by construction",
+        "repo_precedent": "seeing/experiment/design.py treats duplicate as a REMOVAL/ROBUSTNESS test, not a primary input gate ('the sign of the incremental lift is preserved after stale, duplicate, crossed/locked and largest-wall removal')",
+        "fix": "dup_payload moved from exclude_frame_if to the robustness-removal tests, recorded per frame as r_dup; it is still never a predictor",
+        "after": "16.6% excluded, session ACCEPTED, 77.9% of frames eligible"
+      }
+    ],
+    "commitment": "This is the FINAL freeze. Nothing in this file changes again."
+  },
+  "calibration_measured_rates_2026_09_06": {
+    "eligible_share": 0.779,
+    "quality_excluded_share": 0.166,
+    "dup_payload_share": 0.565,
+    "valid_60s": 0.733,
+    "valid_180s": 0.822,
+    "valid_600s": 0.813,
+    "up_180s": 0.244,
+    "down_180s": 0.327,
+    "flat_180s": 0.429,
+    "median_frame_dt_s": 43.67,
+    "note": "denominator/plumbing rates only. No predictive outcome was fitted or evaluated to produce these."
+  }
+}
