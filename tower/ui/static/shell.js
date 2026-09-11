@@ -155,8 +155,8 @@ function derive() {
   /* attention list — every hit is a real rule over real engine features */
   const attention = [];
   for (const f of featList) {
-    const hits = ATTENTION_RULES.filter(rule => { try { return rule.test(f); } catch (e) { return false; } })
-      .sort((x, y) => y.w - x.w);   /* most specific reason first */
+    const hits = OBSERVATIONS.filter(o => { try { return o.test(f); } catch (e) { return false; } })
+      .sort((x, y) => { try { return y.rank(f) - x.rank(f); } catch (e) { return 0; } });
     if (!hits.length) continue;
     const inst = seen.get(f.symbol) || null;
     attention.push({
@@ -166,13 +166,13 @@ function derive() {
       chg: inst && F.has(inst.ltp) && inst.ltp > 0 ? inst.change_pct : null,
       value: inst ? inst.value : null,
       hits, f,
-      rank: hits[0].w + (typeof f.rel_volume_z === 'number' ? Math.max(0, f.rel_volume_z) : 0),
+      rank: (() => { try { return hits[0].rank(f); } catch (e) { return 0; } })(),
     });
   }
   attention.sort((a, b) => b.rank - a.rank);
 
   const byRule = {};
-  for (const r of ATTENTION_RULES) byRule[r.id] = attention.filter(a => a.hits.some(h => h.id === r.id));
+  for (const r of OBSERVATIONS) byRule[r.id] = attention.filter(a => a.hits.some(h => h.id === r.id));
 
   /* sector map — DSE's own aggregates, joined to per-symbol breadth counts */
   const counts = {};
@@ -286,13 +286,13 @@ function heroBlock(M) {
     ? `<span class="num ${F.cls(M.dsex.change_pct)}">${F.spct(M.dsex.change_pct)}</span>` : '';
 
   const lead = [];
-  const acc = M.byRule.accumulation || [], vol = M.byRule.volume_departure || [],
-        frag = M.byRule.fragile || [], comp = M.byRule.compression || [];
-  if (acc.length)  lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${acc.length}</b> quiet-accumulation candidates</a>`);
-  if (vol.length)  lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${vol.length}</b> abnormal-volume stocks</a>`);
-  if (frag.length) lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${frag.length}</b> thin and fragile</a>`);
-  if (comp.length) lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${comp.length}</b> with a squeezed range</a>`);
-  if (!lead.length) lead.push(`<span class="lead-chip">Nothing unusual flagged by the engine</span>`);
+  const vol = M.byRule.vol_departure || [], xs = M.byRule.xs_standout || [],
+        imp = M.byRule.price_impact || [];
+  if (vol.length) lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${vol.length}</b> far from their own normal volume</a>`);
+  if (xs.length)  lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${xs.length}</b> standing out across the market</a>`);
+  if (imp.length) lead.push(`<a class="lead-chip" href="#/alerts"><b class="n">${imp.length}</b> moving far per taka traded</a>`);
+  if (!lead.length) lead.push(`<span class="lead-chip">Nothing measured far from its own normal</span>`);
+  lead.push(`<a class="lead-chip warn-chip" href="#/research"><b>0</b> tradeable candidates — research verdict</a>`);
 
   const sList = a => a.length ? a.map(s => F.esc(s.name)).join(', ') : F.dash;
 
@@ -325,11 +325,11 @@ function heroBlock(M) {
 
 function attentionRow(a, skipId) {
   const top = a.hits.slice(0, 3);
-  /* inside a grouped list the group heading already states one reason —
-     the row then leads with the NEXT thing the engine saw, not a repeat */
   const lead = (skipId ? a.hits.filter(h => h.id !== skipId) : a.hits).concat(a.hits);
-  const why = lead.map(h => { try { return h.why(a.f); } catch (e) { return ''; } }).filter(Boolean);
-  const tags = top.map(h => `<span class="tag ${h.tone}">${F.esc(h.tag)}</span>`).join('');
+  const said = lead.map(h => { try { return h.say(a.f); } catch (e) { return ''; } }).filter(Boolean);
+  const tags = top.map(h =>
+    `<span class="tag ${h.tone}">${F.esc(h.tag)}</span>` +
+    `<span class="tag verdict v-${h.verdict}">${F.esc(h.verdict.replace('_', ' '))}</span>`).join('');
   const raw = S.mode === 'research'
     ? `<div class="att-tags">${Array.from(new Set([].concat.apply([], top.map(h => h.raw)))).slice(0, 4)
         .map(k => `<span class="tag"><span class="num">${F.esc(k)}=${F.has(a.f[k]) ? F.n(a.f[k]) : F.dash}</span></span>`).join('')}</div>` : '';
@@ -339,7 +339,7 @@ function attentionRow(a, skipId) {
       <span class="att-sym">${F.esc(a.symbol)}</span>
       <span class="att-sec">${F.esc(a.sector || 'Sector not mapped')}</span>
     </span>
-    <span class="att-why">${F.esc(why[0] || '')}
+    <span class="att-why">${F.esc(said[0] || '')}
       <span class="att-tags">${tags}</span>${raw}
     </span>
     <span class="att-move">
@@ -347,6 +347,16 @@ function attentionRow(a, skipId) {
       <span class="t">${F.cr(a.value)}</span>
     </span>
   </a>`;
+}
+
+/* the standing truth banner — shown wherever measurements are listed, so a
+   reader can never take a row for a signal */
+function ledgerBanner() {
+  return `<div class="ledger-banner">
+    <b>${F.esc(LEDGER.headline)}</b>
+    <span>Every row below is a measurement against the stock's own trailing history — not a prediction, not a recommendation, not a mechanism.</span>
+    <span class="src">${F.esc(LEDGER.source)}</span>
+  </div>`;
 }
 
 function sectorCard(s, maxVal) {
@@ -402,11 +412,12 @@ function renderHome() {
     ${heroBlock(M)}
 
     <section class="sec">
-      <div class="sec-head"><h2>WHAT NEEDS ATTENTION NOW</h2>
-        <span class="note">${M.attention.length} stocks flagged by the engine · plain reason on every row</span>
+      <div class="sec-head"><h2>MOST UNUSUAL TODAY</h2>
+        <span class="note">${M.attention.length} stocks measured as far from their own normal · ranked by size of departure</span>
         <span class="spacer"></span><a class="ev-toggle" href="#/alerts">see all ${M.attention.length}</a></div>
-      <div class="card">${att.length ? att.map(attentionRow).join('') : `<div class="empty">The engine flagged nothing in this session.</div>`}
-      ${provLine('rules read the engine feature table; no price target, no buy, no sell', 'evidence/public_engine · features/latest', 'OBSERVED', M.featAt)}</div>
+      ${ledgerBanner()}
+      <div class="card">${att.length ? att.map(attentionRow).join('') : `<div class="empty">Nothing departed far from its own normal in this session.</div>`}
+      ${provLine('measurements read straight from the engine feature table — no rule here predicts anything', 'evidence/public_engine · features/latest', 'OBSERVED', M.featAt)}</div>
     </section>
 
     <section class="sec">
@@ -467,19 +478,23 @@ function renderHome() {
 
 function renderAlerts() {
   const M = S.M;
-  const groups = ATTENTION_RULES.map(r => ({ rule: r, rows: M.byRule[r.id] || [] })).filter(g => g.rows.length);
+  const groups = OBSERVATIONS.map(r => ({ rule: r, rows: M.byRule[r.id] || [] })).filter(g => g.rows.length);
   return `<div class="wrap">
     <section class="sec" style="margin-top:0">
-      <div class="sec-head"><h2>WHAT NEEDS ATTENTION NOW</h2>
-        <span class="note">${M.attention.length} stocks · grouped by what the engine saw</span></div>
+      <div class="sec-head"><h2>MOST UNUSUAL TODAY</h2>
+        <span class="note">${M.attention.length} stocks · grouped by which measurement departed</span></div>
+      ${ledgerBanner()}
       ${groups.map(g => `
         <div class="sec" style="margin-top:14px">
           <div class="sec-head"><h2 style="letter-spacing:.06em;font-size:12.5px">${F.esc(g.rule.tag.toUpperCase())}</h2>
-            <span class="note">${g.rows.length} stock${g.rows.length === 1 ? '' : 's'} · ${F.esc(g.rule.why(g.rows[0].f))}</span></div>
+            <span class="note">${g.rows.length} stock${g.rows.length === 1 ? '' : 's'}</span>
+            <span class="spacer"></span>
+            <span class="tag verdict v-${g.rule.verdict}">${F.esc(g.rule.verdict.replace('_', ' '))}</span></div>
+          <p class="rule-note">${F.esc(g.rule.note)}</p>
           <div class="card">${g.rows.map(r => attentionRow(r, g.rule.id)).join('')}</div>
         </div>`).join('') || `<div class="card"><div class="empty">Nothing flagged.</div></div>`}
       <div class="card" style="margin-top:16px">
-        ${provLine('these are observations, not recommendations — the engine never emits buy or sell', 'features/latest + ATTENTION_RULES', 'OBSERVED', M.featAt)}
+        ${provLine('measurements only — the engine emits no buy, sell, target or stop, and no row here predicts anything', 'features/latest + OBSERVATIONS', 'OBSERVED', M.featAt)}
       </div>
     </section>
   </div>`;
@@ -621,7 +636,7 @@ function renderEvents() {
       <div class="sec-head"><h2>ENGINE EVENTS</h2>
         <span class="note">state transitions the engine recorded — an observation, never an instruction</span></div>
       <div class="card">${withState.length ? withState.map(attentionRow).join('') : '<div class="empty">No state events in this session.</div>'}
-      ${provLine('rungs 1–2 are built (volume departure, range compression, quiet accumulation); rungs 2b–5 are designed, not running', 'state engine', 'OBSERVED', M.featAt)}</div>
+      ${provLine('state-engine rungs 1–2 are built and emit states; rungs 2b–5 are designed, not running. A built rung is not a validated finding', 'state engine', 'OBSERVED', M.featAt)}</div>
     </section>
   </div>`;
 }
@@ -683,18 +698,19 @@ function renderStock() {
 
   const chg = F.has(inst.ltp) && inst.ltp > 0 ? inst.change_pct : null;
   const traded = F.has(inst.ltp) && inst.ltp > 0;
-  const hits = f ? ATTENTION_RULES.filter(r => { try { return r.test(f); } catch (e) { return false; } }) : [];
+  const hits = f ? OBSERVATIONS.filter(r => { try { return r.test(f); } catch (e) { return false; } })
+      .sort((x, y) => { try { return y.rank(f) - x.rank(f); } catch (e) { return 0; } }) : [];
 
   /* 1. WHAT IS HAPPENING — one sentence, no feature names */
   let happening;
   if (!traded) happening = 'This stock did not trade in the last session.';
-  else if (hits.length) happening = hits[0].tag + ' — ' + hits[0].why(f);
+  else if (hits.length) happening = hits[0].say(f);
   else if (Math.abs(chg || 0) >= 3) happening = `A large ${chg > 0 ? 'rise' : 'fall'} today, with nothing abnormal in how it traded.`;
   else happening = 'Trading normally. Nothing in this session departs from this stock’s own usual behaviour.';
 
   /* 2. WHY — plain reasons, ranked */
   const why = [];
-  for (const h of hits) why.push({ tone: h.tone, text: h.why(f) });
+  for (const h of hits) why.push({ tone: h.tone, text: h.say(f), verdict: h.verdict });
   if (f) {
     if (typeof f.market_relative_ret === 'number' && Math.abs(f.market_relative_ret) >= 0.02)
       why.push({ tone: f.market_relative_ret > 0 ? 'info' : 'neg', text: FEATURES.market_relative_ret.say(f.market_relative_ret) });
@@ -740,13 +756,16 @@ function renderStock() {
         : 'No price printed in this session, so every comparison below is from the last session in which it did trade.'}</p>
       <div class="hero-lead">
         <button class="lead-chip" id="watch-btn" type="button">${onWatch ? '★ On your watchlist' : '☆ Watch this stock'}</button>
-        ${hits.map(h => `<span class="lead-chip ${h.tone === 'neg' ? 'neg' : ''}"><b>${F.esc(h.tag)}</b></span>`).join('')}
+        ${hits.map(h => `<span class="lead-chip ${h.tone === 'neg' ? 'neg' : ''}"><b>${F.esc(h.tag)}</b><span class="tag verdict v-${h.verdict}">${F.esc(h.verdict.replace('_', ' '))}</span></span>`).join('')}
       </div>
     </div>
 
     ${why.length ? `<section class="sec">
-      <div class="sec-head"><h2>WHY</h2><span class="note">what the engine actually saw, in order of weight</span></div>
-      <ul class="why-list">${why.slice(0, 6).map(w => `<li class="${w.tone}"><span class="b"></span><span>${F.esc(w.text)}</span></li>`).join('')}</ul>
+      <div class="sec-head"><h2>WHAT WAS MEASURED</h2>
+        <span class="note">each line is one number from the engine, restated — none of them predicts anything</span></div>
+      ${ledgerBanner()}
+      <ul class="why-list">${why.slice(0, 6).map(w => `<li class="${w.tone}"><span class="b"></span><span>${F.esc(w.text)}
+        ${w.verdict ? `<span class="tag verdict v-${w.verdict}">${F.esc(w.verdict.replace('_', ' '))}</span>` : ''}</span></li>`).join('')}</ul>
     </section>` : ''}
 
     <section class="sec">
@@ -790,10 +809,93 @@ function renderStock() {
   </div>`;
 }
 
+
+/* --------------------------- RESEARCH VERDICT ---------------------------- */
+/* Reads the committed ledger documents. The UI reports these verdicts; it does
+   not compute, soften or re-open them. */
+const LEADS = [
+  {
+    id: 'A', name: 'Sustained volume departure → negative mean return',
+    status: 'UNVALIDATED', tone: 'warn',
+    tested: 'Mean market-relative return over h = 5–10 sessions after rung1_volume_departure.',
+    evidence: 'Excess −0.44% to −1.57% at h = 10, t = −8 to −11, across ~2,000 dates, both entry conventions (2012–2024, full-sample descriptive).',
+    counter: 'Descriptive only. Never run on the sealed holdout.',
+    sample: '~2,000 dates', costs: 'Not considered.',
+    use: 'If it ever survives: an AVOIDANCE filter. Not a buy signal — there is no short selling in Bangladesh.',
+  },
+  {
+    id: 'B', name: 'F07 — abnormal volume on a market-quiet day → up-move in 3 sessions',
+    status: 'UNVALIDATED', tone: 'warn',
+    tested: 'rel_volume_z ≥ 2 on a day when ≤5% of names are abnormal-volume, against an abnormal up-move within 3 sessions.',
+    evidence: 'Hit rate 5.60% vs 2.59% volatility-matched (lift 2.16, NW t 6.6) and 3.04% shock-matched (lift 1.84). 145 distinct events, 101 symbols, 6 of 6 years.',
+    counter: 'Fails 94% of the time. Margin over PLAIN abnormal volume is NOT established — the direct between-dates test of the quiet condition gives t = 0.7.',
+    sample: '145 events / 101 symbols', costs: 'Not considered.',
+    use: 'Not tradeable. The ledger states: “not accumulation (price is not calm — the calm variant is weaker)”.',
+  },
+];
+
+const KILLED = [
+  ['P45-1', 'Quiet accumulation (abnormal volume + calm price)', 'SUBTRACTS INFORMATION — lift 1.59 vs 1.76 for plain abnormal volume; the calm condition lowers the hit rate (paired t −2.6, −6.8)'],
+  ['P45-2', 'Absorption / dip-recovered-on-volume', 'BELOW THE GATES — a hammer bar is indistinguishable from a bounce on EOD data'],
+  ['P45-3', 'Closing strength', 'NO INFORMATION — 1.38 and 1.04'],
+  ['P45-5', 'Persistence (second abnormal-volume day)', 'DIES AT THE INCREMENTAL GATE — NW t 2.67 against a t ≥ 3 gate. Nearest miss in the phase'],
+  ['P45-7', 'Compression → volume', 'UNMEASURABLE — 213 occurrences'],
+  ['P45-8', 'Any footprint → limit-up', 'NONE PASSES'],
+];
+
+function renderResearch() {
+  const M = S.M;
+  return `<div class="wrap">
+    <section class="sec" style="margin-top:0">
+      <div class="sec-head"><h2>RESEARCH VERDICT</h2>
+        <span class="note">what this system actually knows, and what it does not</span></div>
+      <div class="hero t-warn">
+        <div class="hero-phase"><span>TRADEABLE CANDIDATES</span></div>
+        <div class="hero-state">NONE</div>
+        <p class="hero-read">Nothing in this product is a signal. Two leads are carried, both UNVALIDATED,
+        both waiting on a sealed holdout that has never been opened. Everything else listed below was
+        tested and killed. The UI is forbidden from showing a killed shape as a finding.</p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2>CARRIED — awaiting the sealed holdout</h2></div>
+      ${LEADS.map(l => `<div class="card" style="margin-bottom:12px">
+        <div class="ev-group">
+          <h4>LEAD ${F.esc(l.id)} <span class="tag verdict v-${l.status}">${F.esc(l.status)}</span></h4>
+          <div class="ev-item"><span class="ev-label"><b>${F.esc(l.name)}</b></span><span></span></div>
+          <div class="ev-item"><span><span class="ev-label">What is being tested</span><br><span class="ev-say">${F.esc(l.tested)}</span></span><span></span></div>
+          <div class="ev-item"><span><span class="ev-label">Evidence</span><br><span class="ev-say">${F.esc(l.evidence)}</span></span><span></span></div>
+          <div class="ev-item"><span><span class="ev-label">Counter-evidence</span><br><span class="ev-say neg">${F.esc(l.counter)}</span></span><span></span></div>
+          <div class="ev-item"><span class="ev-label">Sample size</span><span class="ev-val">${F.esc(l.sample)}</span></div>
+          <div class="ev-item"><span class="ev-label">Costs considered?</span><span class="ev-val neg">${F.esc(l.costs)}</span></div>
+          <div class="ev-item"><span><span class="ev-label">Use if it survives</span><br><span class="ev-say">${F.esc(l.use)}</span></span><span></span></div>
+        </div>
+      </div>`).join('')}
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2>KILLED — may never reappear as a finding</h2>
+        <span class="note">a rejected idea does not come back wearing a new name</span></div>
+      <div class="card scroll-x">
+        <table class="tbl"><thead><tr><th>ID</th><th>SHAPE</th><th>WHY IT DIED</th></tr></thead>
+        <tbody>${KILLED.map(k => `<tr>
+          <td class="sym">${F.esc(k[0])}</td>
+          <td>${F.esc(k[1])}</td>
+          <td class="muted" style="white-space:normal">${F.esc(k[2])}</td></tr>`).join('')}</tbody></table>
+      </div>
+      <div class="card" style="margin-top:12px">
+        ${provLine('verbatim from the committed ledger — this screen reports verdicts, it does not compute them', 'SURVIVING_RESEARCH_LEADS.md · REJECTED_CANDIDATES.md · RESEARCH_STATUS.md', 'OBSERVED', null)}
+      </div>
+    </section>
+  </div>`;
+}
+
 const ROUTES = {
   home: renderHome, market: renderMarket, sectors: renderSectors, radar: renderRadar,
   watchlist: renderWatchlist, alerts: renderAlerts, events: renderEvents,
   evidence: renderEvidence, trust: renderTrust, stock: renderStock,
+  research: renderResearch,
 };
 
 /* ============================================================================
