@@ -1,30 +1,21 @@
 /* Read-only UI bridge for captured public/live layers. No signal logic here. */
 'use strict';
 
-/* Remove the UI-invented compound "quiet accumulation" rule. Research truth
-   comes from the engine/ledger, not from a browser-side threshold combination. */
-if (typeof ATTENTION_RULES !== 'undefined') {
-  for (let i = ATTENTION_RULES.length - 1; i >= 0; i--) {
-    if (ATTENTION_RULES[i] && ATTENTION_RULES[i].id === 'accumulation') ATTENTION_RULES.splice(i, 1);
-  }
-}
-if (typeof FEATURES !== 'undefined' && FEATURES.accumulation_proxy) {
-  FEATURES.accumulation_proxy.label = 'One-sided activity proxy';
-  FEATURES.accumulation_proxy.say = v => v >= 0.5 ? 'Activity is skewed to one side without matching price movement.'
-    : v <= -0.5 ? 'Activity is skewed the other way without matching price movement.'
-    : 'No strong one-sided activity reading.';
-}
+/* Nothing is patched into the shell from here.
 
-/* Keep the old Engine Events screen honest without rewriting the shell. */
-if (typeof renderEvents === 'function') {
-  const _eventsCore = renderEvents;
-  renderEvents = function () {
-    return _eventsCore().replace(
-      'rungs 1–2 are built (volume departure, range compression, quiet accumulation); rungs 2b–5 are designed, not running',
-      'stored engine events and features only; this UI does not create a second research engine'
-    );
-  };
-}
+   This file used to reach into the shell's globals at load time: it spliced the
+   invented "quiet accumulation" rule out of ATTENTION_RULES, overwrote
+   FEATURES.accumulation_proxy's label, and wrapped renderEvents to swap one
+   sentence. All three were stop-gaps written while the invented research layer
+   was still on main.
+
+   main now carries the real fix (PR #13): ATTENTION_RULES no longer exists,
+   OBSERVATIONS replaced it, accumulation_proxy is labelled for what it measures,
+   and the Engine Events provenance line is already correct. Two of those patches
+   would now be dead code; the third would silently overwrite the stricter label
+   with the weaker one, because this file loads after labels.js. So they are gone.
+
+   This file renders captured layers and does nothing else. */
 
 function clEsc(v) { return F.esc(v === null || v === undefined ? '' : String(v)); }
 function clTruth(v) { return `<span class="truth ${clEsc(v || 'OBSERVED')}">${clEsc((v || 'OBSERVED').replace('OBSERVED','OBS'))}</span>`; }

@@ -138,3 +138,51 @@ def test_shell_does_not_fill_missing_ownership_fields():
 def test_unknown_truth_badge_has_a_style():
     css = open(os.path.join(STATIC, "shell.css"), encoding="utf-8").read()
     assert ".truth.UNKNOWN" in css, "UNKNOWN renders unstyled and reads as a normal badge"
+
+
+# ──────────────────────────────── the bridge may not patch the shell at runtime
+#
+# `connected_layers.js` loads last (shell.html: labels.js → shell.js →
+# connected_layers.js). While the invented research layer was still on main this
+# file reached into the shell's globals at load time to soften it. main now
+# carries the real fix, so those patches are at best dead and at worst harmful:
+# overwriting `FEATURES.accumulation_proxy.label` from here replaces the strict
+# label ("Volume weighted toward up-closes vs down-closes") with the weaker one
+# it had before, and a clean git merge does not surface that — the two files
+# never conflict. These tests pin it.
+
+def _connected_js():
+    return open(os.path.join(STATIC, "connected_layers.js"), encoding="utf-8").read()
+
+
+def _strip_comments(js):
+    js = re.sub(r"/\*.*?\*/", "", js, flags=re.S)
+    return re.sub(r"^\s*//.*$", "", js, flags=re.M)
+
+
+def test_bridge_does_not_write_to_shell_globals():
+    """No assignment into FEATURES / OBSERVATIONS / a shell render function."""
+    code = _strip_comments(_connected_js())
+    for target in ("FEATURES.", "OBSERVATIONS", "LEDGER", "FORBIDDEN_CLAIMS"):
+        assert target not in code, (
+            f"connected_layers.js touches {target}; it loads after labels.js, "
+            "so anything it writes silently wins over the shell's own definition"
+        )
+    assert not re.search(r"^\s*render[A-Za-z]+\s*=", code, flags=re.M), \
+        "connected_layers.js reassigns a shell render function"
+
+
+def test_bridge_does_not_reference_the_removed_rule_table():
+    """ATTENTION_RULES no longer exists; a live reference to it is a stale patch."""
+    code = _strip_comments(_connected_js())
+    assert "ATTENTION_RULES" not in code, \
+        "connected_layers.js still manipulates ATTENTION_RULES, which main removed"
+
+
+def test_strict_feature_label_survives_every_loaded_script():
+    """The label the reader sees must be the one labels.js defines, not a softer one."""
+    labels = open(os.path.join(STATIC, "labels.js"), encoding="utf-8").read()
+    assert "Volume weighted toward up-closes vs down-closes" in labels
+    for weak in ("One-sided activity proxy", "Quiet buying signature"):
+        assert weak not in _strip_comments(_connected_js()), \
+            f"connected_layers.js reintroduces the label {weak!r}"
