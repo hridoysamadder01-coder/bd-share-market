@@ -382,10 +382,22 @@ def load_bullbd(root: str, as_of: str) -> List[SourceClaim]:
     return out
 
 
-def load_ecosoft(directory: str, as_of: str) -> List[SourceClaim]:
-    """The owner's own broker terminal, from the committed HAR probes. TradingCode only."""
+_ECOSOFT_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+
+def load_ecosoft(directory: str, as_of: Optional[str] = None) -> List[SourceClaim]:
+    """The owner's own broker terminal, from the committed HAR probes. TradingCode only.
+
+    Each probe file is dated from its own filename rather than from one argument.
+    The directory grows as the account holder records more sessions, and stamping a
+    2026-09-08 recording with 2026-09-07 because that was the first one would put a
+    false observation date on real evidence — the one thing an `as_of` exists to
+    carry. `as_of` remains available as a fallback for a file whose name has no date.
+    """
     out = []
     for path in sorted(glob.glob(os.path.join(directory, "*.ndjson"))):
+        m = _ECOSOFT_DATE.search(os.path.basename(path))
+        file_as_of = m.group(1) if m else (as_of or "unknown")
         seen = set()
         with open(path, encoding="utf-8") as fh:
             for line in fh:
@@ -408,7 +420,7 @@ def load_ecosoft(directory: str, as_of: str) -> List[SourceClaim]:
                 # name. Reading it as one would be a guess, so the exchange is
                 # left unknown here and resolved by corroboration in build_spine.
                 out.append(SourceClaim(
-                    source="ecosoft_ost", code_raw=code, exchange=None, as_of=as_of,
+                    source="ecosoft_ost", code_raw=code, exchange=None, as_of=file_as_of,
                     evidence=os.path.relpath(path, ROOT),
                     source_exchange_code=_s(p.get("StockExchange"))))
     return out
@@ -640,7 +652,21 @@ def build_spine(claims: Sequence[SourceClaim]) -> Spine:
                 corroboration=("company names agree across the exchanges" if len(names) == 1 and names
                                else "uncorroborated — no shared field beyond the trading code"))
 
-    unresolved: List[Dict[str, Any]] = list(unplaced)
+    # One entry per unresolvable INSTRUMENT, not one per file that mentions it.
+    # The EcoSoft evidence directory grows a probe per recorded session, so a code
+    # the opaque exchange enum cannot place appeared once per recording and made
+    # the unresolved count climb with the evidence rather than with the problem.
+    # Sources are merged so nothing about where the claim came from is lost.
+    unresolved: List[Dict[str, Any]] = []
+    _seen_unresolved: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for u in unplaced:
+        k = (str(u.get("key")), str(u.get("reason")))
+        prior = _seen_unresolved.get(k)
+        if prior is None:
+            _seen_unresolved[k] = dict(u)
+            unresolved.append(_seen_unresolved[k])
+        else:
+            prior["sources"] = sorted(set(prior.get("sources") or []) | set(u.get("sources") or []))
     for key, lst in sorted(listings.items()):
         if not lst.resolved:
             unresolved.append({"key": key, "reason": "identity attribute conflict",
@@ -673,7 +699,7 @@ def collect_claims(public_dir: str = DEFAULT_PUBLIC, engine_dir: str = DEFAULT_E
     claims += load_stocknow(engine_dir, eng_date)
     claims += load_cse(engine_dir, eng_date)
     claims += load_bullbd(engine_dir, eng_date)
-    claims += load_ecosoft(ecosoft_dir, "2026-09-07")
+    claims += load_ecosoft(ecosoft_dir)
     claims.sort(key=lambda c: (c.source, c.exchange, c.code, c.as_of))
     return claims
 

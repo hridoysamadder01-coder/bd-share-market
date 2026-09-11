@@ -5,7 +5,7 @@
    "2026-09-07",
    "2026-09-08"
   ],
-  "claims": 2562,
+  "claims": 2563,
   "companies": [
    {
     "corroboration": "company names agree across the exchanges",
@@ -124705,7 +124705,7 @@
   "unresolved": 0,
   "unresolved_symbols": []
  },
- "generated_utc": "2026-09-08T04:03:36.506240+00:00",
+ "generated_utc": "2026-09-08T09:05:55.668418+00:00",
  "schema": "identity_spine/1",
- "spine_sha256": "c516aed2940273ee524c4b2cca9e715ee02582879c4237b46996dd13631f9bc4"
+ "spine_sha256": "60f413741266843f4cabcff25f71f65738e23fa0c12eb7caecbad8e1c11937a8"
 }

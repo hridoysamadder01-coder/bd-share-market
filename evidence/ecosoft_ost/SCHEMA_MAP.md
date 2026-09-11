@@ -194,3 +194,86 @@ One HAR (or kit run) recorded **during continuous trading** with 3–5 symbols c
 That single recording resolves the timestamp convention, measures how often the book actually changes
 between 11-s polls, and gives the microstructure engine its first non-static broker-terminal frames.
 Nothing in this adapter needs to change for that — `frames_from_probe()` already replays it.
+
+---
+
+# Recording 3 — 2026-09-08 08:57 UTC, AAMRANET (`rich_sensor_probe_2026-09-08T0857Z_AAMRANET.ndjson`)
+
+Saved by the account holder from their own logged-in browser, 2026-09-08
+08:57:01 → **09:18:39** UTC (14:57 → 15:18 Dhaka). **119** `Order/MarketDepth`
+polls at a **11.0 s** median gap over **21.6 minutes**, plus `CompanyInfo`, `TradingCodes` and one third-party chat
+widget the probe kept because its body happened to carry two market-looking keys.
+Processed by `seeing/capture/har_probe.py`: **122 records kept, 33 sensitive keys
+stripped, `leaked_keys()` = [] (0 leaked)**. (An earlier 7-poll export of this same
+session was committed first and then replaced by this superset — same recording,
+saved longer. Two files would have claimed AAMRANET twice in the identity spine.) The raw HAR is NOT committed — it
+carries request cookies and authorization that the probe never reads.
+
+## What it settles
+
+**1. `Depth.DateTime` is Dhaka local time carrying a spurious `Z`, and it is the
+book's LAST-MODIFICATION time — not the response time.**
+
+The earlier recording left this open ("tz convention unresolved on a closed-market
+recording"). Two independent proofs from this one:
+
+| field | value | poll received | reading |
+|---|---|---|---|
+| `Depth.DateTime` | `2026-09-08T14:11:54.494Z` | 08:57:01 UTC = 14:57 Dhaka | as UTC it would be 20:11 Dhaka — **in the future**. Impossible. As Dhaka it is 14:11:54, **~2 min after the 14:10 close** — exactly when the book last changed |
+| `Company.UpdateDateTime` | `2026-09-08T14:46:54.917` | 08:56:55 UTC = 14:56 Dhaka | **no `Z` at all**, and 10 minutes before the poll in Dhaka terms |
+
+Both fields are Dhaka wall-clock. The `Z` on `Depth.DateTime` is wrong and must be
+stripped, not honoured, or every EcoSoft frame lands 6 hours in the future.
+
+**2. The 10-level book holds on a second, very different symbol.** AAMRANET is a
+Z-category name at 17.70; the first recording was CITYGENINS. Both deliver 10 bid
+rows and a full ask ladder in the same shape, so the 10-row cap is the terminal's,
+not one symbol's accident.
+
+**3. The public source has no equivalent stamp — checked, not assumed.** The
+LankaBD depth payload (`evidence/capture/2026-09-06`, raw record decoded) carries
+`openPrice`, `lastTradePrice`, `yesterdayClosePrice`, two HTML tables — and **no
+last-modified field**. Its only date is the HTTP `Date` response header. There is
+no way to know the public book changed without hashing the body.
+
+That difference is the whole explanation of the 2026-09-08 session rejection:
+polling a source with no staleness stamp at 10.3 s when it refreshes every ~43 s
+produces 85 % byte-identical payloads and there is no signal to poll *on*. EcoSoft
+publishes the stamp, so the same fast polling would be deduped exactly.
+
+## What it does NOT settle
+
+**All 119 polls are byte-identical** (`distinct body_sha256 = 1`), across 21.6
+minutes, and `Depth.DateTime` stays pinned at `14:11:54.494` in every one of them
+while `Trade` (293) and `Volume` (261,037) never move. The market closed at 14:10
+Dhaka and this was recorded from 14:57, so a frozen book proves nothing about the
+live update rate.
+
+That length is itself worth having as a **negative control**: over 119 responses
+the last-modification stamp did not tick with the response, which is the direct
+confirmation that `Depth.DateTime` is the book's change time and not a server
+clock. A single-digit sample could not have shown that. **Whether EcoSoft's book actually changes faster than
+the public ~43 s during an open market remains UNKNOWN**, and only a recording
+inside 10:00–14:00 Dhaka can answer it. That is still the open item.
+
+## The AAMRANET book as recorded (all 7 polls identical)
+
+`Ltp 17.7 · Open 17.4 · High 18.6 · Low 17.4 · Ycp 17.4 · Trade 293 · Volume 261,037 · Value 4.687 mn`
+
+| Buy volume | Buy price | Sell price | Sell volume |
+|---|---|---|---|
+| 6,857 | 17.5 | 17.7 | 5,531 |
+| 10,486 | 17.4 | 17.9 | 2,000 |
+| 22,500 | 17.3 | 18.0 | 8,801 |
+| 6,800 | 17.2 | 18.1 | 5,580 |
+| 600 | 17.1 | 18.2 | 2,941 |
+| 2,906 | 17.0 | 18.3 | 2,999 |
+| 805 | 16.9 | 18.4 | 837 |
+| 1,905 | 16.8 | 18.5 | 1,550 |
+| 1,005 | 16.7 | 18.6 | 4,407 |
+| 5 | 16.6 | 18.7 | 2,280 |
+
+Note the spread: best bid 17.5 against best ask 17.7 — **2 ticks**, with the LTP
+sitting on the ask. A public 5-level view would have shown rows 1–5 only and
+missed the 22,500 wall three levels down, which is the largest single quantity in
+the book.

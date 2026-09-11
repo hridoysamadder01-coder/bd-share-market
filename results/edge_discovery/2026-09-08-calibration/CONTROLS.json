@@ -1,0 +1,1554 @@
+[
+ {
+  "C1_null_scores": {
+   "clean": true,
+   "constant": 0.5,
+   "random": 0.51311,
+   "up_rate": 0.42764
+  },
+  "C2_past_move": {
+   "already_moved_confound": false,
+   "candidate": 0.692,
+   "mid_change_1_ticks": 0.48734,
+   "mid_change_w_ticks": 0.45447
+  },
+  "C3_per_symbol": {
+   "above_half": 14,
+   "max": 0.82964,
+   "median": 0.70518,
+   "min": 0.57773,
+   "per_symbol": [
+    {
+     "auc": 0.70868,
+     "note": "",
+     "rows": 78,
+     "symbol": "BEXIMCO"
+    },
+    {
+     "auc": 0.82964,
+     "note": "",
+     "rows": 98,
+     "symbol": "BRACBANK"
+    },
+    {
+     "auc": 0.70491,
+     "note": "",
+     "rows": 226,
+     "symbol": "BXPHARMA"
+    },
+    {
+     "auc": 0.70546,
+     "note": "",
+     "rows": 150,
+     "symbol": "GP"
+    },
+    {
+     "auc": 0.71421,
+     "note": "",
+     "rows": 138,
+     "symbol": "IPDC"
+    },
+    {
+     "auc": 0.6624,
+     "note": "",
+     "rows": 171,
+     "symbol": "LOVELLO"
+    },
+    {
+     "auc": 0.61003,
+     "note": "",
+     "rows": 211,
+     "symbol": "MALEKSPIN"
+    },
+    {
+     "auc": 0.62713,
+     "note": "",
+     "rows": 109,
+     "symbol": "ORIONPHARM"
+    },
+    {
+     "auc": 0.68199,
+     "note": "",
+     "rows": 83,
+     "symbol": "POWERGRID"
+    },
+    {
+     "auc": 0.73648,
+     "note": "",
+     "rows": 145,
+     "symbol": "PTL"
+    },
+    {
+     "auc": 0.57773,
+     "note": "",
+     "rows": 173,
+     "symbol": "SAIHAMCOT"
+    },
+    {
+     "auc": 0.81995,
+     "note": "",
+     "rows": 128,
+     "symbol": "SAIHAMTEX"
+    },
+    {
+     "auc": 0.69857,
+     "note": "",
+     "rows": 146,
+     "symbol": "SHARPIND"
+    },
+    {
+     "auc": 0.76153,
+     "note": "",
+     "rows": 141,
+     "symbol": "SQURPHARMA"
+    }
+   ],
+   "symbols_measured": 14
+  },
+  "C4_time_split": {
+   "first_half": {
+    "auc": 0.69073,
+    "rows": 999
+   },
+   "second_half": {
+    "auc": 0.68885,
+    "rows": 998
+   },
+   "stable": true
+  },
+  "C5_beats_strongest_established": false,
+  "C5_incremental_vs_baselines": [
+   {
+    "a": "tlpi_2",
+    "auc_a": 0.692,
+    "auc_b": 0.68143,
+    "b": "imb_l1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.02744,
+    "ci_lo": -0.00658,
+    "diff": 0.01057,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.8955,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_2",
+    "auc_a": 0.692,
+    "auc_b": 0.58386,
+    "b": "imb_top5",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.15478,
+    "ci_lo": 0.06968,
+    "diff": 0.10814,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_2",
+    "auc_a": 0.692,
+    "auc_b": 0.60252,
+    "b": "imb_weighted",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.13236,
+    "ci_lo": 0.05212,
+    "diff": 0.08949,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_2",
+    "auc_a": 0.692,
+    "auc_b": 0.5277,
+    "b": "one_frame_pressure",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.19673,
+    "ci_lo": 0.13643,
+    "diff": 0.1643,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_2",
+    "auc_a": 0.70435,
+    "auc_b": 0.63092,
+    "b": "signed_int_volume",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.12456,
+    "ci_lo": 0.0319,
+    "diff": 0.07343,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.9995,
+    "rows": 1330
+   },
+   {
+    "a": "tlpi_2",
+    "auc_a": 0.692,
+    "auc_b": 0.68143,
+    "b": "e1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.02744,
+    "ci_lo": -0.00658,
+    "diff": 0.01057,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.8955,
+    "rows": 1997
+   }
+  ],
+  "C5_strongest_baseline": {
+   "a": "tlpi_2",
+   "auc_a": 0.692,
+   "auc_b": 0.68143,
+   "b": "imb_l1",
+   "block_col": "symbol",
+   "blocks": 14,
+   "ci_hi": 0.02744,
+   "ci_lo": -0.00658,
+   "diff": 0.01057,
+   "established": false,
+   "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+   "p_diff_gt_0": 0.8955,
+   "rows": 1997
+  },
+  "C6_episode_anchored": {
+   "auc_all_rows": 0.692,
+   "auc_episode_anchored": 0.69003,
+   "episodes": 681,
+   "rows": 1997
+  },
+  "C7_ablation": {
+   "by_population": [
+    {
+     "a": "tlpi_2",
+     "auc_a": 0.67962,
+     "auc_b": 0.6556,
+     "b": "tlpi_2_rank",
+     "block_col": "symbol",
+     "blocks": 14,
+     "ci_hi": 0.03502,
+     "ci_lo": 0.01533,
+     "diff": 0.02403,
+     "established": true,
+     "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+     "p_diff_gt_0": 1.0,
+     "population": "gapped",
+     "rows": 717
+    },
+    {
+     "a": "tlpi_2",
+     "auc_a": 0.89797,
+     "auc_b": 0.88333,
+     "b": "tlpi_2_rank",
+     "block_col": "symbol",
+     "blocks": 11,
+     "ci_hi": 0.04274,
+     "ci_lo": -0.00249,
+     "diff": 0.01463,
+     "established": false,
+     "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+     "p_diff_gt_0": 0.88,
+     "population": "slightly_gapped",
+     "rows": 101
+    },
+    {
+     "a": "tlpi_2",
+     "auc_a": 0.68285,
+     "auc_b": 0.68271,
+     "b": "tlpi_2_rank",
+     "block_col": "symbol",
+     "blocks": 14,
+     "ci_hi": 0.00048,
+     "ci_lo": 0.0,
+     "diff": 0.00014,
+     "established": false,
+     "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+     "p_diff_gt_0": 0.6375,
+     "population": "symmetric",
+     "rows": 1179
+    }
+   ],
+   "candidate": "tlpi_2",
+   "pooled": {
+    "a": "tlpi_2",
+    "auc_a": 0.692,
+    "auc_b": 0.68316,
+    "b": "tlpi_2_rank",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.01573,
+    "ci_lo": 0.0034,
+    "diff": 0.00884,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   "twin": "tlpi_2_rank"
+  },
+  "candidate": "tlpi_2",
+  "eligible_rows": 1997,
+  "horizon_s": 180
+ },
+ {
+  "C1_null_scores": {
+   "clean": true,
+   "constant": 0.5,
+   "random": 0.51311,
+   "up_rate": 0.42764
+  },
+  "C2_past_move": {
+   "already_moved_confound": false,
+   "candidate": 0.67596,
+   "mid_change_1_ticks": 0.48734,
+   "mid_change_w_ticks": 0.45447
+  },
+  "C3_per_symbol": {
+   "above_half": 14,
+   "max": 0.79954,
+   "median": 0.70457,
+   "min": 0.55602,
+   "per_symbol": [
+    {
+     "auc": 0.69358,
+     "note": "",
+     "rows": 78,
+     "symbol": "BEXIMCO"
+    },
+    {
+     "auc": 0.79954,
+     "note": "",
+     "rows": 98,
+     "symbol": "BRACBANK"
+    },
+    {
+     "auc": 0.70737,
+     "note": "",
+     "rows": 226,
+     "symbol": "BXPHARMA"
+    },
+    {
+     "auc": 0.74652,
+     "note": "",
+     "rows": 150,
+     "symbol": "GP"
+    },
+    {
+     "auc": 0.73342,
+     "note": "",
+     "rows": 138,
+     "symbol": "IPDC"
+    },
+    {
+     "auc": 0.65786,
+     "note": "",
+     "rows": 171,
+     "symbol": "LOVELLO"
+    },
+    {
+     "auc": 0.58087,
+     "note": "",
+     "rows": 211,
+     "symbol": "MALEKSPIN"
+    },
+    {
+     "auc": 0.59822,
+     "note": "",
+     "rows": 109,
+     "symbol": "ORIONPHARM"
+    },
+    {
+     "auc": 0.7114,
+     "note": "",
+     "rows": 83,
+     "symbol": "POWERGRID"
+    },
+    {
+     "auc": 0.70176,
+     "note": "",
+     "rows": 145,
+     "symbol": "PTL"
+    },
+    {
+     "auc": 0.55602,
+     "note": "",
+     "rows": 173,
+     "symbol": "SAIHAMCOT"
+    },
+    {
+     "auc": 0.78924,
+     "note": "",
+     "rows": 128,
+     "symbol": "SAIHAMTEX"
+    },
+    {
+     "auc": 0.69093,
+     "note": "",
+     "rows": 146,
+     "symbol": "SHARPIND"
+    },
+    {
+     "auc": 0.77898,
+     "note": "",
+     "rows": 141,
+     "symbol": "SQURPHARMA"
+    }
+   ],
+   "symbols_measured": 14
+  },
+  "C4_time_split": {
+   "first_half": {
+    "auc": 0.68754,
+    "rows": 999
+   },
+   "second_half": {
+    "auc": 0.66159,
+    "rows": 998
+   },
+   "stable": true
+  },
+  "C5_beats_strongest_established": false,
+  "C5_incremental_vs_baselines": [
+   {
+    "a": "tlpi_1",
+    "auc_a": 0.67596,
+    "auc_b": 0.68143,
+    "b": "imb_l1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.02274,
+    "ci_lo": -0.03403,
+    "diff": -0.00547,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.3575,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_1",
+    "auc_a": 0.67596,
+    "auc_b": 0.58386,
+    "b": "imb_top5",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.1314,
+    "ci_lo": 0.05585,
+    "diff": 0.0921,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_1",
+    "auc_a": 0.67596,
+    "auc_b": 0.60252,
+    "b": "imb_weighted",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.10982,
+    "ci_lo": 0.03933,
+    "diff": 0.07344,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_1",
+    "auc_a": 0.67596,
+    "auc_b": 0.5277,
+    "b": "one_frame_pressure",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.17998,
+    "ci_lo": 0.11731,
+    "diff": 0.14826,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "tlpi_1",
+    "auc_a": 0.6861,
+    "auc_b": 0.63092,
+    "b": "signed_int_volume",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.11475,
+    "ci_lo": 0.00568,
+    "diff": 0.05518,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.988,
+    "rows": 1330
+   },
+   {
+    "a": "tlpi_1",
+    "auc_a": 0.67596,
+    "auc_b": 0.68143,
+    "b": "e1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.02274,
+    "ci_lo": -0.03403,
+    "diff": -0.00547,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.3575,
+    "rows": 1997
+   }
+  ],
+  "C5_strongest_baseline": {
+   "a": "tlpi_1",
+   "auc_a": 0.67596,
+   "auc_b": 0.68143,
+   "b": "imb_l1",
+   "block_col": "symbol",
+   "blocks": 14,
+   "ci_hi": 0.02274,
+   "ci_lo": -0.03403,
+   "diff": -0.00547,
+   "established": false,
+   "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+   "p_diff_gt_0": 0.3575,
+   "rows": 1997
+  },
+  "C6_episode_anchored": {
+   "auc_all_rows": 0.67596,
+   "auc_episode_anchored": 0.64702,
+   "episodes": 663,
+   "rows": 1997
+  },
+  "C7_ablation": {
+   "by_population": [
+    {
+     "a": "tlpi_1",
+     "auc_a": 0.68095,
+     "auc_b": 0.63302,
+     "b": "tlpi_1_rank",
+     "block_col": "symbol",
+     "blocks": 14,
+     "ci_hi": 0.08057,
+     "ci_lo": 0.02623,
+     "diff": 0.04793,
+     "established": true,
+     "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+     "p_diff_gt_0": 0.9995,
+     "population": "gapped",
+     "rows": 717
+    },
+    {
+     "a": "tlpi_1",
+     "auc_a": 0.86992,
+     "auc_b": 0.85163,
+     "b": "tlpi_1_rank",
+     "block_col": "symbol",
+     "blocks": 11,
+     "ci_hi": 0.07633,
+     "ci_lo": -0.02302,
+     "diff": 0.01829,
+     "established": false,
+     "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+     "p_diff_gt_0": 0.817,
+     "population": "slightly_gapped",
+     "rows": 101
+    },
+    {
+     "a": "tlpi_1",
+     "auc_a": 0.65869,
+     "auc_b": 0.65815,
+     "b": "tlpi_1_rank",
+     "block_col": "symbol",
+     "blocks": 14,
+     "ci_hi": 0.00223,
+     "ci_lo": 0.0,
+     "diff": 0.00054,
+     "established": false,
+     "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+     "p_diff_gt_0": 0.7995,
+     "population": "symmetric",
+     "rows": 1179
+    }
+   ],
+   "candidate": "tlpi_1",
+   "pooled": {
+    "a": "tlpi_1",
+    "auc_a": 0.67596,
+    "auc_b": 0.65911,
+    "b": "tlpi_1_rank",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.03092,
+    "ci_lo": 0.00598,
+    "diff": 0.01685,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.9995,
+    "rows": 1997
+   },
+   "twin": "tlpi_1_rank"
+  },
+  "candidate": "tlpi_1",
+  "eligible_rows": 1997,
+  "horizon_s": 180
+ },
+ {
+  "C1_null_scores": {
+   "clean": true,
+   "constant": 0.5,
+   "random": 0.51311,
+   "up_rate": 0.42764
+  },
+  "C2_past_move": {
+   "already_moved_confound": false,
+   "candidate": 0.65798,
+   "mid_change_1_ticks": 0.48734,
+   "mid_change_w_ticks": 0.45447
+  },
+  "C3_per_symbol": {
+   "above_half": 14,
+   "max": 0.81125,
+   "median": 0.66463,
+   "min": 0.56243,
+   "per_symbol": [
+    {
+     "auc": 0.76453,
+     "note": "",
+     "rows": 78,
+     "symbol": "BEXIMCO"
+    },
+    {
+     "auc": 0.81125,
+     "note": "",
+     "rows": 98,
+     "symbol": "BRACBANK"
+    },
+    {
+     "auc": 0.58304,
+     "note": "",
+     "rows": 226,
+     "symbol": "BXPHARMA"
+    },
+    {
+     "auc": 0.62683,
+     "note": "",
+     "rows": 150,
+     "symbol": "GP"
+    },
+    {
+     "auc": 0.65361,
+     "note": "",
+     "rows": 138,
+     "symbol": "IPDC"
+    },
+    {
+     "auc": 0.62461,
+     "note": "",
+     "rows": 171,
+     "symbol": "LOVELLO"
+    },
+    {
+     "auc": 0.62498,
+     "note": "",
+     "rows": 211,
+     "symbol": "MALEKSPIN"
+    },
+    {
+     "auc": 0.70126,
+     "note": "",
+     "rows": 109,
+     "symbol": "ORIONPHARM"
+    },
+    {
+     "auc": 0.64461,
+     "note": "",
+     "rows": 83,
+     "symbol": "POWERGRID"
+    },
+    {
+     "auc": 0.74645,
+     "note": "",
+     "rows": 145,
+     "symbol": "PTL"
+    },
+    {
+     "auc": 0.56243,
+     "note": "",
+     "rows": 173,
+     "symbol": "SAIHAMCOT"
+    },
+    {
+     "auc": 0.78228,
+     "note": "",
+     "rows": 128,
+     "symbol": "SAIHAMTEX"
+    },
+    {
+     "auc": 0.67565,
+     "note": "",
+     "rows": 146,
+     "symbol": "SHARPIND"
+    },
+    {
+     "auc": 0.68509,
+     "note": "",
+     "rows": 141,
+     "symbol": "SQURPHARMA"
+    }
+   ],
+   "symbols_measured": 14
+  },
+  "C4_time_split": {
+   "first_half": {
+    "auc": 0.62532,
+    "rows": 999
+   },
+   "second_half": {
+    "auc": 0.68455,
+    "rows": 998
+   },
+   "stable": false
+  },
+  "C5_beats_strongest_established": false,
+  "C5_incremental_vs_baselines": [
+   {
+    "a": "geom_divergence",
+    "auc_a": 0.65798,
+    "auc_b": 0.67913,
+    "b": "imb_l1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": -0.00092,
+    "ci_lo": -0.03843,
+    "diff": -0.02115,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.018,
+    "rows": 1978
+   },
+   {
+    "a": "geom_divergence",
+    "auc_a": 0.65798,
+    "auc_b": 0.58535,
+    "b": "imb_top5",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.13745,
+    "ci_lo": 0.0178,
+    "diff": 0.07264,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.9985,
+    "rows": 1978
+   },
+   {
+    "a": "geom_divergence",
+    "auc_a": 0.65798,
+    "auc_b": 0.60215,
+    "b": "imb_weighted",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.11803,
+    "ci_lo": 0.00056,
+    "diff": 0.05583,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.975,
+    "rows": 1978
+   },
+   {
+    "a": "geom_divergence",
+    "auc_a": 0.65798,
+    "auc_b": 0.52773,
+    "b": "one_frame_pressure",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.17021,
+    "ci_lo": 0.09769,
+    "diff": 0.13026,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1978
+   },
+   {
+    "a": "geom_divergence",
+    "auc_a": 0.67241,
+    "auc_b": 0.62978,
+    "b": "signed_int_volume",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.08822,
+    "ci_lo": 0.00191,
+    "diff": 0.04263,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.9835,
+    "rows": 1320
+   },
+   {
+    "a": "geom_divergence",
+    "auc_a": 0.65798,
+    "auc_b": 0.67913,
+    "b": "e1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": -0.00092,
+    "ci_lo": -0.03843,
+    "diff": -0.02115,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.018,
+    "rows": 1978
+   }
+  ],
+  "C5_strongest_baseline": {
+   "a": "geom_divergence",
+   "auc_a": 0.65798,
+   "auc_b": 0.67913,
+   "b": "imb_l1",
+   "block_col": "symbol",
+   "blocks": 14,
+   "ci_hi": -0.00092,
+   "ci_lo": -0.03843,
+   "diff": -0.02115,
+   "established": false,
+   "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+   "p_diff_gt_0": 0.018,
+   "rows": 1978
+  },
+  "C6_episode_anchored": {
+   "auc_all_rows": 0.65798,
+   "auc_episode_anchored": 0.64595,
+   "episodes": 676,
+   "rows": 1997
+  },
+  "C7_ablation": null,
+  "candidate": "geom_divergence",
+  "eligible_rows": 1997,
+  "horizon_s": 180
+ },
+ {
+  "C1_null_scores": {
+   "clean": true,
+   "constant": 0.5,
+   "random": 0.51311,
+   "up_rate": 0.42764
+  },
+  "C2_past_move": {
+   "already_moved_confound": false,
+   "candidate": 0.69126,
+   "mid_change_1_ticks": 0.48734,
+   "mid_change_w_ticks": 0.45447
+  },
+  "C3_per_symbol": {
+   "above_half": 14,
+   "max": 0.83988,
+   "median": 0.69731,
+   "min": 0.58966,
+   "per_symbol": [
+    {
+     "auc": 0.75623,
+     "note": "",
+     "rows": 78,
+     "symbol": "BEXIMCO"
+    },
+    {
+     "auc": 0.83988,
+     "note": "",
+     "rows": 98,
+     "symbol": "BRACBANK"
+    },
+    {
+     "auc": 0.61822,
+     "note": "",
+     "rows": 226,
+     "symbol": "BXPHARMA"
+    },
+    {
+     "auc": 0.71316,
+     "note": "",
+     "rows": 150,
+     "symbol": "GP"
+    },
+    {
+     "auc": 0.74008,
+     "note": "",
+     "rows": 138,
+     "symbol": "IPDC"
+    },
+    {
+     "auc": 0.66638,
+     "note": "",
+     "rows": 171,
+     "symbol": "LOVELLO"
+    },
+    {
+     "auc": 0.66986,
+     "note": "",
+     "rows": 211,
+     "symbol": "MALEKSPIN"
+    },
+    {
+     "auc": 0.63454,
+     "note": "",
+     "rows": 109,
+     "symbol": "ORIONPHARM"
+    },
+    {
+     "auc": 0.66483,
+     "note": "",
+     "rows": 83,
+     "symbol": "POWERGRID"
+    },
+    {
+     "auc": 0.71461,
+     "note": "",
+     "rows": 145,
+     "symbol": "PTL"
+    },
+    {
+     "auc": 0.58966,
+     "note": "",
+     "rows": 173,
+     "symbol": "SAIHAMCOT"
+    },
+    {
+     "auc": 0.77229,
+     "note": "",
+     "rows": 128,
+     "symbol": "SAIHAMTEX"
+    },
+    {
+     "auc": 0.71904,
+     "note": "",
+     "rows": 146,
+     "symbol": "SHARPIND"
+    },
+    {
+     "auc": 0.68145,
+     "note": "",
+     "rows": 141,
+     "symbol": "SQURPHARMA"
+    }
+   ],
+   "symbols_measured": 14
+  },
+  "C4_time_split": {
+   "first_half": {
+    "auc": 0.66609,
+    "rows": 999
+   },
+   "second_half": {
+    "auc": 0.71161,
+    "rows": 998
+   },
+   "stable": true
+  },
+  "C5_beats_strongest_established": false,
+  "C5_incremental_vs_baselines": [
+   {
+    "a": "c_e1_minus_market",
+    "auc_a": 0.69126,
+    "auc_b": 0.68143,
+    "b": "imb_l1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.02494,
+    "ci_lo": -0.00608,
+    "diff": 0.00983,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.869,
+    "rows": 1997
+   },
+   {
+    "a": "c_e1_minus_market",
+    "auc_a": 0.69126,
+    "auc_b": 0.58386,
+    "b": "imb_top5",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.15417,
+    "ci_lo": 0.06964,
+    "diff": 0.1074,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "c_e1_minus_market",
+    "auc_a": 0.69126,
+    "auc_b": 0.60252,
+    "b": "imb_weighted",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.13251,
+    "ci_lo": 0.04743,
+    "diff": 0.08874,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "c_e1_minus_market",
+    "auc_a": 0.69126,
+    "auc_b": 0.5277,
+    "b": "one_frame_pressure",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.19357,
+    "ci_lo": 0.1408,
+    "diff": 0.16356,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "c_e1_minus_market",
+    "auc_a": 0.70553,
+    "auc_b": 0.63092,
+    "b": "signed_int_volume",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.12415,
+    "ci_lo": 0.02842,
+    "diff": 0.0746,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.999,
+    "rows": 1330
+   },
+   {
+    "a": "c_e1_minus_market",
+    "auc_a": 0.69126,
+    "auc_b": 0.68143,
+    "b": "e1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.02494,
+    "ci_lo": -0.00608,
+    "diff": 0.00983,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.869,
+    "rows": 1997
+   }
+  ],
+  "C5_strongest_baseline": {
+   "a": "c_e1_minus_market",
+   "auc_a": 0.69126,
+   "auc_b": 0.68143,
+   "b": "imb_l1",
+   "block_col": "symbol",
+   "blocks": 14,
+   "ci_hi": 0.02494,
+   "ci_lo": -0.00608,
+   "diff": 0.00983,
+   "established": false,
+   "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+   "p_diff_gt_0": 0.869,
+   "rows": 1997
+  },
+  "C6_episode_anchored": {
+   "auc_all_rows": 0.69126,
+   "auc_episode_anchored": 0.69364,
+   "episodes": 693,
+   "rows": 1997
+  },
+  "C7_ablation": null,
+  "candidate": "c_e1_minus_market",
+  "eligible_rows": 1997,
+  "horizon_s": 180
+ },
+ {
+  "C1_null_scores": {
+   "clean": true,
+   "constant": 0.5,
+   "random": 0.51311,
+   "up_rate": 0.42764
+  },
+  "C2_past_move": {
+   "already_moved_confound": false,
+   "candidate": 0.6645,
+   "mid_change_1_ticks": 0.48734,
+   "mid_change_w_ticks": 0.45447
+  },
+  "C3_per_symbol": {
+   "above_half": 14,
+   "max": 0.83174,
+   "median": 0.65959,
+   "min": 0.57556,
+   "per_symbol": [
+    {
+     "auc": 0.81962,
+     "note": "",
+     "rows": 78,
+     "symbol": "BEXIMCO"
+    },
+    {
+     "auc": 0.80623,
+     "note": "",
+     "rows": 98,
+     "symbol": "BRACBANK"
+    },
+    {
+     "auc": 0.5773,
+     "note": "",
+     "rows": 226,
+     "symbol": "BXPHARMA"
+    },
+    {
+     "auc": 0.62207,
+     "note": "",
+     "rows": 150,
+     "symbol": "GP"
+    },
+    {
+     "auc": 0.65234,
+     "note": "",
+     "rows": 138,
+     "symbol": "IPDC"
+    },
+    {
+     "auc": 0.62376,
+     "note": "",
+     "rows": 171,
+     "symbol": "LOVELLO"
+    },
+    {
+     "auc": 0.63035,
+     "note": "",
+     "rows": 211,
+     "symbol": "MALEKSPIN"
+    },
+    {
+     "auc": 0.71053,
+     "note": "",
+     "rows": 109,
+     "symbol": "ORIONPHARM"
+    },
+    {
+     "auc": 0.63358,
+     "note": "",
+     "rows": 83,
+     "symbol": "POWERGRID"
+    },
+    {
+     "auc": 0.74837,
+     "note": "",
+     "rows": 145,
+     "symbol": "PTL"
+    },
+    {
+     "auc": 0.57556,
+     "note": "",
+     "rows": 173,
+     "symbol": "SAIHAMCOT"
+    },
+    {
+     "auc": 0.83174,
+     "note": "",
+     "rows": 128,
+     "symbol": "SAIHAMTEX"
+    },
+    {
+     "auc": 0.66683,
+     "note": "",
+     "rows": 146,
+     "symbol": "SHARPIND"
+    },
+    {
+     "auc": 0.67823,
+     "note": "",
+     "rows": 141,
+     "symbol": "SQURPHARMA"
+    }
+   ],
+   "symbols_measured": 14
+  },
+  "C4_time_split": {
+   "first_half": {
+    "auc": 0.64092,
+    "rows": 999
+   },
+   "second_half": {
+    "auc": 0.68314,
+    "rows": 998
+   },
+   "stable": true
+  },
+  "C5_beats_strongest_established": false,
+  "C5_incremental_vs_baselines": [
+   {
+    "a": "x_e1_minus_tlpi0",
+    "auc_a": 0.6645,
+    "auc_b": 0.68143,
+    "b": "imb_l1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.00614,
+    "ci_lo": -0.03725,
+    "diff": -0.01693,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.073,
+    "rows": 1997
+   },
+   {
+    "a": "x_e1_minus_tlpi0",
+    "auc_a": 0.6645,
+    "auc_b": 0.58386,
+    "b": "imb_top5",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.15404,
+    "ci_lo": 0.02609,
+    "diff": 0.08064,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.9995,
+    "rows": 1997
+   },
+   {
+    "a": "x_e1_minus_tlpi0",
+    "auc_a": 0.6645,
+    "auc_b": 0.60252,
+    "b": "imb_weighted",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.13012,
+    "ci_lo": 0.0056,
+    "diff": 0.06198,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.984,
+    "rows": 1997
+   },
+   {
+    "a": "x_e1_minus_tlpi0",
+    "auc_a": 0.6645,
+    "auc_b": 0.5277,
+    "b": "one_frame_pressure",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.18178,
+    "ci_lo": 0.1032,
+    "diff": 0.1368,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "x_e1_minus_tlpi0",
+    "auc_a": 0.67575,
+    "auc_b": 0.63092,
+    "b": "signed_int_volume",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.09172,
+    "ci_lo": 0.00225,
+    "diff": 0.04483,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.98,
+    "rows": 1330
+   },
+   {
+    "a": "x_e1_minus_tlpi0",
+    "auc_a": 0.6645,
+    "auc_b": 0.68143,
+    "b": "e1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.00614,
+    "ci_lo": -0.03725,
+    "diff": -0.01693,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.073,
+    "rows": 1997
+   }
+  ],
+  "C5_strongest_baseline": {
+   "a": "x_e1_minus_tlpi0",
+   "auc_a": 0.6645,
+   "auc_b": 0.68143,
+   "b": "imb_l1",
+   "block_col": "symbol",
+   "blocks": 14,
+   "ci_hi": 0.00614,
+   "ci_lo": -0.03725,
+   "diff": -0.01693,
+   "established": false,
+   "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+   "p_diff_gt_0": 0.073,
+   "rows": 1997
+  },
+  "C6_episode_anchored": {
+   "auc_all_rows": 0.6645,
+   "auc_episode_anchored": 0.65463,
+   "episodes": 680,
+   "rows": 1997
+  },
+  "C7_ablation": null,
+  "candidate": "x_e1_minus_tlpi0",
+  "eligible_rows": 1997,
+  "horizon_s": 180
+ },
+ {
+  "C1_null_scores": {
+   "clean": true,
+   "constant": 0.5,
+   "random": 0.51311,
+   "up_rate": 0.42764
+  },
+  "C2_past_move": {
+   "already_moved_confound": false,
+   "candidate": 0.65725,
+   "mid_change_1_ticks": 0.48734,
+   "mid_change_w_ticks": 0.45447
+  },
+  "C3_per_symbol": {
+   "above_half": 14,
+   "max": 0.75105,
+   "median": 0.66436,
+   "min": 0.56843,
+   "per_symbol": [
+    {
+     "auc": 0.68679,
+     "note": "",
+     "rows": 78,
+     "symbol": "BEXIMCO"
+    },
+    {
+     "auc": 0.75105,
+     "note": "",
+     "rows": 98,
+     "symbol": "BRACBANK"
+    },
+    {
+     "auc": 0.64451,
+     "note": "",
+     "rows": 226,
+     "symbol": "BXPHARMA"
+    },
+    {
+     "auc": 0.6688,
+     "note": "",
+     "rows": 150,
+     "symbol": "GP"
+    },
+    {
+     "auc": 0.63345,
+     "note": "",
+     "rows": 138,
+     "symbol": "IPDC"
+    },
+    {
+     "auc": 0.59633,
+     "note": "",
+     "rows": 171,
+     "symbol": "LOVELLO"
+    },
+    {
+     "auc": 0.58484,
+     "note": "",
+     "rows": 211,
+     "symbol": "MALEKSPIN"
+    },
+    {
+     "auc": 0.64159,
+     "note": "",
+     "rows": 109,
+     "symbol": "ORIONPHARM"
+    },
+    {
+     "auc": 0.65993,
+     "note": "",
+     "rows": 83,
+     "symbol": "POWERGRID"
+    },
+    {
+     "auc": 0.74329,
+     "note": "",
+     "rows": 145,
+     "symbol": "PTL"
+    },
+    {
+     "auc": 0.56843,
+     "note": "",
+     "rows": 173,
+     "symbol": "SAIHAMCOT"
+    },
+    {
+     "auc": 0.69381,
+     "note": "",
+     "rows": 128,
+     "symbol": "SAIHAMTEX"
+    },
+    {
+     "auc": 0.70641,
+     "note": "",
+     "rows": 146,
+     "symbol": "SHARPIND"
+    },
+    {
+     "auc": 0.70877,
+     "note": "",
+     "rows": 141,
+     "symbol": "SQURPHARMA"
+    }
+   ],
+   "symbols_measured": 14
+  },
+  "C4_time_split": {
+   "first_half": {
+    "auc": 0.63503,
+    "rows": 999
+   },
+   "second_half": {
+    "auc": 0.67175,
+    "rows": 998
+   },
+   "stable": true
+  },
+  "C5_beats_strongest_established": false,
+  "C5_incremental_vs_baselines": [
+   {
+    "a": "v_e1_vetoed",
+    "auc_a": 0.65725,
+    "auc_b": 0.68143,
+    "b": "imb_l1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": -0.00764,
+    "ci_lo": -0.04179,
+    "diff": -0.02418,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.0005,
+    "rows": 1997
+   },
+   {
+    "a": "v_e1_vetoed",
+    "auc_a": 0.65725,
+    "auc_b": 0.58386,
+    "b": "imb_top5",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.12473,
+    "ci_lo": 0.03279,
+    "diff": 0.07339,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "v_e1_vetoed",
+    "auc_a": 0.65725,
+    "auc_b": 0.60252,
+    "b": "imb_weighted",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.09885,
+    "ci_lo": 0.01307,
+    "diff": 0.05473,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.998,
+    "rows": 1997
+   },
+   {
+    "a": "v_e1_vetoed",
+    "auc_a": 0.65725,
+    "auc_b": 0.5277,
+    "b": "one_frame_pressure",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.16545,
+    "ci_lo": 0.10058,
+    "diff": 0.12955,
+    "established": true,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 1.0,
+    "rows": 1997
+   },
+   {
+    "a": "v_e1_vetoed",
+    "auc_a": 0.66115,
+    "auc_b": 0.63092,
+    "b": "signed_int_volume",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": 0.07701,
+    "ci_lo": -0.00614,
+    "diff": 0.03022,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.943,
+    "rows": 1330
+   },
+   {
+    "a": "v_e1_vetoed",
+    "auc_a": 0.65725,
+    "auc_b": 0.68143,
+    "b": "e1",
+    "block_col": "symbol",
+    "blocks": 14,
+    "ci_hi": -0.00764,
+    "ci_lo": -0.04179,
+    "diff": -0.02418,
+    "established": false,
+    "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+    "p_diff_gt_0": 0.0005,
+    "rows": 1997
+   }
+  ],
+  "C5_strongest_baseline": {
+   "a": "v_e1_vetoed",
+   "auc_a": 0.65725,
+   "auc_b": 0.68143,
+   "b": "imb_l1",
+   "block_col": "symbol",
+   "blocks": 14,
+   "ci_hi": -0.00764,
+   "ci_lo": -0.04179,
+   "diff": -0.02418,
+   "established": false,
+   "note": "blocks are symbol. The prereg's block is a whole SESSION; with one session this is a within-session consistency check, not the preregistered inference.",
+   "p_diff_gt_0": 0.0005,
+   "rows": 1997
+  },
+  "C6_episode_anchored": {
+   "auc_all_rows": 0.65725,
+   "auc_episode_anchored": 0.65519,
+   "episodes": 695,
+   "rows": 1997
+  },
+  "C7_ablation": null,
+  "candidate": "v_e1_vetoed",
+  "eligible_rows": 1997,
+  "horizon_s": 180
+ }
+]

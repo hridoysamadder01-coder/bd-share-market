@@ -1,0 +1,48 @@
+{
+ "run_id": "2026-09-08-bigmove",
+ "branch": "claude/big-move-ultra-push",
+ "commit": "6235e34",
+ "parent_commit": "1cb176b9063aad7504f9a9fd9fa1e6ca931f9feb",
+ "dataset": "data/raw/dse_eod_extended.parquet",
+ "dataset_hash": "2d9c77ffed30c9978068c6c5993c5dec017fdc6e1e56050ddf0fb1ca6248e609",
+ "rows": 587474,
+ "symbols": 392,
+ "date_min": "2012-10-01",
+ "date_max": "2026-01-22",
+ "sealed_holdout": [
+  "2019-01-01",
+  "2022-07-27"
+ ],
+ "reserved_from": "2026-01-25",
+ "horizons": [
+  3,
+  5,
+  10,
+  20,
+  30
+ ],
+ "bands": [
+  0.05,
+  0.08,
+  0.1,
+  0.15,
+  0.2,
+  0.3
+ ],
+ "control_draws": 20,
+ "bootstrap_draws": 400,
+ "strata": [
+  "year",
+  "liq_bucket",
+  "price_bucket",
+  "prior5_bucket"
+ ],
+ "n_candidates": 41,
+ "command": "python3 -m research.bigmove.run",
+ "elapsed_s": 687.2,
+ "note_on_provenance": "the run executed in the /home/user/bd-share-market clone, which had the protected claude/micro-evidence-data branch checked out; nothing was written there and the code, tests and artifacts live on claude/big-move-ultra-push",
+ "test_status": {
+  "tests/test_bigmove_pit.py": "13 passed",
+  "tests/test_bigmove_panel.py": "14 passed"
+ }
+}

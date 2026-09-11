@@ -3,12 +3,14 @@
 No network here — adapters are stand-ins that return canned `Fetched` objects,
 so the tests are about the engine's contract, not about any source being up.
 """
+import itertools
 import json
 import os
 
 import pytest
 
-from seeing.capture.engine import ALL_PHASES, PublicMarketEngine, SourceSpec, TRADING_PHASES
+from seeing.capture.engine import (ALL_PHASES, NEVER_POLLED, PublicMarketEngine, SourceSpec,
+                                   TRADING_PHASES)
 from seeing.capture.http_client import Fetched
 from seeing.capture.adapters.base import Parsed
 from seeing.capture.raw_store import decode_body, iter_segment, verify_store
@@ -111,6 +113,118 @@ def test_a_closed_cadence_keeps_a_source_alive_overnight_but_slower():
     assert s.due(0.0, 200.0, "CONTINUOUS") is True
     assert s.due(0.0, 200.0, "CLOSED") is False                # polite overnight
     assert s.due(0.0, 4000.0, "CLOSED") is True
+
+
+def test_a_source_that_has_never_run_is_due_even_on_a_freshly_booted_machine():
+    """"Never polled" cannot be 0.0, because 0.0 is a real monotonic reading.
+
+    `time.monotonic()` counts from boot on Linux. The whole-market engine was
+    started on a container that had been up 1359 s; every closed-market cadence
+    is 3600 s or more, so `now - 0.0` cleared none of them and the engine ran six
+    minutes making zero requests while reporting every source UNTRIED. `--once`
+    never noticed because it polls without consulting `due` at all.
+    """
+    s = SourceSpec("watch", "watch", None, 120.0, phases=TRADING_PHASES, closed_cadence_s=3600.0)
+    assert s.due(0.0, 1359.0, "CLOSED") is False               # the old initial value
+    assert s.due(NEVER_POLLED, 1359.0, "CLOSED") is True       # what "never" has to mean
+    assert s.due(NEVER_POLLED, 0.0, "CLOSED") is True          # due even at boot itself
+
+
+def test_the_engine_starts_every_source_and_symbol_as_never_polled(tmp_path):
+    eng = engine(tmp_path, [SourceSpec("s", "watch", FakeAdapter(), 3600.0),
+                            SourceSpec("d", "book", FakeAdapter(), 3600.0, per_symbol=True)],
+                 symbols=["GP", "ACI"])
+    assert eng._last["s"] == NEVER_POLLED
+    assert eng._sym_last["d"] == {"GP": NEVER_POLLED, "ACI": NEVER_POLLED}
+
+
+def test_the_cadence_loop_polls_at_once_on_a_short_uptime_clock(tmp_path, monkeypatch):
+    """The stall, end to end: a small monotonic clock must not hold the loop off.
+
+    Both an hourly whole-market source and a per-symbol one have to fire on the
+    first pass — that is the difference between a 55-minute run that captures the
+    market and one that writes nothing but heartbeats.
+    """
+    from seeing.capture import engine as engine_mod
+
+    ticks = itertools.count(1359.0, 0.001)                     # 22 minutes of uptime
+    monkeypatch.setattr(engine_mod.time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda _s: None)
+
+    watch, book = FakeAdapter(), FakeAdapter()
+    eng = engine(tmp_path,
+                 [SourceSpec("s", "watch", watch, 3600.0, phases=ALL_PHASES),
+                  SourceSpec("d", "book", book, 3600.0, per_symbol=True, phases=ALL_PHASES)],
+                 symbols=["GP", "ACI"])
+    eng.run_for(minutes=0.01)                                  # 0.6 s of the fake clock
+    assert watch.calls == [None], "an hourly source that has never run must be polled at once"
+    assert book.calls == ["GP", "ACI"], "and every symbol of a per-symbol source, once each"
+
+
+def test_a_wide_per_symbol_source_cannot_starve_the_registry_below_it(tmp_path, monkeypatch):
+    """500 symbols on a 30 s cadence used to take every slot, forever.
+
+    A sweep that wide can never be finished inside its own cadence, so one of its
+    symbols is always due; taking the first due item in registry order meant the
+    depth feed ran all session and the tape, market and block feeds below it were
+    never polled once. Invisible at 14 symbols, total at market width.
+    """
+    from seeing.capture import engine as engine_mod
+
+    ticks = itertools.count(1000.0, 0.4)                       # the real 0.4 s min-gap
+    monkeypatch.setattr(engine_mod.time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda _s: None)
+
+    wide, tape, market = FakeAdapter(), FakeAdapter(), FakeAdapter()
+    syms = [f"SYM{i:03d}" for i in range(500)]
+    eng = engine(tmp_path,
+                 [SourceSpec("depth", "book", wide, 30.0, per_symbol=True, phases=ALL_PHASES),
+                  SourceSpec("tape", "tape", tape, 180.0, phases=ALL_PHASES),
+                  SourceSpec("market", "market", market, 60.0, phases=ALL_PHASES)],
+                 symbols=syms)
+    eng.run_for(minutes=30.0)                                  # 1800 s of the fake clock
+
+    assert len(wide.calls) > 500, "the wide source still gets the bulk of the budget"
+    assert tape.calls, "but the tape below it must be polled at all"
+    assert market.calls, "and so must the market feed"
+
+
+def test_when_capacity_allows_the_split_follows_the_cadences(tmp_path, monkeypatch):
+    """Starvation is the bug; the cadence ratio is what replaces it.
+
+    The wide test above runs the registry past its capacity on purpose, and there
+    every source stretches together — a 60 s feed and a 180 s feed both come out
+    at roughly the same low rate, which is the honest answer when there is no
+    budget to divide. With room to spare the ratio is the cadences' own.
+    """
+    from seeing.capture import engine as engine_mod
+
+    ticks = itertools.count(1000.0, 0.4)
+    monkeypatch.setattr(engine_mod.time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda _s: None)
+
+    fast, slow = FakeAdapter(), FakeAdapter()
+    eng = engine(tmp_path, [SourceSpec("slow", "tape", slow, 180.0, phases=ALL_PHASES),
+                            SourceSpec("fast", "market", fast, 60.0, phases=ALL_PHASES)])
+    eng.run_for(minutes=30.0)
+    assert len(fast.calls) == pytest.approx(3 * len(slow.calls), rel=0.25), \
+        "a 60 s feed is polled about three times as often as a 180 s one"
+
+
+def test_the_scheduler_picks_the_most_overdue_work_not_the_first_listed(tmp_path):
+    fast, slow = FakeAdapter(), FakeAdapter()
+    eng = engine(tmp_path, [SourceSpec("slow", "market", slow, 600.0, phases=ALL_PHASES),
+                            SourceSpec("fast", "l1", fast, 10.0, phases=ALL_PHASES)])
+    eng._last["slow"] = 0.0                                    # 1.0 cadence late
+    eng._last["fast"] = 540.0                                  # 6.0 cadences late
+    spec, key = eng.next_due(600.0, "CLOSED")
+    assert (spec.name, key) == ("fast", None), "six cadences late beats one, listed first or not"
+
+
+def test_nothing_due_is_reported_as_nothing_not_as_the_least_stale_thing(tmp_path):
+    eng = engine(tmp_path, [SourceSpec("s", "watch", FakeAdapter(), 600.0, phases=ALL_PHASES)])
+    eng._last["s"] = 500.0
+    assert eng.next_due(600.0, "CLOSED") is None               # 100 s into a 600 s cadence
 
 
 def test_a_source_without_a_closed_cadence_uses_one_cadence_everywhere():

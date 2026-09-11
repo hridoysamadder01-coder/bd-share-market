@@ -53,6 +53,18 @@ def _is_cert_error(exc: BaseException) -> bool:
     return False
 
 
+# Backoff exists to protect a server that is struggling or telling us to slow
+# down. These two statuses are neither: they are a prompt, definitive answer
+# about the RESOURCE — this source does not carry this instrument. Sweeping a
+# 691-symbol universe against a source that only covers equities produces
+# hundreds of them in a row, and counting each one toward the exponential
+# backoff drove the whole-market run to 120 s per request: a nine-minute sweep
+# would have taken over six hours, and only because the answers arrived fast.
+# Every other non-2xx — 429, 403, 5xx — still backs off, because those are about
+# us or about the server, not about the symbol.
+NO_BACKOFF_STATUSES = frozenset({404, 410})
+
+
 @dataclass
 class PoliteClient:
     min_gap_s: float = 0.35
@@ -106,9 +118,14 @@ class PoliteClient:
                 env["final_url"] = r.url
                 env["elapsed_ms"] = int(r.elapsed.total_seconds() * 1000)
                 ok = 200 <= r.status_code < 300
-                self._consecutive_errors = 0 if ok else self._consecutive_errors + 1
+                if ok:
+                    self._consecutive_errors = 0
+                elif r.status_code not in NO_BACKOFF_STATUSES:
+                    self._consecutive_errors += 1
+                # else: neutral. A miss says nothing about the server's load, so
+                # it neither escalates a backoff nor cancels one a 429 earned.
                 if not ok:
-                    self.stats["errors"] += 1
+                    self.stats["errors"] += 1              # still counted, still a gap record
                 return Fetched(ok, r.status_code, body, env, None if ok else f"http {r.status_code}")
             except Exception as e:  # noqa: BLE001
                 if allow_tls_fallback and _is_cert_error(e) and \

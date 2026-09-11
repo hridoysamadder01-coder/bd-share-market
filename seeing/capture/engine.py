@@ -44,7 +44,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from ..clock import now_utc, session_phase, trading_date
 from .failures import SourceHealth, classify_fetch, classify_parse
@@ -53,6 +53,11 @@ from .raw_store import RawStore
 
 ALL_PHASES = ("CLOSED", "PRE_OPEN", "CONTINUOUS", "POST_CLOSE")
 TRADING_PHASES = ("PRE_OPEN", "CONTINUOUS", "POST_CLOSE")
+
+# "this source has never been polled", as a monotonic reading. Not 0.0: on Linux
+# `time.monotonic()` counts from boot, so 0.0 means "at boot", and a source with
+# an hourly cadence stays not-due for the machine's first hour of uptime.
+NEVER_POLLED = float("-inf")
 
 
 @dataclass
@@ -105,6 +110,16 @@ class SourceSpec:
         return base * max(self.cadence_scale, 1e-9)
 
     def due(self, last: float, now: float, phase: str = "CONTINUOUS") -> bool:
+        """Is this source due, given the monotonic time of its last poll?
+
+        `last` is NEVER_POLLED for a source that has not run yet, which makes the
+        first poll unconditionally due. It used to be 0.0, and 0.0 is a real
+        monotonic reading: `time.monotonic()` is time since boot on Linux, so on
+        a machine that had been up 23 minutes NOTHING with an hourly cadence was
+        due, and the whole-market engine ran 6 minutes making zero requests while
+        reporting every source UNTRIED. `--once` hid the defect because it polls
+        without asking `due` at all.
+        """
         return (now - last) >= self.cadence_for(phase)
 
     def runs_in(self, phase: str) -> bool:
@@ -131,8 +146,8 @@ class PublicMarketEngine:
                                             software_version=_git_commit())
         for s in self.specs:
             self.health[s.name] = SourceHealth(s.name)
-            self._last[s.name] = 0.0
-            self._sym_last[s.name] = {sym: 0.0 for sym in self.symbols}
+            self._last[s.name] = NEVER_POLLED
+            self._sym_last[s.name] = {sym: NEVER_POLLED for sym in self.symbols}
 
     # ------------------------------------------------------------------ one poll
     def poll(self, spec: SourceSpec, key: Optional[str] = None) -> bool:
@@ -242,6 +257,42 @@ class PublicMarketEngine:
         self.write_status()
         return self.status()
 
+    def next_due(self, now: float, phase: str) -> Optional[Tuple[SourceSpec, Optional[str]]]:
+        """The single most overdue (source, symbol) pair, measured in cadences.
+
+        Scanning the registry in list order and taking the first due item starves
+        every source below a wide per-symbol one. 691 symbols on a 30 s cadence
+        cannot be swept in 30 s, so one of them is ALWAYS due, and `dsebd_depth`
+        would take every slot for the whole session while `lankabd_depth`, the
+        tape, the market feed and the block feed were never polled once. That is
+        invisible in a 14-symbol capture and total at market width.
+
+        Overdue-ness is a ratio, `(now - last) / cadence`, so a 20 s source three
+        cadences late outranks a 3600 s one that is barely late, and no source can
+        crowd another out by sheer symbol count. When capacity runs out the whole
+        registry stretches together — depth every ~9 cadences, the market feed
+        every ~9 cadences — instead of one source running on time and the rest not
+        at all. Ties (everything at the start of a run) fall back to registry
+        order, which makes the first pass a deterministic breadth-first sweep.
+        """
+        best: Optional[Tuple[SourceSpec, Optional[str]]] = None
+        best_score = 1.0                                  # below 1.0 is not yet due
+        for spec in self.specs:
+            if spec.blocked or not spec.enabled or not spec.runs_in(phase):
+                continue
+            cad = max(spec.cadence_for(phase), 1e-9)
+            if spec.per_symbol:
+                last_by = self._sym_last[spec.name]
+                for sym in self.symbols:
+                    score = (now - last_by.get(sym, NEVER_POLLED)) / cad
+                    if score > best_score:
+                        best_score, best = score, (spec, sym)
+            else:
+                score = (now - self._last[spec.name]) / cad
+                if score > best_score:
+                    best_score, best = score, (spec, None)
+        return best
+
     def run_for(self, minutes: float, heartbeat_s: float = 30.0) -> Dict[str, Any]:
         """Cadence-driven loop until the deadline or a signal."""
         signal.signal(signal.SIGTERM, self._sig)
@@ -255,27 +306,19 @@ class PublicMarketEngine:
             "note": "raw-first; parse on replay only",
         })
         deadline = time.monotonic() + minutes * 60.0
-        last_hb = 0.0
+        last_hb = NEVER_POLLED           # first heartbeat lands before the first poll
         while not self.stop and time.monotonic() < deadline:
             now = time.monotonic()
             phase = session_phase(now_utc())
-            did = False
-            for spec in self.specs:
-                if self.stop or spec.blocked or not spec.enabled or not spec.runs_in(phase):
-                    continue
-                if spec.per_symbol:
-                    for sym in self.symbols:
-                        if spec.due(self._sym_last[spec.name].get(sym, 0.0), now, phase):
-                            self.poll(spec, sym)
-                            self._sym_last[spec.name][sym] = time.monotonic()
-                            did = True
-                            break
-                elif spec.due(self._last[spec.name], now, phase):
-                    self.poll(spec)
+            work = None if self.stop else self.next_due(now, phase)
+            did = work is not None
+            if work is not None:
+                spec, sym = work
+                self.poll(spec, sym)
+                if sym is None:
                     self._last[spec.name] = time.monotonic()
-                    did = True
-                if did:
-                    break
+                else:
+                    self._sym_last[spec.name][sym] = time.monotonic()
             if now - last_hb >= heartbeat_s:
                 self.store.write_heartbeat(self.status())
                 self.write_status()

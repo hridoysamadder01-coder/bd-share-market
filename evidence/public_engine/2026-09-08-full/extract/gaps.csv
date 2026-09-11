@@ -1,0 +1,529 @@
+t_recv,source,key,reason,detail,status
+2026-09-08 09:30:42.868632+00:00,bullbd_detail,ACHIASF,not_found,http 404,404.0
+2026-09-08 09:30:53.696017+00:00,bullbd_detail,AMPL,not_found,http 404,404.0
+2026-09-08 09:30:57.262411+00:00,bullbd_detail,AOPLC,not_found,http 404,404.0
+2026-09-08 09:31:01.680401+00:00,bullbd_detail,APEXWEAV,not_found,http 404,404.0
+2026-09-08 09:31:14.592180+00:00,bullbd_detail,BDPAINTS,not_found,http 404,404.0
+2026-09-08 09:31:16.940548+00:00,bullbd_detail,BDSERVICE,not_found,http 404,404.0
+2026-09-08 09:31:23.321858+00:00,bullbd_detail,BENGALBISC,not_found,http 404,404.0
+2026-09-08 09:31:33.051872+00:00,bullbd_detail,BXSYNTH,not_found,http 404,404.0
+2026-09-08 09:31:36.603380+00:00,bullbd_detail,CBLPBOND,not_found,http 404,404.0
+2026-09-08 09:31:40.150826+00:00,bullbd_detail,CERAMICSSECTOR,not_found,http 404,404.0
+2026-09-08 09:31:45.306152+00:00,bullbd_detail,CORPORATEBOND,not_found,http 404,404.0
+2026-09-08 09:31:47.661538+00:00,bullbd_detail,CRAFTSMAN,not_found,http 404,404.0
+2026-09-08 09:31:55.219389+00:00,bullbd_detail,DEBARACEM,not_found,http 404,404.0
+2026-09-08 09:31:57.584616+00:00,bullbd_detail,DEBBDLUGG,not_found,http 404,404.0
+2026-09-08 09:32:01.946720+00:00,bullbd_detail,DEBBDWELD,not_found,http 404,404.0
+2026-09-08 09:32:10.313633+00:00,bullbd_detail,DEBBDZIPP,not_found,http 404,404.0
+2026-09-08 09:32:26.684151+00:00,bullbd_detail,DEBBXDENIM,not_found,http 404,404.0
+2026-09-08 09:32:59.066705+00:00,bullbd_detail,DEBBXFISH,not_found,http 404,404.0
+2026-09-08 09:34:03.427960+00:00,bullbd_detail,DEBBXKNI,not_found,http 404,404.0
+2026-09-08 09:36:04.792464+00:00,bullbd_detail,DEBBXTEX,not_found,http 404,404.0
+2026-09-08 09:38:06.138180+00:00,bullbd_detail,DEBENTURE,not_found,http 404,404.0
+2026-09-08 09:40:24.303784+00:00,bullbd_detail,FINANCIALINSTITUTIONS,not_found,http 404,404.0
+2026-09-08 09:40:27.856526+00:00,bullbd_detail,FOOD&ALLIED,not_found,http 404,404.0
+2026-09-08 09:40:30.605945+00:00,bullbd_detail,FUEL&POWER,not_found,http 404,404.0
+2026-09-08 09:40:36.585354+00:00,bullbd_detail,GLAXOSMITH,not_found,http 404,404.0
+2026-09-08 09:40:45.028721+00:00,bullbd_detail,HIMADRI,not_found,http 404,404.0
+2026-09-08 09:40:50.699340+00:00,bullbd_detail,ICB2NDNRB,not_found,http 404,404.0
+2026-09-08 09:41:02.251334+00:00,bullbd_detail,ITSECTOR,not_found,http 404,404.0
+2026-09-08 09:41:08.624878+00:00,bullbd_detail,KBSEED,not_found,http 404,404.0
+2026-09-08 09:41:11.770446+00:00,bullbd_detail,KFL,not_found,http 404,404.0
+2026-09-08 09:41:16.115020+00:00,bullbd_detail,LBS,not_found,http 404,404.0
+2026-09-08 09:41:20.194127+00:00,bullbd_detail,LIFEINSURANCE,not_found,http 404,404.0
+2026-09-08 09:41:25.344714+00:00,bullbd_detail,MAMUNAGRO,not_found,http 404,404.0
+2026-09-08 09:41:28.090019+00:00,bullbd_detail,MASTERAGRO,not_found,http 404,404.0
+2026-09-08 09:41:31.242774+00:00,bullbd_detail,MBPLCPBOND,not_found,http 404,404.0
+2026-09-08 09:50:23.979990+00:00,dse_ownership,ACHIASF,parse_error,no shareholding block on the company page for 'ACHIASF',
+2026-09-08 09:50:53.553458+00:00,dse_ownership,AMPL,parse_error,no shareholding block on the company page for 'AMPL',
+2026-09-08 09:50:57.655818+00:00,dse_ownership,AOPLC,parse_error,no shareholding block on the company page for 'AOPLC',
+2026-09-08 09:51:03.563383+00:00,dse_ownership,APEXWEAV,parse_error,no shareholding block on the company page for 'APEXWEAV',
+2026-09-08 09:51:12.688641+00:00,dse_ownership,ATCSLGF,parse_error,no shareholding block on the company page for 'ATCSLGF',
+2026-09-08 09:51:15.204481+00:00,dse_ownership,BANK,parse_error,no shareholding block on the company page for 'BANK',
+2026-09-08 09:51:33.638819+00:00,dse_ownership,BDPAINTS,parse_error,no shareholding block on the company page for 'BDPAINTS',
+2026-09-08 09:51:42.623727+00:00,dse_ownership,BENGALBISC,parse_error,no shareholding block on the company page for 'BENGALBISC',
+2026-09-08 09:51:55.405805+00:00,dse_ownership,BXSYNTH,parse_error,no shareholding block on the company page for 'BXSYNTH',
+2026-09-08 09:51:59.179351+00:00,dse_ownership,CEMENT,parse_error,no shareholding block on the company page for 'CEMENT',
+2026-09-08 09:52:01.715303+00:00,dse_ownership,CERAMICSSECTOR,parse_error,no shareholding block on the company page for 'CERAMICSSECTOR',
+2026-09-08 09:52:12.637969+00:00,dse_ownership,CORPORATEBOND,parse_error,no shareholding block on the company page for 'CORPORATEBOND',
+2026-09-08 09:52:13.273132+00:00,dse_ownership,CRAFTSMAN,parse_error,no shareholding block on the company page for 'CRAFTSMAN',
+2026-09-08 09:52:38.073099+00:00,dse_ownership,DEBENTURE,parse_error,no shareholding block on the company page for 'DEBENTURE',
+2026-09-08 09:52:53.761291+00:00,dse_ownership,DS30,parse_error,no shareholding block on the company page for 'DS30',
+2026-09-08 09:52:54.298261+00:00,dse_ownership,DSES,parse_error,no shareholding block on the company page for 'DSES',
+2026-09-08 09:52:54.853135+00:00,dse_ownership,DSEX,parse_error,no shareholding block on the company page for 'DSEX',
+2026-09-08 09:53:17.755223+00:00,dse_ownership,ENGINEERING,parse_error,no shareholding block on the company page for 'ENGINEERING',
+2026-09-08 09:53:33.963675+00:00,dse_ownership,FINANCIALINSTITUTIONS,parse_error,no shareholding block on the company page for 'FINANCIALINSTITUTIONS',
+2026-09-08 09:53:36.696554+00:00,dse_ownership,FOOD&ALLIED,parse_error,no shareholding block on the company page for 'FOOD&ALLIED',
+2026-09-08 09:53:37.991379+00:00,dse_ownership,FUEL&POWER,parse_error,no shareholding block on the company page for 'FUEL&POWER',
+2026-09-08 09:53:51.212563+00:00,dse_ownership,GLAXOSMITH,parse_error,no shareholding block on the company page for 'GLAXOSMITH',
+2026-09-08 09:54:08.508812+00:00,dse_ownership,HIMADRI,parse_error,no shareholding block on the company page for 'HIMADRI',
+2026-09-08 09:54:15.388464+00:00,dse_ownership,ICB2NDNRB,parse_error,no shareholding block on the company page for 'ICB2NDNRB',
+2026-09-08 09:54:32.726332+00:00,dse_ownership,INSURANCE,parse_error,no shareholding block on the company page for 'INSURANCE',
+2026-09-08 09:54:43.297432+00:00,dse_ownership,ITSECTOR,parse_error,no shareholding block on the company page for 'ITSECTOR',
+2026-09-08 09:54:50.292890+00:00,dse_ownership,JUTE,parse_error,no shareholding block on the company page for 'JUTE',
+2026-09-08 09:54:58.152091+00:00,dse_ownership,KBSEED,parse_error,no shareholding block on the company page for 'KBSEED',
+2026-09-08 09:55:01.569818+00:00,dse_ownership,KFL,parse_error,no shareholding block on the company page for 'KFL',
+2026-09-08 09:55:08.786612+00:00,dse_ownership,LBS,parse_error,no shareholding block on the company page for 'LBS',
+2026-09-08 09:55:12.144151+00:00,dse_ownership,LIFEINSURANCE,parse_error,no shareholding block on the company page for 'LIFEINSURANCE',
+2026-09-08 09:55:20.702848+00:00,dse_ownership,MAMUNAGRO,parse_error,no shareholding block on the company page for 'MAMUNAGRO',
+2026-09-08 09:55:21.829689+00:00,dse_ownership,MASTERAGRO,parse_error,no shareholding block on the company page for 'MASTERAGRO',
+2026-09-08 09:55:38.710996+00:00,dse_ownership,MISCELLANEOUS,parse_error,no shareholding block on the company page for 'MISCELLANEOUS',
+2026-09-08 09:55:42.079233+00:00,dse_ownership,MKFOOTWEAR,parse_error,no shareholding block on the company page for 'MKFOOTWEAR',
+2026-09-08 09:55:45.782406+00:00,dse_ownership,MONNOSTAF,parse_error,no shareholding block on the company page for 'MONNOSTAF',
+2026-09-08 09:55:46.900787+00:00,dse_ownership,MOSTFAMETL,parse_error,no shareholding block on the company page for 'MOSTFAMETL',
+2026-09-08 09:55:50.172191+00:00,dse_ownership,MUTUALFUNDS,parse_error,no shareholding block on the company page for 'MUTUALFUNDS',
+2026-09-08 09:55:59.549854+00:00,dse_ownership,NIALCO,parse_error,no shareholding block on the company page for 'NIALCO',
+2026-09-08 09:56:03.271621+00:00,dse_ownership,NLI1STMF,parse_error,no shareholding block on the company page for 'NLI1STMF',
+2026-09-08 09:56:22.346646+00:00,dse_ownership,ORYZAAGRO,parse_error,no shareholding block on the company page for 'ORYZAAGRO',
+2026-09-08 09:56:25.349732+00:00,dse_ownership,PAPER&PRINTING,parse_error,no shareholding block on the company page for 'PAPER&PRINTING',
+2026-09-08 09:56:34.864912+00:00,dse_ownership,PHARMACEUTICALS&CHEMICALS,parse_error,no shareholding block on the company page for 'PHARMACEUTICALS&CHEMICALS',
+2026-09-08 09:57:41.507183+00:00,dse_ownership,SADHESIVE,parse_error,no shareholding block on the company page for 'SADHESIVE',
+2026-09-08 09:58:01.605741+00:00,dse_ownership,SEBL1STMF,parse_error,no shareholding block on the company page for 'SEBL1STMF',
+2026-09-08 09:58:04.451536+00:00,dse_ownership,SEMLLECMF,parse_error,no shareholding block on the company page for 'SEMLLECMF',
+2026-09-08 09:58:05.116819+00:00,dse_ownership,SERVICES&REALESTATE,parse_error,no shareholding block on the company page for 'SERVICES&REALESTATE',
+2026-09-08 09:58:35.630073+00:00,dse_ownership,T10Y0126,parse_error,no shareholding block on the company page for 'T10Y0126',
+2026-09-08 09:58:39.257312+00:00,dse_ownership,TANNERYINDUSTRIES,parse_error,no shareholding block on the company page for 'TANNERYINDUSTRIES',
+2026-09-08 09:58:39.885040+00:00,dse_ownership,TB10Y0127,parse_error,no shareholding block on the company page for 'TB10Y0127',
+2026-09-08 09:58:40.460304+00:00,dse_ownership,TB10Y0130,parse_error,no shareholding block on the company page for 'TB10Y0130',
+2026-09-08 09:58:41.055056+00:00,dse_ownership,TB10Y0132,parse_error,no shareholding block on the company page for 'TB10Y0132',
+2026-09-08 09:58:41.816089+00:00,dse_ownership,TB10Y0135,parse_error,no shareholding block on the company page for 'TB10Y0135',
+2026-09-08 09:58:42.349486+00:00,dse_ownership,TB10Y0231,parse_error,no shareholding block on the company page for 'TB10Y0231',
+2026-09-08 09:58:42.991591+00:00,dse_ownership,TB10Y0234,parse_error,no shareholding block on the company page for 'TB10Y0234',
+2026-09-08 09:58:43.634502+00:00,dse_ownership,TB10Y0333,parse_error,no shareholding block on the company page for 'TB10Y0333',
+2026-09-08 09:58:44.271990+00:00,dse_ownership,TB10Y0335,parse_error,no shareholding block on the company page for 'TB10Y0335',
+2026-09-08 09:58:44.809518+00:00,dse_ownership,TB10Y0429,parse_error,no shareholding block on the company page for 'TB10Y0429',
+2026-09-08 09:58:45.389300+00:00,dse_ownership,TB10Y0434,parse_error,no shareholding block on the company page for 'TB10Y0434',
+2026-09-08 09:58:46.016223+00:00,dse_ownership,TB10Y0530,parse_error,no shareholding block on the company page for 'TB10Y0530',
+2026-09-08 09:58:46.606968+00:00,dse_ownership,TB10Y0531,parse_error,no shareholding block on the company page for 'TB10Y0531',
+2026-09-08 09:58:47.287806+00:00,dse_ownership,TB10Y0532,parse_error,no shareholding block on the company page for 'TB10Y0532',
+2026-09-08 09:58:48.115433+00:00,dse_ownership,TB10Y0535,parse_error,no shareholding block on the company page for 'TB10Y0535',
+2026-09-08 09:58:48.684231+00:00,dse_ownership,TB10Y0628,parse_error,no shareholding block on the company page for 'TB10Y0628',
+2026-09-08 09:58:49.298740+00:00,dse_ownership,TB10Y0629,parse_error,no shareholding block on the company page for 'TB10Y0629',
+2026-09-08 09:58:49.997095+00:00,dse_ownership,TB10Y0630,parse_error,no shareholding block on the company page for 'TB10Y0630',
+2026-09-08 09:58:50.673460+00:00,dse_ownership,TB10Y0632,parse_error,no shareholding block on the company page for 'TB10Y0632',
+2026-09-08 09:58:51.273748+00:00,dse_ownership,TB10Y0634,parse_error,no shareholding block on the company page for 'TB10Y0634',
+2026-09-08 09:58:52.006791+00:00,dse_ownership,TB10Y0730,parse_error,no shareholding block on the company page for 'TB10Y0730',
+2026-09-08 09:58:52.580879+00:00,dse_ownership,TB10Y0731,parse_error,no shareholding block on the company page for 'TB10Y0731',
+2026-09-08 09:58:53.198270+00:00,dse_ownership,TB10Y0735,parse_error,no shareholding block on the company page for 'TB10Y0735',
+2026-09-08 09:58:53.910035+00:00,dse_ownership,TB10Y0829,parse_error,no shareholding block on the company page for 'TB10Y0829',
+2026-09-08 09:58:54.486004+00:00,dse_ownership,TB10Y0833,parse_error,no shareholding block on the company page for 'TB10Y0833',
+2026-09-08 09:58:55.100502+00:00,dse_ownership,TB10Y0932,parse_error,no shareholding block on the company page for 'TB10Y0932',
+2026-09-08 09:58:55.654165+00:00,dse_ownership,TB10Y1027,parse_error,no shareholding block on the company page for 'TB10Y1027',
+2026-09-08 09:58:56.348240+00:00,dse_ownership,TB10Y1030,parse_error,no shareholding block on the company page for 'TB10Y1030',
+2026-09-08 09:58:56.914234+00:00,dse_ownership,TB10Y1031,parse_error,no shareholding block on the company page for 'TB10Y1031',
+2026-09-08 09:58:57.497455+00:00,dse_ownership,TB10Y1128,parse_error,no shareholding block on the company page for 'TB10Y1128',
+2026-09-08 09:58:58.159382+00:00,dse_ownership,TB10Y1135,parse_error,no shareholding block on the company page for 'TB10Y1135',
+2026-09-08 09:58:58.708801+00:00,dse_ownership,TB10Y1229,parse_error,no shareholding block on the company page for 'TB10Y1229',
+2026-09-08 09:58:59.261360+00:00,dse_ownership,TB10Y1232,parse_error,no shareholding block on the company page for 'TB10Y1232',
+2026-09-08 09:58:59.939254+00:00,dse_ownership,TB15Y0127,parse_error,no shareholding block on the company page for 'TB15Y0127',
+2026-09-08 09:59:00.534456+00:00,dse_ownership,TB15Y0128,parse_error,no shareholding block on the company page for 'TB15Y0128',
+2026-09-08 09:59:01.120286+00:00,dse_ownership,TB15Y0129,parse_error,no shareholding block on the company page for 'TB15Y0129',
+2026-09-08 09:59:01.740093+00:00,dse_ownership,TB15Y0227,parse_error,no shareholding block on the company page for 'TB15Y0227',
+2026-09-08 09:59:02.328488+00:00,dse_ownership,TB15Y0228,parse_error,no shareholding block on the company page for 'TB15Y0228',
+2026-09-08 09:59:02.883399+00:00,dse_ownership,TB15Y0229,parse_error,no shareholding block on the company page for 'TB15Y0229',
+2026-09-08 09:59:03.534029+00:00,dse_ownership,TB15Y0327,parse_error,no shareholding block on the company page for 'TB15Y0327',
+2026-09-08 09:59:04.280124+00:00,dse_ownership,TB15Y0328,parse_error,no shareholding block on the company page for 'TB15Y0328',
+2026-09-08 09:59:04.839190+00:00,dse_ownership,TB15Y0329,parse_error,no shareholding block on the company page for 'TB15Y0329',
+2026-09-08 09:59:05.363949+00:00,dse_ownership,TB15Y0339,parse_error,no shareholding block on the company page for 'TB15Y0339',
+2026-09-08 09:59:05.964544+00:00,dse_ownership,TB15Y0340,parse_error,no shareholding block on the company page for 'TB15Y0340',
+2026-09-08 09:59:06.515429+00:00,dse_ownership,TB15Y0427,parse_error,no shareholding block on the company page for 'TB15Y0427',
+2026-09-08 09:59:07.171052+00:00,dse_ownership,TB15Y0428,parse_error,no shareholding block on the company page for 'TB15Y0428',
+2026-09-08 09:59:07.787921+00:00,dse_ownership,TB15Y0429,parse_error,no shareholding block on the company page for 'TB15Y0429',
+2026-09-08 09:59:08.336939+00:00,dse_ownership,TB15Y0431,parse_error,no shareholding block on the company page for 'TB15Y0431',
+2026-09-08 09:59:08.942629+00:00,dse_ownership,TB15Y0437,parse_error,no shareholding block on the company page for 'TB15Y0437',
+2026-09-08 09:59:09.601057+00:00,dse_ownership,TB15Y0527,parse_error,no shareholding block on the company page for 'TB15Y0527',
+2026-09-08 09:59:10.212857+00:00,dse_ownership,TB15Y0528,parse_error,no shareholding block on the company page for 'TB15Y0528',
+2026-09-08 09:59:10.789949+00:00,dse_ownership,TB15Y0529,parse_error,no shareholding block on the company page for 'TB15Y0529',
+2026-09-08 09:59:11.406543+00:00,dse_ownership,TB15Y0535,parse_error,no shareholding block on the company page for 'TB15Y0535',
+2026-09-08 09:59:12.085978+00:00,dse_ownership,TB15Y0627,parse_error,no shareholding block on the company page for 'TB15Y0627',
+2026-09-08 09:59:12.715735+00:00,dse_ownership,TB15Y0628,parse_error,no shareholding block on the company page for 'TB15Y0628',
+2026-09-08 09:59:13.282891+00:00,dse_ownership,TB15Y0629,parse_error,no shareholding block on the company page for 'TB15Y0629',
+2026-09-08 09:59:13.895291+00:00,dse_ownership,TB15Y0635,parse_error,no shareholding block on the company page for 'TB15Y0635',
+2026-09-08 09:59:14.500854+00:00,dse_ownership,TB15Y0637,parse_error,no shareholding block on the company page for 'TB15Y0637',
+2026-09-08 09:59:15.035901+00:00,dse_ownership,TB15Y0727,parse_error,no shareholding block on the company page for 'TB15Y0727',
+2026-09-08 09:59:15.682828+00:00,dse_ownership,TB15Y0728,parse_error,no shareholding block on the company page for 'TB15Y0728',
+2026-09-08 09:59:16.279551+00:00,dse_ownership,TB15Y0729,parse_error,no shareholding block on the company page for 'TB15Y0729',
+2026-09-08 09:59:16.812835+00:00,dse_ownership,TB15Y0730,parse_error,no shareholding block on the company page for 'TB15Y0730',
+2026-09-08 09:59:17.494153+00:00,dse_ownership,TB15Y0736,parse_error,no shareholding block on the company page for 'TB15Y0736',
+2026-09-08 09:59:18.076447+00:00,dse_ownership,TB15Y0828,parse_error,no shareholding block on the company page for 'TB15Y0828',
+2026-09-08 09:59:18.815073+00:00,dse_ownership,TB15Y0829,parse_error,no shareholding block on the company page for 'TB15Y0829',
+2026-09-08 09:59:19.359026+00:00,dse_ownership,TB15Y0840,parse_error,no shareholding block on the company page for 'TB15Y0840',
+2026-09-08 09:59:20.024247+00:00,dse_ownership,TB15Y0926,parse_error,no shareholding block on the company page for 'TB15Y0926',
+2026-09-08 09:59:20.678799+00:00,dse_ownership,TB15Y0927,parse_error,no shareholding block on the company page for 'TB15Y0927',
+2026-09-08 09:59:21.248257+00:00,dse_ownership,TB15Y0928,parse_error,no shareholding block on the company page for 'TB15Y0928',
+2026-09-08 09:59:21.887550+00:00,dse_ownership,TB15Y0929,parse_error,no shareholding block on the company page for 'TB15Y0929',
+2026-09-08 09:59:22.433567+00:00,dse_ownership,TB15Y0930,parse_error,no shareholding block on the company page for 'TB15Y0930',
+2026-09-08 09:59:22.987872+00:00,dse_ownership,TB15Y0933,parse_error,no shareholding block on the company page for 'TB15Y0933',
+2026-09-08 09:59:23.767574+00:00,dse_ownership,TB15Y1026,parse_error,no shareholding block on the company page for 'TB15Y1026',
+2026-09-08 09:59:24.398749+00:00,dse_ownership,TB15Y1027,parse_error,no shareholding block on the company page for 'TB15Y1027',
+2026-09-08 09:59:25.015221+00:00,dse_ownership,TB15Y1028,parse_error,no shareholding block on the company page for 'TB15Y1028',
+2026-09-08 09:59:25.650950+00:00,dse_ownership,TB15Y1029,parse_error,no shareholding block on the company page for 'TB15Y1029',
+2026-09-08 09:59:26.237103+00:00,dse_ownership,TB15Y1126,parse_error,no shareholding block on the company page for 'TB15Y1126',
+2026-09-08 09:59:26.818800+00:00,dse_ownership,TB15Y1127,parse_error,no shareholding block on the company page for 'TB15Y1127',
+2026-09-08 09:59:27.403453+00:00,dse_ownership,TB15Y1128,parse_error,no shareholding block on the company page for 'TB15Y1128',
+2026-09-08 09:59:28.145687+00:00,dse_ownership,TB15Y1129,parse_error,no shareholding block on the company page for 'TB15Y1129',
+2026-09-08 09:59:28.762026+00:00,dse_ownership,TB15Y1133,parse_error,no shareholding block on the company page for 'TB15Y1133',
+2026-09-08 09:59:29.358721+00:00,dse_ownership,TB15Y1226,parse_error,no shareholding block on the company page for 'TB15Y1226',
+2026-09-08 09:59:30.050438+00:00,dse_ownership,TB15Y1227,parse_error,no shareholding block on the company page for 'TB15Y1227',
+2026-09-08 09:59:30.594786+00:00,dse_ownership,TB15Y1228,parse_error,no shareholding block on the company page for 'TB15Y1228',
+2026-09-08 09:59:31.147357+00:00,dse_ownership,TB20Y0128,parse_error,no shareholding block on the company page for 'TB20Y0128',
+2026-09-08 09:59:31.811462+00:00,dse_ownership,TB20Y0129,parse_error,no shareholding block on the company page for 'TB20Y0129',
+2026-09-08 09:59:32.413614+00:00,dse_ownership,TB20Y0131,parse_error,no shareholding block on the company page for 'TB20Y0131',
+2026-09-08 09:59:33.060277+00:00,dse_ownership,TB20Y0132,parse_error,no shareholding block on the company page for 'TB20Y0132',
+2026-09-08 09:59:33.741752+00:00,dse_ownership,TB20Y0133,parse_error,no shareholding block on the company page for 'TB20Y0133',
+2026-09-08 09:59:34.368353+00:00,dse_ownership,TB20Y0134,parse_error,no shareholding block on the company page for 'TB20Y0134',
+2026-09-08 09:59:34.901749+00:00,dse_ownership,TB20Y0143,parse_error,no shareholding block on the company page for 'TB20Y0143',
+2026-09-08 09:59:35.607540+00:00,dse_ownership,TB20Y0228,parse_error,no shareholding block on the company page for 'TB20Y0228',
+2026-09-08 09:59:36.258264+00:00,dse_ownership,TB20Y0229,parse_error,no shareholding block on the company page for 'TB20Y0229',
+2026-09-08 09:59:36.846535+00:00,dse_ownership,TB20Y0230,parse_error,no shareholding block on the company page for 'TB20Y0230',
+2026-09-08 09:59:37.445561+00:00,dse_ownership,TB20Y0231,parse_error,no shareholding block on the company page for 'TB20Y0231',
+2026-09-08 09:59:38.156644+00:00,dse_ownership,TB20Y0232,parse_error,no shareholding block on the company page for 'TB20Y0232',
+2026-09-08 09:59:38.703017+00:00,dse_ownership,TB20Y0233,parse_error,no shareholding block on the company page for 'TB20Y0233',
+2026-09-08 09:59:39.223342+00:00,dse_ownership,TB20Y0234,parse_error,no shareholding block on the company page for 'TB20Y0234',
+2026-09-08 09:59:39.856687+00:00,dse_ownership,TB20Y0328,parse_error,no shareholding block on the company page for 'TB20Y0328',
+2026-09-08 09:59:40.422231+00:00,dse_ownership,TB20Y0329,parse_error,no shareholding block on the company page for 'TB20Y0329',
+2026-09-08 09:59:40.982139+00:00,dse_ownership,TB20Y0330,parse_error,no shareholding block on the company page for 'TB20Y0330',
+2026-09-08 09:59:41.585706+00:00,dse_ownership,TB20Y0331,parse_error,no shareholding block on the company page for 'TB20Y0331',
+2026-09-08 09:59:42.155988+00:00,dse_ownership,TB20Y0332,parse_error,no shareholding block on the company page for 'TB20Y0332',
+2026-09-08 09:59:42.708715+00:00,dse_ownership,TB20Y0333,parse_error,no shareholding block on the company page for 'TB20Y0333',
+2026-09-08 09:59:43.246996+00:00,dse_ownership,TB20Y0334,parse_error,no shareholding block on the company page for 'TB20Y0334',
+2026-09-08 09:59:43.857449+00:00,dse_ownership,TB20Y0342,parse_error,no shareholding block on the company page for 'TB20Y0342',
+2026-09-08 09:59:44.436808+00:00,dse_ownership,TB20Y0428,parse_error,no shareholding block on the company page for 'TB20Y0428',
+2026-09-08 09:59:45.258414+00:00,dse_ownership,TB20Y0429,parse_error,no shareholding block on the company page for 'TB20Y0429',
+2026-09-08 09:59:45.893593+00:00,dse_ownership,TB20Y0430,parse_error,no shareholding block on the company page for 'TB20Y0430',
+2026-09-08 09:59:46.505388+00:00,dse_ownership,TB20Y0431,parse_error,no shareholding block on the company page for 'TB20Y0431',
+2026-09-08 09:59:47.065316+00:00,dse_ownership,TB20Y0432,parse_error,no shareholding block on the company page for 'TB20Y0432',
+2026-09-08 09:59:47.689974+00:00,dse_ownership,TB20Y0433,parse_error,no shareholding block on the company page for 'TB20Y0433',
+2026-09-08 09:59:48.264601+00:00,dse_ownership,TB20Y0434,parse_error,no shareholding block on the company page for 'TB20Y0434',
+2026-09-08 09:59:48.844117+00:00,dse_ownership,TB20Y0436,parse_error,no shareholding block on the company page for 'TB20Y0436',
+2026-09-08 09:59:49.566076+00:00,dse_ownership,TB20Y0528,parse_error,no shareholding block on the company page for 'TB20Y0528',
+2026-09-08 09:59:50.131731+00:00,dse_ownership,TB20Y0529,parse_error,no shareholding block on the company page for 'TB20Y0529',
+2026-09-08 09:59:50.731589+00:00,dse_ownership,TB20Y0530,parse_error,no shareholding block on the company page for 'TB20Y0530',
+2026-09-08 09:59:51.277029+00:00,dse_ownership,TB20Y0531,parse_error,no shareholding block on the company page for 'TB20Y0531',
+2026-09-08 09:59:51.891790+00:00,dse_ownership,TB20Y0532,parse_error,no shareholding block on the company page for 'TB20Y0532',
+2026-09-08 09:59:52.439110+00:00,dse_ownership,TB20Y0533,parse_error,no shareholding block on the company page for 'TB20Y0533',
+2026-09-08 09:59:53.025967+00:00,dse_ownership,TB20Y0534,parse_error,no shareholding block on the company page for 'TB20Y0534',
+2026-09-08 09:59:53.598102+00:00,dse_ownership,TB20Y0540,parse_error,no shareholding block on the company page for 'TB20Y0540',
+2026-09-08 09:59:54.192375+00:00,dse_ownership,TB20Y0545,parse_error,no shareholding block on the company page for 'TB20Y0545',
+2026-09-08 09:59:54.756510+00:00,dse_ownership,TB20Y0628,parse_error,no shareholding block on the company page for 'TB20Y0628',
+2026-09-08 09:59:55.427146+00:00,dse_ownership,TB20Y0629,parse_error,no shareholding block on the company page for 'TB20Y0629',
+2026-09-08 09:59:56.023227+00:00,dse_ownership,TB20Y0630,parse_error,no shareholding block on the company page for 'TB20Y0630',
+2026-09-08 09:59:56.580831+00:00,dse_ownership,TB20Y0631,parse_error,no shareholding block on the company page for 'TB20Y0631',
+2026-09-08 09:59:57.223326+00:00,dse_ownership,TB20Y0632,parse_error,no shareholding block on the company page for 'TB20Y0632',
+2026-09-08 09:59:57.962197+00:00,dse_ownership,TB20Y0633,parse_error,no shareholding block on the company page for 'TB20Y0633',
+2026-09-08 09:59:58.519429+00:00,dse_ownership,TB20Y0634,parse_error,no shareholding block on the company page for 'TB20Y0634',
+2026-09-08 09:59:59.108073+00:00,dse_ownership,TB20Y0639,parse_error,no shareholding block on the company page for 'TB20Y0639',
+2026-09-08 09:59:59.795652+00:00,dse_ownership,TB20Y0640,parse_error,no shareholding block on the company page for 'TB20Y0640',
+2026-09-08 09:44:39.488695+00:00,dsebd_latest,,connect_error,"ConnectionError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))",
+2026-09-08 09:44:53.378365+00:00,dsebd_hts,,connect_error,"ConnectionError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))",
+2026-09-08 09:45:11.998373+00:00,bullbd_detail,ACHIASF,not_found,http 404,404.0
+2026-09-08 09:45:20.740446+00:00,bullbd_detail,AMPL,not_found,http 404,404.0
+2026-09-08 09:45:22.348106+00:00,bullbd_detail,AOPLC,not_found,http 404,404.0
+2026-09-08 09:45:24.342883+00:00,bullbd_detail,APEXWEAV,not_found,http 404,404.0
+2026-09-08 09:45:35.650124+00:00,bullbd_detail,BDPAINTS,not_found,http 404,404.0
+2026-09-08 09:45:36.054585+00:00,bullbd_detail,BDSERVICE,not_found,http 404,404.0
+2026-09-08 09:45:38.453536+00:00,bullbd_detail,BENGALBISC,not_found,http 404,404.0
+2026-09-08 09:45:45.721373+00:00,bullbd_detail,BXSYNTH,not_found,http 404,404.0
+2026-09-08 09:45:47.315975+00:00,bullbd_detail,CBLPBOND,not_found,http 404,404.0
+2026-09-08 09:45:49.078135+00:00,bullbd_detail,CERAMICSSECTOR,not_found,http 404,404.0
+2026-09-08 09:45:52.262831+00:00,bullbd_detail,CORPORATEBOND,not_found,http 404,404.0
+2026-09-08 09:45:52.658592+00:00,bullbd_detail,CRAFTSMAN,not_found,http 404,404.0
+2026-09-08 09:45:56.707170+00:00,bullbd_detail,DEBARACEM,not_found,http 404,404.0
+2026-09-08 09:45:57.111876+00:00,bullbd_detail,DEBBDLUGG,not_found,http 404,404.0
+2026-09-08 09:45:57.519290+00:00,bullbd_detail,DEBBDWELD,not_found,http 404,404.0
+2026-09-08 09:45:57.908448+00:00,bullbd_detail,DEBBDZIPP,not_found,http 404,404.0
+2026-09-08 09:45:58.318877+00:00,bullbd_detail,DEBBXDENIM,not_found,http 404,404.0
+2026-09-08 09:45:58.710696+00:00,bullbd_detail,DEBBXFISH,not_found,http 404,404.0
+2026-09-08 09:45:59.113429+00:00,bullbd_detail,DEBBXKNI,not_found,http 404,404.0
+2026-09-08 09:45:59.512891+00:00,bullbd_detail,DEBBXTEX,not_found,http 404,404.0
+2026-09-08 09:45:59.913260+00:00,bullbd_detail,DEBENTURE,not_found,http 404,404.0
+2026-09-08 09:46:20.158455+00:00,bullbd_detail,FINANCIALINSTITUTIONS,not_found,http 404,404.0
+2026-09-08 09:46:21.762299+00:00,bullbd_detail,FOOD&ALLIED,not_found,http 404,404.0
+2026-09-08 09:46:22.560189+00:00,bullbd_detail,FUEL&POWER,not_found,http 404,404.0
+2026-09-08 09:46:26.565548+00:00,bullbd_detail,GLAXOSMITH,not_found,http 404,404.0
+2026-09-08 09:46:32.575139+00:00,bullbd_detail,HIMADRI,not_found,http 404,404.0
+2026-09-08 09:46:35.772084+00:00,bullbd_detail,ICB2NDNRB,not_found,http 404,404.0
+2026-09-08 09:46:45.849294+00:00,bullbd_detail,ITSECTOR,not_found,http 404,404.0
+2026-09-08 09:46:50.251794+00:00,bullbd_detail,KBSEED,not_found,http 404,404.0
+2026-09-08 09:46:51.452039+00:00,bullbd_detail,KFL,not_found,http 404,404.0
+2026-09-08 09:46:53.858807+00:00,bullbd_detail,LBS,not_found,http 404,404.0
+2026-09-08 09:46:55.457273+00:00,bullbd_detail,LIFEINSURANCE,not_found,http 404,404.0
+2026-09-08 09:46:58.655918+00:00,bullbd_detail,MAMUNAGRO,not_found,http 404,404.0
+2026-09-08 09:46:59.953955+00:00,bullbd_detail,MASTERAGRO,not_found,http 404,404.0
+2026-09-08 09:47:01.167024+00:00,bullbd_detail,MBPLCPBOND,not_found,http 404,404.0
+2026-09-08 09:47:07.961809+00:00,bullbd_detail,MKFOOTWEAR,not_found,http 404,404.0
+2026-09-08 09:47:09.967806+00:00,bullbd_detail,MONNOSTAF,not_found,http 404,404.0
+2026-09-08 09:47:10.765067+00:00,bullbd_detail,MOSTFAMETL,not_found,http 404,404.0
+2026-09-08 09:47:11.978604+00:00,bullbd_detail,MTBPBOND,not_found,http 404,404.0
+2026-09-08 09:47:12.384332+00:00,bullbd_detail,MUTUALFUNDS,not_found,http 404,404.0
+2026-09-08 09:47:16.806438+00:00,bullbd_detail,NIALCO,not_found,http 404,404.0
+2026-09-08 09:47:17.577373+00:00,bullbd_detail,NLI1STMF,not_found,http 404,404.0
+2026-09-08 09:47:24.088573+00:00,bullbd_detail,ORYZAAGRO,not_found,http 404,404.0
+2026-09-08 09:47:25.279101+00:00,bullbd_detail,PAPER&PRINTING,not_found,http 404,404.0
+2026-09-08 09:47:28.081273+00:00,bullbd_detail,PHARMACEUTICALS&CHEMICALS,not_found,http 404,404.0
+2026-09-08 09:47:48.294044+00:00,bullbd_detail,SADHESIVE,not_found,http 404,404.0
+2026-09-08 09:47:57.370922+00:00,bullbd_detail,SEBL1STMF,not_found,http 404,404.0
+2026-09-08 09:47:58.986899+00:00,bullbd_detail,SERVICES&REALESTATE,not_found,http 404,404.0
+2026-09-08 09:48:12.620474+00:00,bullbd_detail,T10Y0126,not_found,http 404,404.0
+2026-09-08 09:48:14.217710+00:00,bullbd_detail,TANNERYINDUSTRIES,not_found,http 404,404.0
+2026-09-08 09:48:14.633132+00:00,bullbd_detail,TB10Y0127,not_found,http 404,404.0
+2026-09-08 09:48:15.022366+00:00,bullbd_detail,TB10Y0130,not_found,http 404,404.0
+2026-09-08 09:48:15.421255+00:00,bullbd_detail,TB10Y0132,not_found,http 404,404.0
+2026-09-08 09:48:16.218737+00:00,bullbd_detail,TB10Y0231,not_found,http 404,404.0
+2026-09-08 09:48:17.017422+00:00,bullbd_detail,TB10Y0333,not_found,http 404,404.0
+2026-09-08 09:48:17.823129+00:00,bullbd_detail,TB10Y0429,not_found,http 404,404.0
+2026-09-08 09:48:19.023708+00:00,bullbd_detail,TB10Y0531,not_found,http 404,404.0
+2026-09-08 09:48:19.421813+00:00,bullbd_detail,TB10Y0532,not_found,http 404,404.0
+2026-09-08 09:48:20.223616+00:00,bullbd_detail,TB10Y0628,not_found,http 404,404.0
+2026-09-08 09:48:20.624776+00:00,bullbd_detail,TB10Y0629,not_found,http 404,404.0
+2026-09-08 09:48:21.024248+00:00,bullbd_detail,TB10Y0630,not_found,http 404,404.0
+2026-09-08 09:48:21.427299+00:00,bullbd_detail,TB10Y0632,not_found,http 404,404.0
+2026-09-08 09:48:22.735811+00:00,bullbd_detail,TB10Y0730,not_found,http 404,404.0
+2026-09-08 09:48:23.077571+00:00,bullbd_detail,TB10Y0731,not_found,http 404,404.0
+2026-09-08 09:48:24.409144+00:00,bullbd_detail,TB10Y0829,not_found,http 404,404.0
+2026-09-08 09:48:25.551084+00:00,bullbd_detail,TB10Y1027,not_found,http 404,404.0
+2026-09-08 09:48:25.951390+00:00,bullbd_detail,TB10Y1030,not_found,http 404,404.0
+2026-09-08 09:48:26.353673+00:00,bullbd_detail,TB10Y1031,not_found,http 404,404.0
+2026-09-08 09:48:26.750773+00:00,bullbd_detail,TB10Y1128,not_found,http 404,404.0
+2026-09-08 09:48:27.547633+00:00,bullbd_detail,TB10Y1229,not_found,http 404,404.0
+2026-09-08 09:48:27.969731+00:00,bullbd_detail,TB10Y1232,not_found,http 404,404.0
+2026-09-08 09:48:28.371553+00:00,bullbd_detail,TB15Y0127,not_found,http 404,404.0
+2026-09-08 09:48:28.755371+00:00,bullbd_detail,TB15Y0128,not_found,http 404,404.0
+2026-09-08 09:48:29.155527+00:00,bullbd_detail,TB15Y0129,not_found,http 404,404.0
+2026-09-08 09:48:29.558238+00:00,bullbd_detail,TB15Y0227,not_found,http 404,404.0
+2026-09-08 09:48:29.954162+00:00,bullbd_detail,TB15Y0228,not_found,http 404,404.0
+2026-09-08 09:48:30.357349+00:00,bullbd_detail,TB15Y0229,not_found,http 404,404.0
+2026-09-08 09:48:30.754865+00:00,bullbd_detail,TB15Y0327,not_found,http 404,404.0
+2026-09-08 09:48:31.150528+00:00,bullbd_detail,TB15Y0328,not_found,http 404,404.0
+2026-09-08 09:48:31.552753+00:00,bullbd_detail,TB15Y0329,not_found,http 404,404.0
+2026-09-08 09:48:32.755035+00:00,bullbd_detail,TB15Y0427,not_found,http 404,404.0
+2026-09-08 09:48:33.155567+00:00,bullbd_detail,TB15Y0428,not_found,http 404,404.0
+2026-09-08 09:48:33.556921+00:00,bullbd_detail,TB15Y0429,not_found,http 404,404.0
+2026-09-08 09:48:33.955045+00:00,bullbd_detail,TB15Y0431,not_found,http 404,404.0
+2026-09-08 09:48:34.362954+00:00,bullbd_detail,TB15Y0437,not_found,http 404,404.0
+2026-09-08 09:48:34.760213+00:00,bullbd_detail,TB15Y0527,not_found,http 404,404.0
+2026-09-08 09:48:35.157343+00:00,bullbd_detail,TB15Y0528,not_found,http 404,404.0
+2026-09-08 09:48:36.354813+00:00,bullbd_detail,TB15Y0627,not_found,http 404,404.0
+2026-09-08 09:48:36.779362+00:00,bullbd_detail,TB15Y0628,not_found,http 404,404.0
+2026-09-08 09:48:37.155579+00:00,bullbd_detail,TB15Y0629,not_found,http 404,404.0
+2026-09-08 09:48:37.560680+00:00,bullbd_detail,TB15Y0635,not_found,http 404,404.0
+2026-09-08 09:48:38.359825+00:00,bullbd_detail,TB15Y0727,not_found,http 404,404.0
+2026-09-08 09:48:38.760503+00:00,bullbd_detail,TB15Y0728,not_found,http 404,404.0
+2026-09-08 09:48:39.157287+00:00,bullbd_detail,TB15Y0729,not_found,http 404,404.0
+2026-09-08 09:48:39.564266+00:00,bullbd_detail,TB15Y0730,not_found,http 404,404.0
+2026-09-08 09:48:39.975842+00:00,bullbd_detail,TB15Y0736,not_found,http 404,404.0
+2026-09-08 09:48:40.358041+00:00,bullbd_detail,TB15Y0828,not_found,http 404,404.0
+2026-09-08 09:48:40.761490+00:00,bullbd_detail,TB15Y0829,not_found,http 404,404.0
+2026-09-08 09:48:41.160416+00:00,bullbd_detail,TB15Y0840,not_found,http 404,404.0
+2026-09-08 09:48:41.570785+00:00,bullbd_detail,TB15Y0926,not_found,http 404,404.0
+2026-09-08 09:48:41.958888+00:00,bullbd_detail,TB15Y0927,not_found,http 404,404.0
+2026-09-08 09:48:42.360832+00:00,bullbd_detail,TB15Y0928,not_found,http 404,404.0
+2026-09-08 09:48:42.762179+00:00,bullbd_detail,TB15Y0929,not_found,http 404,404.0
+2026-09-08 09:48:43.163803+00:00,bullbd_detail,TB15Y0930,not_found,http 404,404.0
+2026-09-08 09:48:43.558980+00:00,bullbd_detail,TB15Y0933,not_found,http 404,404.0
+2026-09-08 09:48:43.963294+00:00,bullbd_detail,TB15Y1026,not_found,http 404,404.0
+2026-09-08 09:48:44.881188+00:00,bullbd_detail,TB15Y1027,not_found,http 404,404.0
+2026-09-08 09:48:45.622778+00:00,bullbd_detail,TB15Y1029,not_found,http 404,404.0
+2026-09-08 09:48:46.020603+00:00,bullbd_detail,TB15Y1126,not_found,http 404,404.0
+2026-09-08 09:48:46.425811+00:00,bullbd_detail,TB15Y1127,not_found,http 404,404.0
+2026-09-08 09:48:46.820775+00:00,bullbd_detail,TB15Y1128,not_found,http 404,404.0
+2026-09-08 09:48:47.221428+00:00,bullbd_detail,TB15Y1129,not_found,http 404,404.0
+2026-09-08 09:48:47.620300+00:00,bullbd_detail,TB15Y1133,not_found,http 404,404.0
+2026-09-08 09:48:48.025248+00:00,bullbd_detail,TB15Y1226,not_found,http 404,404.0
+2026-09-08 09:48:48.433012+00:00,bullbd_detail,TB15Y1227,not_found,http 404,404.0
+2026-09-08 09:48:48.820946+00:00,bullbd_detail,TB15Y1228,not_found,http 404,404.0
+2026-09-08 09:48:49.233161+00:00,bullbd_detail,TB20Y0128,not_found,http 404,404.0
+2026-09-08 09:48:49.622584+00:00,bullbd_detail,TB20Y0129,not_found,http 404,404.0
+2026-09-08 09:48:50.023191+00:00,bullbd_detail,TB20Y0131,not_found,http 404,404.0
+2026-09-08 09:48:50.433250+00:00,bullbd_detail,TB20Y0132,not_found,http 404,404.0
+2026-09-08 09:48:50.827093+00:00,bullbd_detail,TB20Y0133,not_found,http 404,404.0
+2026-09-08 09:48:51.233350+00:00,bullbd_detail,TB20Y0134,not_found,http 404,404.0
+2026-09-08 09:48:52.028600+00:00,bullbd_detail,TB20Y0228,not_found,http 404,404.0
+2026-09-08 09:48:52.423783+00:00,bullbd_detail,TB20Y0229,not_found,http 404,404.0
+2026-09-08 09:48:52.826017+00:00,bullbd_detail,TB20Y0230,not_found,http 404,404.0
+2026-09-08 09:48:53.225717+00:00,bullbd_detail,TB20Y0231,not_found,http 404,404.0
+2026-09-08 09:48:53.625746+00:00,bullbd_detail,TB20Y0232,not_found,http 404,404.0
+2026-09-08 09:48:54.023885+00:00,bullbd_detail,TB20Y0233,not_found,http 404,404.0
+2026-09-08 09:48:54.555724+00:00,bullbd_detail,TB20Y0234,not_found,http 404,404.0
+2026-09-08 09:48:54.892564+00:00,bullbd_detail,TB20Y0328,not_found,http 404,404.0
+2026-09-08 09:48:55.311218+00:00,bullbd_detail,TB20Y0329,not_found,http 404,404.0
+2026-09-08 09:48:55.697740+00:00,bullbd_detail,TB20Y0330,not_found,http 404,404.0
+2026-09-08 09:48:56.100167+00:00,bullbd_detail,TB20Y0331,not_found,http 404,404.0
+2026-09-08 09:48:56.496039+00:00,bullbd_detail,TB20Y0332,not_found,http 404,404.0
+2026-09-08 09:48:56.899250+00:00,bullbd_detail,TB20Y0333,not_found,http 404,404.0
+2026-09-08 09:48:57.296236+00:00,bullbd_detail,TB20Y0334,not_found,http 404,404.0
+2026-09-08 09:48:57.697125+00:00,bullbd_detail,TB20Y0342,not_found,http 404,404.0
+2026-09-08 09:48:58.101113+00:00,bullbd_detail,TB20Y0428,not_found,http 404,404.0
+2026-09-08 09:48:58.498794+00:00,bullbd_detail,TB20Y0429,not_found,http 404,404.0
+2026-09-08 09:48:58.903864+00:00,bullbd_detail,TB20Y0430,not_found,http 404,404.0
+2026-09-08 09:49:00.209191+00:00,bullbd_detail,TB20Y0432,not_found,http 404,404.0
+2026-09-08 09:49:00.602873+00:00,bullbd_detail,TB20Y0433,not_found,http 404,404.0
+2026-09-08 09:49:01.009025+00:00,bullbd_detail,TB20Y0434,not_found,http 404,404.0
+2026-09-08 09:49:01.410145+00:00,bullbd_detail,TB20Y0436,not_found,http 404,404.0
+2026-09-08 09:49:01.802918+00:00,bullbd_detail,TB20Y0528,not_found,http 404,404.0
+2026-09-08 09:49:02.603875+00:00,bullbd_detail,TB20Y0530,not_found,http 404,404.0
+2026-09-08 09:49:03.015483+00:00,bullbd_detail,TB20Y0531,not_found,http 404,404.0
+2026-09-08 09:49:03.410058+00:00,bullbd_detail,TB20Y0532,not_found,http 404,404.0
+2026-09-08 09:49:03.807296+00:00,bullbd_detail,TB20Y0533,not_found,http 404,404.0
+2026-09-08 09:49:04.203835+00:00,bullbd_detail,TB20Y0534,not_found,http 404,404.0
+2026-09-08 09:49:04.609317+00:00,bullbd_detail,TB20Y0540,not_found,http 404,404.0
+2026-09-08 09:49:05.412307+00:00,bullbd_detail,TB20Y0628,not_found,http 404,404.0
+2026-09-08 09:49:05.810738+00:00,bullbd_detail,TB20Y0629,not_found,http 404,404.0
+2026-09-08 09:49:06.770929+00:00,bullbd_detail,TB20Y0630,not_found,http 404,404.0
+2026-09-08 09:49:07.111585+00:00,bullbd_detail,TB20Y0631,not_found,http 404,404.0
+2026-09-08 09:49:07.523098+00:00,bullbd_detail,TB20Y0632,not_found,http 404,404.0
+2026-09-08 09:49:07.911963+00:00,bullbd_detail,TB20Y0633,not_found,http 404,404.0
+2026-09-08 09:49:08.313159+00:00,bullbd_detail,TB20Y0634,not_found,http 404,404.0
+2026-09-08 09:49:08.712084+00:00,bullbd_detail,TB20Y0639,not_found,http 404,404.0
+2026-09-08 09:49:09.519301+00:00,bullbd_detail,TB20Y0641,not_found,http 404,404.0
+2026-09-08 09:49:09.918436+00:00,bullbd_detail,TB20Y0642,not_found,http 404,404.0
+2026-09-08 09:49:10.313844+00:00,bullbd_detail,TB20Y0727,not_found,http 404,404.0
+2026-09-08 09:49:10.712154+00:00,bullbd_detail,TB20Y0728,not_found,http 404,404.0
+2026-09-08 09:49:11.113088+00:00,bullbd_detail,TB20Y0729,not_found,http 404,404.0
+2026-09-08 09:49:11.528180+00:00,bullbd_detail,TB20Y0730,not_found,http 404,404.0
+2026-09-08 09:49:11.936886+00:00,bullbd_detail,TB20Y0731,not_found,http 404,404.0
+2026-09-08 09:49:12.318206+00:00,bullbd_detail,TB20Y0732,not_found,http 404,404.0
+2026-09-08 09:49:12.723514+00:00,bullbd_detail,TB20Y0733,not_found,http 404,404.0
+2026-09-08 09:49:13.123869+00:00,bullbd_detail,TB20Y0734,not_found,http 404,404.0
+2026-09-08 09:49:13.536015+00:00,bullbd_detail,TB20Y0735,not_found,http 404,404.0
+2026-09-08 09:49:14.319664+00:00,bullbd_detail,TB20Y0827,not_found,http 404,404.0
+2026-09-08 09:49:14.719322+00:00,bullbd_detail,TB20Y0828,not_found,http 404,404.0
+2026-09-08 09:49:15.113471+00:00,bullbd_detail,TB20Y0829,not_found,http 404,404.0
+2026-09-08 09:49:15.526573+00:00,bullbd_detail,TB20Y0830,not_found,http 404,404.0
+2026-09-08 09:49:16.319471+00:00,bullbd_detail,TB20Y0832,not_found,http 404,404.0
+2026-09-08 09:49:16.720265+00:00,bullbd_detail,TB20Y0833,not_found,http 404,404.0
+2026-09-08 09:49:17.124173+00:00,bullbd_detail,TB20Y0834,not_found,http 404,404.0
+2026-09-08 09:49:17.916640+00:00,bullbd_detail,TB20Y0927,not_found,http 404,404.0
+2026-09-08 09:49:18.329923+00:00,bullbd_detail,TB20Y0928,not_found,http 404,404.0
+2026-09-08 09:49:18.735098+00:00,bullbd_detail,TB20Y0930,not_found,http 404,404.0
+2026-09-08 09:49:19.116551+00:00,bullbd_detail,TB20Y0931,not_found,http 404,404.0
+2026-09-08 09:49:19.519363+00:00,bullbd_detail,TB20Y0932,not_found,http 404,404.0
+2026-09-08 09:49:19.928310+00:00,bullbd_detail,TB20Y0933,not_found,http 404,404.0
+2026-09-08 09:49:20.321502+00:00,bullbd_detail,TB20Y0934,not_found,http 404,404.0
+2026-09-08 09:49:20.722837+00:00,bullbd_detail,TB20Y1027,not_found,http 404,404.0
+2026-09-08 09:49:21.118973+00:00,bullbd_detail,TB20Y1028,not_found,http 404,404.0
+2026-09-08 09:49:21.524108+00:00,bullbd_detail,TB20Y1029,not_found,http 404,404.0
+2026-09-08 09:49:21.920506+00:00,bullbd_detail,TB20Y1030,not_found,http 404,404.0
+2026-09-08 09:49:22.320763+00:00,bullbd_detail,TB20Y1031,not_found,http 404,404.0
+2026-09-08 09:49:22.721727+00:00,bullbd_detail,TB20Y1032,not_found,http 404,404.0
+2026-09-08 09:49:23.121202+00:00,bullbd_detail,TB20Y1033,not_found,http 404,404.0
+2026-09-08 09:49:23.522809+00:00,bullbd_detail,TB20Y1034,not_found,http 404,404.0
+2026-09-08 09:49:23.921971+00:00,bullbd_detail,TB20Y1127,not_found,http 404,404.0
+2026-09-08 09:49:24.323686+00:00,bullbd_detail,TB20Y1128,not_found,http 404,404.0
+2026-09-08 09:49:24.724269+00:00,bullbd_detail,TB20Y1130,not_found,http 404,404.0
+2026-09-08 09:49:25.120778+00:00,bullbd_detail,TB20Y1131,not_found,http 404,404.0
+2026-09-08 09:49:25.542300+00:00,bullbd_detail,TB20Y1132,not_found,http 404,404.0
+2026-09-08 09:49:25.978705+00:00,bullbd_detail,TB20Y1133,not_found,http 404,404.0
+2026-09-08 09:49:26.365129+00:00,bullbd_detail,TB20Y1134,not_found,http 404,404.0
+2026-09-08 09:49:26.725707+00:00,bullbd_detail,TB20Y1135,not_found,http 404,404.0
+2026-09-08 09:49:27.125428+00:00,bullbd_detail,TB20Y1138,not_found,http 404,404.0
+2026-09-08 09:49:27.534655+00:00,bullbd_detail,TB20Y1227,not_found,http 404,404.0
+2026-09-08 09:49:27.927705+00:00,bullbd_detail,TB20Y1228,not_found,http 404,404.0
+2026-09-08 09:49:28.330707+00:00,bullbd_detail,TB20Y1229,not_found,http 404,404.0
+2026-09-08 09:49:28.726753+00:00,bullbd_detail,TB20Y1230,not_found,http 404,404.0
+2026-09-08 09:49:29.127282+00:00,bullbd_detail,TB20Y1231,not_found,http 404,404.0
+2026-09-08 09:49:29.549812+00:00,bullbd_detail,TB20Y1232,not_found,http 404,404.0
+2026-09-08 09:49:29.933303+00:00,bullbd_detail,TB20Y1233,not_found,http 404,404.0
+2026-09-08 09:49:36.334581+00:00,bullbd_detail,TB5Y0428,not_found,http 404,404.0
+2026-09-08 09:49:39.137470+00:00,bullbd_detail,TB5Y0727,not_found,http 404,404.0
+2026-09-08 09:49:39.538474+00:00,bullbd_detail,TB5Y0828,not_found,http 404,404.0
+2026-09-08 09:49:39.932517+00:00,bullbd_detail,TB5Y0926,not_found,http 404,404.0
+2026-09-08 09:49:41.534941+00:00,bullbd_detail,TB5Y1126,not_found,http 404,404.0
+2026-09-08 09:49:41.932265+00:00,bullbd_detail,TB5Y1127,not_found,http 404,404.0
+2026-09-08 09:49:46.347519+00:00,bullbd_detail,TRAVEL&LEISURE,not_found,http 404,404.0
+2026-09-08 09:49:48.347506+00:00,bullbd_detail,UCB2PBOND,not_found,http 404,404.0
+2026-09-08 09:49:55.142978+00:00,bullbd_detail,WEBCOATS,not_found,http 404,404.0
+2026-09-08 09:49:55.941678+00:00,bullbd_detail,WONDERTOYS,not_found,http 404,404.0
+2026-09-08 09:49:56.746289+00:00,bullbd_detail,YUSUFLOUR,not_found,http 404,404.0
+2026-09-08 10:00:01.158732+00:00,dse_ownership,TB20Y0641,parse_error,no shareholding block on the company page for 'TB20Y0641',
+2026-09-08 10:00:01.752128+00:00,dse_ownership,TB20Y0642,parse_error,no shareholding block on the company page for 'TB20Y0642',
+2026-09-08 10:00:02.479527+00:00,dse_ownership,TB20Y0727,parse_error,no shareholding block on the company page for 'TB20Y0727',
+2026-09-08 10:00:08.442343+00:00,dse_ownership,TB20Y0728,parse_error,no shareholding block on the company page for 'TB20Y0728',
+2026-09-08 10:00:09.150856+00:00,dse_ownership,TB20Y0729,parse_error,no shareholding block on the company page for 'TB20Y0729',
+2026-09-08 10:00:09.903514+00:00,dse_ownership,TB20Y0730,parse_error,no shareholding block on the company page for 'TB20Y0730',
+2026-09-08 10:00:10.447760+00:00,dse_ownership,TB20Y0731,parse_error,no shareholding block on the company page for 'TB20Y0731',
+2026-09-08 10:00:11.032598+00:00,dse_ownership,TB20Y0732,parse_error,no shareholding block on the company page for 'TB20Y0732',
+2026-09-08 10:00:11.630661+00:00,dse_ownership,TB20Y0733,parse_error,no shareholding block on the company page for 'TB20Y0733',
+2026-09-08 10:00:12.254040+00:00,dse_ownership,TB20Y0734,parse_error,no shareholding block on the company page for 'TB20Y0734',
+2026-09-08 10:00:12.844436+00:00,dse_ownership,TB20Y0735,parse_error,no shareholding block on the company page for 'TB20Y0735',
+2026-09-08 10:00:13.464346+00:00,dse_ownership,TB20Y0744,parse_error,no shareholding block on the company page for 'TB20Y0744',
+2026-09-08 10:00:14.302015+00:00,dse_ownership,TB20Y0827,parse_error,no shareholding block on the company page for 'TB20Y0827',
+2026-09-08 10:00:14.838438+00:00,dse_ownership,TB20Y0828,parse_error,no shareholding block on the company page for 'TB20Y0828',
+2026-09-08 10:00:15.469277+00:00,dse_ownership,TB20Y0829,parse_error,no shareholding block on the company page for 'TB20Y0829',
+2026-09-08 10:00:16.251592+00:00,dse_ownership,TB20Y0830,parse_error,no shareholding block on the company page for 'TB20Y0830',
+2026-09-08 10:00:16.967800+00:00,dse_ownership,TB20Y0831,parse_error,no shareholding block on the company page for 'TB20Y0831',
+2026-09-08 10:00:17.484092+00:00,dse_ownership,TB20Y0832,parse_error,no shareholding block on the company page for 'TB20Y0832',
+2026-09-08 10:00:18.138764+00:00,dse_ownership,TB20Y0833,parse_error,no shareholding block on the company page for 'TB20Y0833',
+2026-09-08 10:00:18.668628+00:00,dse_ownership,TB20Y0834,parse_error,no shareholding block on the company page for 'TB20Y0834',
+2026-09-08 10:00:19.322883+00:00,dse_ownership,TB20Y0845,parse_error,no shareholding block on the company page for 'TB20Y0845',
+2026-09-08 10:00:19.929360+00:00,dse_ownership,TB20Y0927,parse_error,no shareholding block on the company page for 'TB20Y0927',
+2026-09-08 10:00:20.460918+00:00,dse_ownership,TB20Y0928,parse_error,no shareholding block on the company page for 'TB20Y0928',
+2026-09-08 10:00:21.174699+00:00,dse_ownership,TB20Y0930,parse_error,no shareholding block on the company page for 'TB20Y0930',
+2026-09-08 10:00:21.786667+00:00,dse_ownership,TB20Y0931,parse_error,no shareholding block on the company page for 'TB20Y0931',
+2026-09-08 10:00:22.421379+00:00,dse_ownership,TB20Y0932,parse_error,no shareholding block on the company page for 'TB20Y0932',
+2026-09-08 10:00:22.991731+00:00,dse_ownership,TB20Y0933,parse_error,no shareholding block on the company page for 'TB20Y0933',
+2026-09-08 10:00:23.579627+00:00,dse_ownership,TB20Y0934,parse_error,no shareholding block on the company page for 'TB20Y0934',
+2026-09-08 10:00:24.219252+00:00,dse_ownership,TB20Y1027,parse_error,no shareholding block on the company page for 'TB20Y1027',
+2026-09-08 10:00:24.836380+00:00,dse_ownership,TB20Y1028,parse_error,no shareholding block on the company page for 'TB20Y1028',
+2026-09-08 10:00:25.437289+00:00,dse_ownership,TB20Y1029,parse_error,no shareholding block on the company page for 'TB20Y1029',
+2026-09-08 10:00:26.088779+00:00,dse_ownership,TB20Y1030,parse_error,no shareholding block on the company page for 'TB20Y1030',
+2026-09-08 10:00:26.778102+00:00,dse_ownership,TB20Y1031,parse_error,no shareholding block on the company page for 'TB20Y1031',
+2026-09-08 10:00:27.323842+00:00,dse_ownership,TB20Y1032,parse_error,no shareholding block on the company page for 'TB20Y1032',
+2026-09-08 10:00:28.018074+00:00,dse_ownership,TB20Y1033,parse_error,no shareholding block on the company page for 'TB20Y1033',
+2026-09-08 10:00:28.607035+00:00,dse_ownership,TB20Y1034,parse_error,no shareholding block on the company page for 'TB20Y1034',
+2026-09-08 10:00:29.410372+00:00,dse_ownership,TB20Y1127,parse_error,no shareholding block on the company page for 'TB20Y1127',
+2026-09-08 10:00:29.988590+00:00,dse_ownership,TB20Y1128,parse_error,no shareholding block on the company page for 'TB20Y1128',
+2026-09-08 10:00:30.670052+00:00,dse_ownership,TB20Y1130,parse_error,no shareholding block on the company page for 'TB20Y1130',
+2026-09-08 10:00:31.242922+00:00,dse_ownership,TB20Y1131,parse_error,no shareholding block on the company page for 'TB20Y1131',
+2026-09-08 10:00:31.831152+00:00,dse_ownership,TB20Y1132,parse_error,no shareholding block on the company page for 'TB20Y1132',
+2026-09-08 10:00:32.513137+00:00,dse_ownership,TB20Y1133,parse_error,no shareholding block on the company page for 'TB20Y1133',
+2026-09-08 10:00:33.105114+00:00,dse_ownership,TB20Y1134,parse_error,no shareholding block on the company page for 'TB20Y1134',
+2026-09-08 10:00:33.866092+00:00,dse_ownership,TB20Y1135,parse_error,no shareholding block on the company page for 'TB20Y1135',
+2026-09-08 10:00:34.671300+00:00,dse_ownership,TB20Y1138,parse_error,no shareholding block on the company page for 'TB20Y1138',
+2026-09-08 10:00:35.210217+00:00,dse_ownership,TB20Y1227,parse_error,no shareholding block on the company page for 'TB20Y1227',
+2026-09-08 10:00:35.843295+00:00,dse_ownership,TB20Y1228,parse_error,no shareholding block on the company page for 'TB20Y1228',
+2026-09-08 10:00:36.467924+00:00,dse_ownership,TB20Y1229,parse_error,no shareholding block on the company page for 'TB20Y1229',
+2026-09-08 10:00:37.063012+00:00,dse_ownership,TB20Y1230,parse_error,no shareholding block on the company page for 'TB20Y1230',
+2026-09-08 10:00:37.627663+00:00,dse_ownership,TB20Y1231,parse_error,no shareholding block on the company page for 'TB20Y1231',
+2026-09-08 10:00:38.910613+00:00,dse_ownership,TB20Y1232,parse_error,no shareholding block on the company page for 'TB20Y1232',
+2026-09-08 10:00:39.585316+00:00,dse_ownership,TB20Y1233,parse_error,no shareholding block on the company page for 'TB20Y1233',
+2026-09-08 10:00:40.225650+00:00,dse_ownership,TB20Y1242,parse_error,no shareholding block on the company page for 'TB20Y1242',
+2026-09-08 10:00:40.802848+00:00,dse_ownership,TB2Y0127,parse_error,no shareholding block on the company page for 'TB2Y0127',
+2026-09-08 10:00:41.435827+00:00,dse_ownership,TB2Y0227,parse_error,no shareholding block on the company page for 'TB2Y0227',
+2026-09-08 10:00:42.007371+00:00,dse_ownership,TB2Y0327,parse_error,no shareholding block on the company page for 'TB2Y0327',
+2026-09-08 10:00:42.558442+00:00,dse_ownership,TB2Y0427,parse_error,no shareholding block on the company page for 'TB2Y0427',
+2026-09-08 10:00:43.435412+00:00,dse_ownership,TB2Y0527,parse_error,no shareholding block on the company page for 'TB2Y0527',
+2026-09-08 10:00:44.025967+00:00,dse_ownership,TB2Y0627,parse_error,no shareholding block on the company page for 'TB2Y0627',
+2026-09-08 10:00:44.592769+00:00,dse_ownership,TB2Y0727,parse_error,no shareholding block on the company page for 'TB2Y0727',
+2026-09-08 10:00:45.197587+00:00,dse_ownership,TB2Y0927,parse_error,no shareholding block on the company page for 'TB2Y0927',
+2026-09-08 10:00:45.958127+00:00,dse_ownership,TB2Y1026,parse_error,no shareholding block on the company page for 'TB2Y1026',
+2026-09-08 10:00:46.602465+00:00,dse_ownership,TB2Y1126,parse_error,no shareholding block on the company page for 'TB2Y1126',
+2026-09-08 10:00:47.157191+00:00,dse_ownership,TB2Y1127,parse_error,no shareholding block on the company page for 'TB2Y1127',
+2026-09-08 10:00:47.834594+00:00,dse_ownership,TB5Y0128,parse_error,no shareholding block on the company page for 'TB5Y0128',
+2026-09-08 10:00:48.399938+00:00,dse_ownership,TB5Y0230,parse_error,no shareholding block on the company page for 'TB5Y0230',
+2026-09-08 10:00:48.921425+00:00,dse_ownership,TB5Y0327,parse_error,no shareholding block on the company page for 'TB5Y0327',
+2026-09-08 10:00:49.544688+00:00,dse_ownership,TB5Y0428,parse_error,no shareholding block on the company page for 'TB5Y0428',
+2026-09-08 10:00:50.113203+00:00,dse_ownership,TB5Y0429,parse_error,no shareholding block on the company page for 'TB5Y0429',
+2026-09-08 10:00:50.752742+00:00,dse_ownership,TB5Y0430,parse_error,no shareholding block on the company page for 'TB5Y0430',
+2026-09-08 10:00:51.427944+00:00,dse_ownership,TB5Y0527,parse_error,no shareholding block on the company page for 'TB5Y0527',
+2026-09-08 10:00:52.221608+00:00,dse_ownership,TB5Y0529,parse_error,no shareholding block on the company page for 'TB5Y0529',
+2026-09-08 10:00:52.830917+00:00,dse_ownership,TB5Y0628,parse_error,no shareholding block on the company page for 'TB5Y0628',
+2026-09-08 10:00:53.481287+00:00,dse_ownership,TB5Y0630,parse_error,no shareholding block on the company page for 'TB5Y0630',
+2026-09-08 10:00:54.067954+00:00,dse_ownership,TB5Y0727,parse_error,no shareholding block on the company page for 'TB5Y0727',
+2026-09-08 10:00:54.678777+00:00,dse_ownership,TB5Y0828,parse_error,no shareholding block on the company page for 'TB5Y0828',
+2026-09-08 10:00:55.507349+00:00,dse_ownership,TB5Y0926,parse_error,no shareholding block on the company page for 'TB5Y0926',
+2026-09-08 10:00:56.172059+00:00,dse_ownership,TB5Y0928,parse_error,no shareholding block on the company page for 'TB5Y0928',
+2026-09-08 10:00:56.751818+00:00,dse_ownership,TB5Y0930,parse_error,no shareholding block on the company page for 'TB5Y0930',
+2026-09-08 10:00:57.337703+00:00,dse_ownership,TB5Y1029,parse_error,no shareholding block on the company page for 'TB5Y1029',
+2026-09-08 10:00:58.032068+00:00,dse_ownership,TB5Y1126,parse_error,no shareholding block on the company page for 'TB5Y1126',
+2026-09-08 10:00:58.570687+00:00,dse_ownership,TB5Y1127,parse_error,no shareholding block on the company page for 'TB5Y1127',
+2026-09-08 10:00:59.142972+00:00,dse_ownership,TB5Y1128,parse_error,no shareholding block on the company page for 'TB5Y1128',
+2026-09-08 10:00:59.926226+00:00,dse_ownership,TB5Y1130,parse_error,no shareholding block on the company page for 'TB5Y1130',
+2026-09-08 10:01:00.608981+00:00,dse_ownership,TB5Y1228,parse_error,no shareholding block on the company page for 'TB5Y1228',
+2026-09-08 10:01:01.195292+00:00,dse_ownership,TB5Y1229,parse_error,no shareholding block on the company page for 'TB5Y1229',
+2026-09-08 10:01:02.628355+00:00,dse_ownership,TELECOMMUNICATION,parse_error,no shareholding block on the company page for 'TELECOMMUNICATION',
+2026-09-08 10:01:03.145567+00:00,dse_ownership,TEXTILE,parse_error,no shareholding block on the company page for 'TEXTILE',
+2026-09-08 10:01:06.932144+00:00,dse_ownership,TRAVEL&LEISURE,parse_error,no shareholding block on the company page for 'TRAVEL&LEISURE',
+2026-09-08 10:01:37.529709+00:00,dse_ownership,WEBCOATS,parse_error,no shareholding block on the company page for 'WEBCOATS',
+2026-09-08 10:01:40.262750+00:00,dse_ownership,WONDERTOYS,parse_error,no shareholding block on the company page for 'WONDERTOYS',
+2026-09-08 10:01:41.368003+00:00,dse_ownership,YUSUFLOUR,parse_error,no shareholding block on the company page for 'YUSUFLOUR',

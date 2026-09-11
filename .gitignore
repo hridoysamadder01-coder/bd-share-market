@@ -21,3 +21,18 @@ tests/tower/_ui_screenshot.png
 # tables are committed under evidence/public/<date>/ instead. Keeping it out of data/
 # matters: data/ holds tracked source (ingest_dse_eod.py, make_synthetic.py).
 runtime/
+
+# whole-market breadth sweeps (*-full): one pass over 691 DSE listings is around
+# half a gigabyte of server-rendered HTML, so the raw store stays on the machine
+# that pulled it. What the repository keeps is everything needed to trust and use
+# it: MANIFEST.json (every record's sha256 and the per-source hash chain),
+# SOURCE_STATUS.json (per-source health and every failure code), and the parsed
+# tables + COVERAGE.json under evidence/public_engine/<run>/extract/, written by
+#   python3 -m seeing.extract --store <run> --out <run>/extract
+evidence/public_engine/*-full/segments/
+
+# whole-market intraday sessions (seeing/capture/market_day.py): one session over
+# ~384 symbols is roughly 100 MB of raw book and tape payloads. Same rule as
+# above — the raw store stays local, the repository keeps MANIFEST.json,
+# SOURCE_STATUS.json and extract/.
+evidence/market_day/*/segments/

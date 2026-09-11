@@ -1,0 +1,86 @@
+{
+ "capture": "evidence/capture/2026-09-06",
+ "checks": [
+  {
+   "check": "states_built",
+   "detail": {
+    "states": 4257
+   },
+   "evaluated": true,
+   "pass": true
+  },
+  {
+   "check": "run_hash_stable",
+   "detail": {
+    "pass_1": "87e00d2a52fbe72fa19ddec591413e6c087cc85297d1971bb8d3a9e326578c1c",
+    "pass_2": "87e00d2a52fbe72fa19ddec591413e6c087cc85297d1971bb8d3a9e326578c1c"
+   },
+   "evaluated": true,
+   "pass": true
+  },
+  {
+   "check": "every_state_hash_stable",
+   "detail": {
+    "compared": 4257,
+    "first_mismatch_index": null,
+    "mismatched": 0
+   },
+   "evaluated": true,
+   "pass": true
+  },
+  {
+   "check": "no_future_reference",
+   "detail": {
+    "ref_status": {
+     "OBSERVED": 4257
+    }
+   },
+   "evaluated": true,
+   "pass": true
+  },
+  {
+   "check": "identity_from_spine",
+   "detail": {
+    "listings": 14,
+    "spine_sha256": "c516aed2940273ee524c4b2cca9e715ee02582879c4237b46996dd13631f9bc4",
+    "unresolved_reasons": [],
+    "unresolved_states": 0
+   },
+   "evaluated": true,
+   "pass": true
+  },
+  {
+   "check": "consensus_reported",
+   "detail": {
+    "consensus_columns": 8,
+    "policy": "consensus filled only where two reporting sources agree; disagreement keeps both values",
+    "states_with_a_disagreement": 2312
+   },
+   "evaluated": true,
+   "pass": true
+  }
+ ],
+ "of": 6,
+ "passed": 6,
+ "schema": "stage2_gate/1",
+ "state_schema": "unified_market_state/2",
+ "summary": {
+  "companies": 14,
+  "distinct_state_sha256": 4257,
+  "hashed_fields": 96,
+  "listings": 14,
+  "ref_status": {
+   "OBSERVED": 4257
+  },
+  "run_sha256": "87e00d2a52fbe72fa19ddec591413e6c087cc85297d1971bb8d3a9e326578c1c",
+  "schema": "unified_market_state/2",
+  "spine_sha256": "c516aed2940273ee524c4b2cca9e715ee02582879c4237b46996dd13631f9bc4",
+  "states": 4257,
+  "states_with_a_disagreement": 2312,
+  "t_first": "2026-09-06T03:55:51.758161+00:00",
+  "t_last": "2026-09-06T08:20:00.253120+00:00",
+  "unresolved_states": 0,
+  "xsrc_agreement_rate_mean": 0.759426
+ },
+ "verdict": "PASS"
+}

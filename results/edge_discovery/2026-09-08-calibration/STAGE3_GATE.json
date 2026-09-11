@@ -1,0 +1,539 @@
+{
+ "checks": [
+  {
+   "check": "all_computable",
+   "detail": [],
+   "pass": true
+  },
+  {
+   "check": "all_vary",
+   "detail": [],
+   "pass": true
+  },
+  {
+   "check": "all_documented",
+   "detail": [],
+   "pass": true
+  },
+  {
+   "check": "tlpi_lambda0_equals_imb_all",
+   "detail": {
+    "max_abs_diff": 0.0,
+    "rows": 3758
+   },
+   "pass": true
+  },
+  {
+   "check": "tlpi_high_lambda_approaches_e1",
+   "detail": {
+    "pearson_r": 0.999571,
+    "rows": 3758
+   },
+   "pass": true
+  }
+ ],
+ "of": 5,
+ "passed": 5,
+ "quantities": [
+  {
+   "candidate": "B1_imb_l1",
+   "column": "imb_l1",
+   "computable": true,
+   "documented": true,
+   "family": "baseline",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.66468086,
+   "varies": true
+  },
+  {
+   "candidate": "B2_imb_top5",
+   "column": "imb_top5",
+   "computable": true,
+   "documented": true,
+   "family": "baseline",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.46432676,
+   "varies": true
+  },
+  {
+   "candidate": "B3_imb_weighted",
+   "column": "imb_weighted",
+   "computable": true,
+   "documented": true,
+   "family": "baseline",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.43298374,
+   "varies": true
+  },
+  {
+   "candidate": "B5_one_frame_pressure",
+   "column": "one_frame_pressure",
+   "computable": true,
+   "documented": true,
+   "family": "baseline",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 17.02261592,
+   "varies": true
+  },
+  {
+   "candidate": "B9_signed_int_volume",
+   "column": "signed_int_volume",
+   "computable": true,
+   "documented": true,
+   "family": "baseline",
+   "present": 2525,
+   "present_pct": 59.31,
+   "sd": 50823.59599819,
+   "varies": true
+  },
+  {
+   "candidate": "E1",
+   "column": "e1",
+   "computable": true,
+   "documented": true,
+   "family": "e1",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.66468086,
+   "varies": true
+  },
+  {
+   "candidate": "E1_fires_up_score",
+   "column": "e1_fires_up_score",
+   "computable": true,
+   "documented": true,
+   "family": "e1",
+   "present": 4257,
+   "present_pct": 100.0,
+   "sd": 0.87844201,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0",
+   "column": "tlpi_0",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33574492,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0_rel",
+   "column": "tlpi_0_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33574492,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0.25",
+   "column": "tlpi_0p25",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.3630264,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0.25_rel",
+   "column": "tlpi_0p25_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33577019,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0.5",
+   "column": "tlpi_0p5",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.40159614,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0.5_rel",
+   "column": "tlpi_0p5_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33579604,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l1",
+   "column": "tlpi_1",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.47045001,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l1_rel",
+   "column": "tlpi_1_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33584942,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l2",
+   "column": "tlpi_2",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.54905349,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l2_rel",
+   "column": "tlpi_2_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33596281,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l4",
+   "column": "tlpi_4",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.61477937,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l4_rel",
+   "column": "tlpi_4_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33621479,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l8",
+   "column": "tlpi_8",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.63459268,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l8_rel",
+   "column": "tlpi_8_rel",
+   "computable": true,
+   "documented": true,
+   "family": "tlpi_rel",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.33680988,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0_vel",
+   "column": "tlpi_0_vel",
+   "computable": true,
+   "documented": true,
+   "family": "velocity",
+   "present": 3625,
+   "present_pct": 85.15,
+   "sd": 0.00186236,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l0_acc",
+   "column": "tlpi_0_acc",
+   "computable": true,
+   "documented": true,
+   "family": "acceleration",
+   "present": 3499,
+   "present_pct": 82.19,
+   "sd": 7.649e-05,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l1_vel",
+   "column": "tlpi_1_vel",
+   "computable": true,
+   "documented": true,
+   "family": "velocity",
+   "present": 3625,
+   "present_pct": 85.15,
+   "sd": 0.00566947,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l1_acc",
+   "column": "tlpi_1_acc",
+   "computable": true,
+   "documented": true,
+   "family": "acceleration",
+   "present": 3499,
+   "present_pct": 82.19,
+   "sd": 0.00023961,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l8_vel",
+   "column": "tlpi_8_vel",
+   "computable": true,
+   "documented": true,
+   "family": "velocity",
+   "present": 3625,
+   "present_pct": 85.15,
+   "sd": 0.01022439,
+   "varies": true
+  },
+  {
+   "candidate": "TLPI_l8_acc",
+   "column": "tlpi_8_acc",
+   "computable": true,
+   "documented": true,
+   "family": "acceleration",
+   "present": 3499,
+   "present_pct": 82.19,
+   "sd": 0.00043909,
+   "varies": true
+  },
+  {
+   "candidate": "E1_vel",
+   "column": "e1_vel",
+   "computable": true,
+   "documented": true,
+   "family": "velocity",
+   "present": 3854,
+   "present_pct": 90.53,
+   "sd": 0.01012145,
+   "varies": true
+  },
+  {
+   "candidate": "E1_acc",
+   "column": "e1_acc",
+   "computable": true,
+   "documented": true,
+   "family": "acceleration",
+   "present": 3725,
+   "present_pct": 87.5,
+   "sd": 0.00043237,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_touch_imb",
+   "column": "geom_touch_imb",
+   "computable": true,
+   "documented": true,
+   "family": "geometry",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.66468086,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_deep_imb",
+   "column": "geom_deep_imb",
+   "computable": true,
+   "documented": true,
+   "family": "geometry",
+   "present": 3719,
+   "present_pct": 87.36,
+   "sd": 0.33754833,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_divergence",
+   "column": "geom_divergence",
+   "computable": true,
+   "documented": true,
+   "family": "geometry",
+   "present": 3719,
+   "present_pct": 87.36,
+   "sd": 0.67147478,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_centroid_gap",
+   "column": "geom_centroid_gap",
+   "computable": true,
+   "documented": true,
+   "family": "geometry",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 3.04866929,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_slope_gap",
+   "column": "geom_slope_gap",
+   "computable": true,
+   "documented": true,
+   "family": "geometry",
+   "present": 3719,
+   "present_pct": 87.36,
+   "sd": 0.51274018,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_touch_share_gap",
+   "column": "geom_touch_share_gap",
+   "computable": true,
+   "documented": true,
+   "family": "geometry",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.14592391,
+   "varies": true
+  },
+  {
+   "candidate": "GEO_divergence_vel",
+   "column": "geom_divergence_vel",
+   "computable": true,
+   "documented": true,
+   "family": "velocity",
+   "present": 3585,
+   "present_pct": 84.21,
+   "sd": 0.01046626,
+   "varies": true
+  },
+  {
+   "candidate": "X_e1_x_tlpi0",
+   "column": "x_e1_x_tlpi0",
+   "computable": true,
+   "documented": true,
+   "family": "cross_timescale",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.24603691,
+   "varies": true
+  },
+  {
+   "candidate": "X_e1_minus_tlpi0",
+   "column": "x_e1_minus_tlpi0",
+   "computable": true,
+   "documented": true,
+   "family": "cross_timescale",
+   "present": 3758,
+   "present_pct": 88.28,
+   "sd": 0.63745647,
+   "varies": true
+  },
+  {
+   "candidate": "X_tlpi1_x_flow",
+   "column": "x_tlpi1_x_flow",
+   "computable": true,
+   "documented": true,
+   "family": "cross_timescale",
+   "present": 2371,
+   "present_pct": 55.7,
+   "sd": 25891.8066772,
+   "varies": true
+  },
+  {
+   "candidate": "C_xs_rank",
+   "column": "xs_pressure_rank",
+   "computable": true,
+   "documented": true,
+   "family": "conditioning",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.22259787,
+   "varies": true
+  },
+  {
+   "candidate": "C_breadth",
+   "column": "mkt_breadth",
+   "computable": true,
+   "documented": true,
+   "family": "conditioning",
+   "present": 4257,
+   "present_pct": 100.0,
+   "sd": 0.10167642,
+   "varies": true
+  },
+  {
+   "candidate": "C_e1_minus_market",
+   "column": "c_e1_minus_market",
+   "computable": true,
+   "documented": true,
+   "family": "conditioning",
+   "present": 3987,
+   "present_pct": 93.66,
+   "sd": 0.6305037,
+   "varies": true
+  },
+  {
+   "candidate": "V_E1_vetoed",
+   "column": "v_e1_vetoed",
+   "computable": true,
+   "documented": true,
+   "family": "risk_veto",
+   "present": 4110,
+   "present_pct": 96.55,
+   "sd": 0.58057748,
+   "varies": true
+  },
+  {
+   "candidate": "V_TLPI1_vetoed",
+   "column": "v_tlpi1_vetoed",
+   "computable": true,
+   "documented": true,
+   "family": "risk_veto",
+   "present": 3918,
+   "present_pct": 92.04,
+   "sd": 0.41779571,
+   "varies": true
+  }
+ ],
+ "rate_window_s": [
+  1.0,
+  600.0
+ ],
+ "schema": "stage3_gate/1",
+ "truth": {
+  "*_vel / *_acc": "INFERRED \u2014 per-second first and second differences; NaN where the frame gap is outside [1.0, 600.0] s",
+  "e1": "INFERRED \u2014 (bid_qty1-ask_qty1)/(bid_qty1+ask_qty1) on OBSERVED L1 quantities; \u03b8=0.2 is preregistered in micro/MICRO_PREREG.json and never fitted here",
+  "geom_*": "INFERRED \u2014 touch/deep decomposition, centroids and slopes of the displayed book",
+  "ladder_mismatch_ticks": "INFERRED \u2014 the largest per-level tick-distance difference between the two displayed ladders; 0 means distance decay and rank decay are algebraically the same on that frame",
+  "risk_veto": "INFERRED \u2014 a suppression condition on liquidity depletion or adverse retreat. It is never a direction and must not be read as one",
+  "tlpi_<\u03bb>": "INFERRED \u2014 \u03a3q\u00b7exp(-\u03bb\u00b7|p-mid|/tick) imbalance over displayed levels; NOT_OBSERVABLE where tick_size or a book side is missing",
+  "tlpi_<\u03bb>_rank": "INFERRED \u2014 the ablation twin: the same decay on level rank rather than tick distance. Identical to tlpi_<\u03bb> on a mirror-symmetric ladder",
+  "tlpi_<\u03bb>_rel": "INFERRED \u2014 the same rule with distance relative to the mid instead of the tick; computable when the circuit reference is not yet observed, and a DIFFERENT measurement from the tick-scaled one"
+ },
+ "verdict": "PASS"
+}

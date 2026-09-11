@@ -1,0 +1,80 @@
+{
+ "store": "evidence/public_engine/2026-09-08-history",
+ "tables": {
+  "market_history": {
+   "path": "market_history.csv",
+   "rows": 30,
+   "columns": [
+    "source",
+    "t_recv",
+    "seq",
+    "epoch",
+    "body_sha256",
+    "http_status",
+    "elapsed_ms",
+    "date",
+    "date_raw",
+    "total_trade",
+    "total_volume",
+    "total_value_mn",
+    "market_cap_mn",
+    "dsex",
+    "dses",
+    "ds30",
+    "dgen",
+    "header_seen",
+    "columns_missing",
+    "sessions_on_page"
+   ],
+   "bytes": 8233
+  },
+  "gaps": {
+   "path": "gaps.csv",
+   "rows": 1,
+   "columns": [
+    "t_recv",
+    "source",
+    "key",
+    "reason",
+    "detail",
+    "status"
+   ],
+   "bytes": 205
+  },
+  "meta": {
+   "path": "meta.csv",
+   "rows": 2,
+   "columns": [
+    "t_recv",
+    "source",
+    "seq",
+    "payload"
+   ],
+   "bytes": 526
+  }
+ },
+ "coverage": {
+  "universe_size": 0,
+  "sources": {
+   "dse_market_history": {
+    "table": "market_history",
+    "rows": 30,
+    "symbols_returned": 0,
+    "polls": 1,
+    "gap_reasons": {
+     "connect_error": 1
+    }
+   }
+  }
+ },
+ "problems": [],
+ "n_problems": 0,
+ "raw_records_by_source": {
+  "dse_market_history": 1
+ },
+ "store_verified": {
+  "all_ok": true,
+  "chain_ok": true,
+  "segments": 2
+ }
+}

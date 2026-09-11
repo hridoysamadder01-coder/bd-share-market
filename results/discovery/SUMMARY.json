@@ -1,0 +1,19 @@
+{
+ "band_ladder_truth": "INFERRED \u2014 today's published ladder applied to history; dated limit changes in RESEARCH_STATUS.md D-16 are not reproduced by it",
+ "slices": [
+  "PRIMARY/free: 425,415 rows, 386 symbols, 2012-10-01\u21922024-02-20",
+  "PRIMARY/floor_era: 119,520 rows, 384 symbols, 2022-07-28\u21922024-01-31",
+  "POSTBREAK/free: 41,722 rows, 94 symbols, 2024-02-22\u21922026-01-22"
+ ],
+ "by_status": {
+  "KILLED": 134,
+  "WEAK": 92,
+  "PROMISING": 26
+ },
+ "n_candidates": 28,
+ "horizons": [
+  5,
+  15,
+  30
+ ]
+}
