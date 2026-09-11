@@ -11,9 +11,9 @@ from typing import Any, Dict, Mapping, Optional, Sequence
 from .relation_replay import ReplayEvent
 
 
-# Event metadata that is useful for audit/provenance but must not silently become
-# a candidate relation field.  The watcher already records source/entity/time/
-# order outside ``data``.
+# Only observed market values enter ``data``.  Source/entity/time/order and
+# provenance metadata stay on ReplayEvent/ObservationPacket so MDL cannot learn
+# a fake relation from identifiers about the feed itself.
 _EVENT_VALUE_FIELDS = (
     "side",
     "price",
@@ -53,11 +53,6 @@ def tower_event_to_replay(
     payload = getattr(event, "payload", None)
     if isinstance(payload, Mapping):
         data["payload"] = dict(payload)
-
-    observed_fields = getattr(event, "observed_fields", None)
-    if observed_fields:
-        # Kept as audit context inside the payload namespace, not interpreted.
-        data["observed_fields"] = list(observed_fields)
 
     t_recv = getattr(event, "t_recv")
     time = t_recv.isoformat() if hasattr(t_recv, "isoformat") else str(t_recv)
