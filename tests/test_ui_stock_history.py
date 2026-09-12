@@ -165,17 +165,27 @@ def _shell_js():
     return open(os.path.join(STATIC, "shell.js"), encoding="utf-8").read()
 
 
-def test_the_line_is_broken_at_a_coverage_gap():
-    """A continuous line across a two-month exchange halt asserts prices that
-    were never printed. The painter must lift the pen."""
+def _painter():
+    """The body of drawHistory with comments stripped, so no guard can be
+    satisfied by prose that merely describes the behaviour."""
     js = _shell_js()
     assert "function drawHistory" in js
     block = js[js.index("function drawHistory"):]
-    block = block[: block.index("\nfunction hexA")]
-    assert "GAP_MS" in block, "the painter has no gap threshold"
-    assert re.search(r"ms\[i\]\s*-\s*ms\[i\s*-\s*1\]\s*\)\s*>\s*GAP_MS", block), \
-        "the painter does not compare the distance between consecutive sessions"
-    assert "pen = false" in block, "the painter never lifts the pen"
+    block = block[: block.index("\n/* nearest stored session")]
+    block = re.sub(r"/\*.*?\*/", "", block, flags=re.S)
+    return re.sub(r"^\s*//.*$", "", block, flags=re.M)
+
+
+def test_nothing_is_drawn_across_a_coverage_gap():
+    """A continuous mark across a two-month exchange halt asserts prices that
+    were never printed. The x axis is real time, so a gap is real empty space;
+    the painter names it with a dashed marker instead of spanning it."""
+    b = _painter()
+    assert "GAP_MS" in b, "the painter has no gap threshold"
+    assert re.search(r"ms\(i\)\s*-\s*ms\(i\s*-\s*1\)\s*<=\s*GAP_MS", b), \
+        "the painter does not measure the distance between consecutive sessions"
+    assert not re.search(r"lineTo\([^)]*Y\(\s*(rows\[i\]\.)?c\s*\)", b), \
+        "a close-to-close polyline is back - that would bridge a gap"
 
 
 def test_the_floor_era_and_the_unchecked_tail_are_both_shaded():
@@ -207,3 +217,83 @@ def test_no_external_resource_is_pulled_for_the_chart():
     for blob in (js, css):
         assert "https://" not in blob
         assert "http://" not in blob
+
+
+# ───────────────────── the chart must be candles, not a line over the close
+#
+# These guards fail if the OHLC candlestick drawing is ever replaced again by a
+# single line over the close. The first version of this section drew exactly
+# that, and it threw away three of the four prices the API already served for
+# every session.
+
+def test_the_painter_reads_all_four_of_open_high_low_close():
+    b = _painter()
+    for k in ("r.o", "r.h", "r.l", "r.c"):
+        assert k in b, f"the painter never reads {k} - it cannot be drawing candles"
+    assert re.search(r"\bo\s*=\s*r\.o\b", b), "open is not taken from the row"
+    assert re.search(r"\bhgh\s*=\s*r\.h\b", b), "high is not taken from the row"
+    assert re.search(r"\blow\s*=\s*r\.l\b", b), "low is not taken from the row"
+    assert re.search(r"\bc\s*=\s*r\.c\b", b), "close is not taken from the row"
+
+
+def test_the_wick_is_drawn_from_the_low_to_the_high():
+    b = _painter()
+    assert re.search(r"moveTo\(\s*xw\s*,\s*Y\(hgh\)\s*\)", b), "the wick does not start at the row's high"
+    assert re.search(r"lineTo\(\s*xw\s*,\s*Y\(low\)\s*\)", b), "the wick does not end at the row's low"
+
+
+def test_the_body_is_drawn_from_the_open_to_the_close():
+    b = _painter()
+    assert re.search(r"const\s+yo\s*=\s*Y\(o\)\s*,\s*yc\s*=\s*Y\(c\)", b), \
+        "the body is not measured from open to close"
+    assert "Math.min(yo, yc)" in b and "Math.abs(yc - yo)" in b, "the body does not span open to close"
+    assert "g.fillRect(x - cw / 2, top" in b, "no body rectangle is filled"
+
+
+def test_a_row_missing_any_price_is_skipped_never_reconstructed():
+    b = _painter()
+    assert re.search(r"\[o,\s*hgh,\s*low,\s*c\]\.every", b), \
+        "the painter does not require all four prices before drawing a candle"
+    assert "skipped++" in b, "an incomplete row is not counted as skipped"
+    assert "rows[i - 1].c" not in b and "rows[i-1].c" not in b, \
+        "the painter reaches into the previous row - that would invent a price"
+
+
+def test_every_visible_row_is_drawn_with_no_thinning():
+    b = _painter()
+    assert re.search(r"for \(let i = i0; i <= i1; i\+\+\)", b), \
+        "the candle loop does not walk every visible row"
+    assert "Math.ceil(nvis /" not in b and "stride" not in b, "a level-of-detail thinning is present"
+
+
+def test_the_truth_markers_survive_the_candles():
+    b = _painter()
+    assert "r.floor === true" in b, "the floor era is no longer shaded"
+    assert "r.annotated === false" in b, "the not-yet-QA-checked tail is no longer shaded"
+    assert "r.locked === true" in b, "locked bars are no longer marked"
+    assert "r.qa_exclude === true" in b, "QA-excluded sessions are no longer marked"
+    assert "VY(" in b, "the volume panel is gone"
+
+
+def test_the_chart_can_be_zoomed_panned_and_read():
+    js = _shell_js()
+    for fn in ("function histZoom", "function histPan", "function histReset",
+               "function histIndexAt", "function wireHistory", "function histReadout"):
+        assert fn in js, f"{fn} is missing - the 14-year history would not be usable"
+    w = js[js.index("function wireHistory"):]
+    w = w[: w.index("\n/* a CSS colour")]
+    for ev in ("'wheel'", "'mousedown'", "'mousemove'", "'touchstart'", "'touchmove'", "'touchend'", "'keydown'"):
+        assert ev in w, f"the chart does not listen for {ev}"
+
+
+def test_the_readout_states_the_raw_row_and_infers_nothing():
+    js = _shell_js()
+    r = js[js.index("function histReadout"):]
+    r = r[: r.index("\nfunction historySection")]
+    for k in ("'DATE'", "'OPEN'", "'HIGH'", "'LOW'", "'CLOSE'", "'VOLUME'"):
+        assert k in r, f"the readout does not show {k}"
+    for st in ("ON THE FLOOR", "LOCKED BAR", "QA EXCLUDED", "QA UNKNOWN"):
+        assert st in r, f"the readout does not show the {st} state"
+    low = re.sub(r"/\*.*?\*/", "", r, flags=re.S).lower()
+    for banned in ("predict", "expect", "target", "signal", "support", "resistance"):
+        assert banned not in low, f"the readout infers something: {banned!r}"
