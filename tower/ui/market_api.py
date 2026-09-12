@@ -367,9 +367,22 @@ def _build_sources() -> List[Dict[str, Any]]:
                     f"{src['cadence_s']}s" if src.get("cadence_s") is not None else src.get("cadence")
                 ),
                 "delay": src.get("delay") or None,
-                "truth": (src.get("truth") or "OBSERVED").upper(),
+                # A source that declares no truth class is UNKNOWN, never OBSERVED.
+                # SOURCE_STATUS.json carries no `truth` key at all, so the previous
+                # `or "OBSERVED"` default stamped the highest truth class on every
+                # source the Data Trust screen shows — provenance manufactured by
+                # the presentation layer. Unknown is reported as unknown.
+                "truth": (src.get("truth") or "UNKNOWN").upper(),
                 "notes": src.get("notes"),
-                "last_success": src.get("last_success") or src.get("t_source"),
+                # The capture writer records the last good poll as `last_ok_utc`.
+                # Reading `last_success`/`t_source` (neither of which it writes)
+                # made every source's last-OK time render as "—", so a stale
+                # source and a fresh one looked identical on screen.
+                "last_success": (
+                    src.get("last_ok_utc")
+                    or src.get("last_success")
+                    or src.get("t_source")
+                ),
                 "records": src.get("records"),
                 "runs_in": src.get("runs_in"),
             }

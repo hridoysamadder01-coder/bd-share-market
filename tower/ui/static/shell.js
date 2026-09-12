@@ -736,6 +736,9 @@ function renderStock() {
   }).join('') : '<div class="empty">The feature engine has no row for this stock in this snapshot.</div>';
 
   const fund = detail && detail.fundamentals ? detail.fundamentals : null;
+  /* ownership history is already served by /api/stock/{sym}; it was simply
+     never rendered. Shown raw, in source order, nothing filled in. */
+  const own = (detail && detail.ownership && detail.ownership.rows) || [];
   const onWatch = S.watch.indexOf(sym) >= 0;
 
   return `<div class="wrap">
@@ -796,6 +799,35 @@ function renderStock() {
         <div><div class="k">NAV</div><div class="v">${F.n(fund.audited_nav)}</div></div>
         <div><div class="k">PRICE / NAV</div><div class="v">${F.n(fund.price_to_nav)}</div></div>
       </div></div>
+    </section>` : ''}
+
+    ${own.length ? `<section class="sec">
+      <div class="sec-head"><h2>OWNERSHIP HISTORY</h2>
+        <span class="note">${own.length} reported snapshot${own.length === 1 ? '' : 's'} · exactly as the source published them, no interpolation</span></div>
+      <div class="card scroll-x">
+        <table class="tbl"><thead><tr>
+          <th>AS ON</th><th class="r">SPONSOR / DIRECTOR</th><th class="r">GOVERNMENT</th>
+          <th class="r">INSTITUTION</th><th class="r">FOREIGN</th><th class="r">PUBLIC</th><th class="r">SUM</th>
+        </tr></thead><tbody>
+        ${own.map(o => {
+          const parts = [o.sponsor_director, o.government, o.institution, o.foreign, o.public];
+          const reported = parts.filter(F.has);
+          const sum = reported.length ? reported.reduce((a, b) => a + b, 0) : null;
+          return `<tr>
+            <td class="sym">${F.esc(o.as_on || F.dash)}</td>
+            <td class="r">${F.pct(o.sponsor_director)}</td>
+            <td class="r">${F.pct(o.government)}</td>
+            <td class="r">${F.pct(o.institution)}</td>
+            <td class="r">${F.pct(o.foreign)}</td>
+            <td class="r">${F.pct(o.public)}</td>
+            <td class="r muted">${F.has(sum) ? F.pct(sum) : F.dash}${reported.length < 5 ? ` <span class="tag">${5 - reported.length} not reported</span>` : ''}</td>
+          </tr>`;
+        }).join('')}
+        </tbody></table>
+      </div>
+      <div class="card" style="margin-top:12px">
+        ${provLine('percentages as published per snapshot date; rows are shown in source order and a missing field stays blank rather than being filled', 'evidence/public_engine/*/extract/ownership.csv', 'OBSERVED', M.dataAt)}
+      </div>
     </section>` : ''}
 
     <section class="sec">
