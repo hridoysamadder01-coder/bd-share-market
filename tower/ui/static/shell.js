@@ -768,6 +768,8 @@ function renderStock() {
         ${w.verdict ? `<span class="tag verdict v-${w.verdict}">${F.esc(w.verdict.replace('_', ' '))}</span>` : ''}</span></li>`).join('')}</ul>
     </section>` : ''}
 
+    ${historySection()}
+
     <section class="sec">
       <div class="sec-head"><h2>THIS SESSION</h2></div>
       <div class="card"><div class="kv">
@@ -809,6 +811,485 @@ function renderStock() {
   </div>`;
 }
 
+
+/* ------------------------------ DAILY HISTORY ------------------------------
+   A real OHLC candlestick chart over this stock's own stored daily rows.
+
+   It states no mechanism and makes no forward claim. Every candle is drawn from
+   one row's own o / h / l / c — the wick spans low→high, the body spans
+   open→close — and nothing between rows is ever synthesised.
+
+   Five things this drawing refuses to do, because doing them would state
+   something the data does not:
+     · it never invents a candle. A row missing any of o/h/l/c is skipped, not
+       guessed, and never filled from its neighbours;
+     · it never bridges a coverage gap. The x axis is real time, so a halt
+       leaves real empty space, and a dashed marker names it;
+     · it shades the floor era, so a price that was not allowed to fall is
+       never read as a price that chose not to;
+     · it shades the tail the QA pass has not reached, because there the flags
+       are UNKNOWN, not false, and it marks the sessions QA excluded;
+     · it draws every row in view — no sampling, no level-of-detail thinning.
+       What you see is the source, not a summary of it.
+   -------------------------------------------------------------------------- */
+
+/* view state: an index window into H.rows, kept per symbol across re-renders */
+function histView(H) {
+  if (!S.histView || S.histView.sym !== S.param) {
+    S.histView = { sym: S.param, i0: 0, i1: Math.max(0, H.rows.length - 1) };
+  }
+  const v = S.histView, n = H.rows.length;
+  v.i0 = Math.max(0, Math.min(v.i0, n - 1));
+  v.i1 = Math.max(v.i0 + 1, Math.min(v.i1, n - 1));
+  return v;
+}
+
+function histReset() {
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!H || !H.rows.length) return;
+  S.histView = { sym: S.param, i0: 0, i1: H.rows.length - 1 };
+  S.histPick = null;
+  drawHistory();
+}
+
+/* the raw row, restated field by field. Nothing here is computed. */
+function histReadout(r, H) {
+  const el = document.getElementById('hist-readout');
+  if (!el) return;
+  if (!r) { el.innerHTML = `<span class="hr-empty">Hover or tap a candle to read its raw row.</span>`; return; }
+  const flags = [];
+  if (r.floor === true)        flags.push(`<span class="tag warn">ON THE FLOOR</span>`);
+  if (r.locked === true)       flags.push(`<span class="tag neg">LOCKED BAR</span>`);
+  if (r.zero_volume === true)  flags.push(`<span class="tag">ZERO VOLUME</span>`);
+  if (r.qa_exclude === true)   flags.push(`<span class="tag neg">QA EXCLUDED</span>`);
+  if (r.annotated === false)   flags.push(`<span class="tag verdict v-NOT_TESTED">QA UNKNOWN</span>`);
+  if (r.annotated === true && !flags.length) flags.push(`<span class="tag verdict v-OBSERVED">QA CLEAN</span>`);
+  const f = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+  const cell = (k, v, cls) =>
+    `<span class="hr-cell"><span class="hr-k">${k}</span><span class="hr-v ${cls || ''}">${v === null ? F.dash : v}</span></span>`;
+  const c = f(r.c), o = f(r.o);
+  const dir = (c === null || o === null) ? '' : (c > o ? 'pos' : (c < o ? 'neg' : ''));
+  el.innerHTML =
+    cell('DATE', F.esc(r.t)) +
+    cell('OPEN', f(r.o) === null ? null : F.n(r.o)) +
+    cell('HIGH', f(r.h) === null ? null : F.n(r.h)) +
+    cell('LOW', f(r.l) === null ? null : F.n(r.l)) +
+    cell('CLOSE', c === null ? null : F.n(r.c), dir) +
+    cell('VOLUME', f(r.v) === null ? null : F.qty(r.v)) +
+    `<span class="hr-flags">${flags.join('')}</span>`;
+}
+
+function historySection() {
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!H || !H.rows || !H.rows.length) {
+    return `<section class="sec">
+      <div class="sec-head"><h2>ITS OWN HISTORY</h2></div>
+      <div class="card"><div class="empty">${F.esc((H && H.reason) || 'No stored daily history for this stock.')}</div></div>
+    </section>`;
+  }
+  const c = H.coverage || {}, pos = H.position || {};
+  const years = c.calendar_days ? (c.calendar_days / 365.25).toFixed(1) : F.dash;
+
+  const pct = (v) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(1) + '%' : F.dash;
+  const marks = [];
+  marks.push(`<span class="hm hm-up"></span>close above open`);
+  marks.push(`<span class="hm hm-down"></span>close below open`);
+  if (c.floor_era_sessions)   marks.push(`<span class="hm hm-floor"></span>${F.int(c.floor_era_sessions)} floor-era sessions`);
+  if (c.locked_sessions)      marks.push(`<span class="hm hm-locked"></span>${F.int(c.locked_sessions)} locked bars`);
+  if (c.unannotated_sessions) marks.push(`<span class="hm hm-unchecked"></span>${F.int(c.unannotated_sessions)} sessions not QA-checked yet`);
+  if (c.gaps_over_10_days)    marks.push(`<span class="hm hm-gap"></span>${F.int(c.gaps_over_10_days)} coverage gap${c.gaps_over_10_days === 1 ? '' : 's'} over 10 days`);
+  if (c.qa_excluded_sessions) marks.push(`<span class="hm hm-excl"></span>${F.int(c.qa_excluded_sessions)} QA-excluded sessions`);
+
+  return `<section class="sec">
+    <div class="sec-head"><h2>ITS OWN HISTORY</h2>
+      <span class="note">${F.int(c.sessions)} sessions · ${F.esc(c.first || '')} → ${F.esc(c.last || '')} · ${years} years · daily candles, every stored row drawn</span></div>
+
+    <div class="card">
+      <div class="hist-bar">
+        <span class="hist-range" id="hist-range">—</span>
+        <span class="spacer"></span>
+        <button class="hist-btn" id="hist-out" type="button" title="zoom out">−</button>
+        <button class="hist-btn" id="hist-in" type="button" title="zoom in">+</button>
+        <button class="hist-btn" id="hist-reset" type="button">All ${F.int(c.sessions)}</button>
+      </div>
+      <div class="hist-readout" id="hist-readout"></div>
+      <div class="hist-wrap">
+        <canvas id="hist-canvas" class="hist-canvas" tabindex="0"
+                aria-label="Daily candlestick history. Drag to pan, scroll or pinch to zoom, hover or tap a candle to read its row."></canvas>
+      </div>
+      <div class="hist-hint">drag to pan · scroll or pinch to zoom · hover or tap a candle · arrow keys pan, + and − zoom</div>
+      ${marks.length ? `<div class="hist-legend">${marks.join('')}</div>` : ''}
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="kv">
+        <div><div class="k">CLOSE ON ${F.esc(pos.as_of || '')}</div><div class="v">${F.n(pos.close)}</div></div>
+        <div><div class="k">HIGHER THAN</div><div class="v">${pct(pos.close_pct_rank)}<span class="muted" style="font-size:11px"> of its own ${F.int(pos.close_ranked_over)} sessions</span></div></div>
+        <div><div class="k">SHARES THAT DAY</div><div class="v">${F.qty(pos.volume)}</div></div>
+        <div><div class="k">HIGHER THAN</div><div class="v">${pct(pos.volume_pct_rank)}<span class="muted" style="font-size:11px"> of its own ${F.int(pos.volume_ranked_over)} sessions</span></div></div>
+      </div>
+      ${c.longest_gap ? `<p class="rule-note">Longest coverage gap: ${F.esc(c.longest_gap.from)} → ${F.esc(c.longest_gap.to)}, ${F.int(c.longest_gap.days)} days. No candle is drawn inside it and nothing is drawn across it.</p>` : ''}
+      ${c.annotated_last && c.unannotated_sessions ? `<p class="rule-note">The QA pass reaches ${F.esc(c.annotated_last)}. After that the floor-era and locked-bar flags are not known, so those sessions are shaded and their flags are served as unknown, never as false.</p>` : ''}
+      ${provLine('candles are the stored open, high, low and close of each session, restated — a measurement, not a prediction', 'results/dse_eod_bars_annotated.parquet · data/raw/dse_eod_extended.parquet', 'OBSERVED', null)}
+    </div>
+  </section>`;
+}
+
+/* geometry of the last paint, so hit-testing reads exactly what was drawn */
+let HIST_GEO = null;
+
+function drawHistory() {
+  const cv = document.getElementById('hist-canvas');
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!cv || !H || !H.rows || !H.rows.length) { HIST_GEO = null; return; }
+
+  const css = getComputedStyle(document.documentElement);
+  const pick = (n, f) => (css.getPropertyValue(n) || '').trim() || f;
+  const ink = pick('--ink-1', '#111'), ink3 = pick('--ink-3', '#888'),
+        line = pick('--line', '#ddd'), posC = pick('--pos', '#0E8F5B'),
+        negC = pick('--neg', '#D32F35'), warn = pick('--warn', '#B26A00');
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(260, cv.parentElement.clientWidth);
+  const h = w < 560 ? 260 : 340;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+
+  const rows = H.rows;
+  const v = histView(H);
+  const i0 = v.i0, i1 = v.i1;
+
+  const padL = 52, padR = 8, padT = 10, padB = 20;
+  const volH = Math.round(h * 0.20);
+  const priceH = h - padT - padB - volH - 8;
+  const plotW = w - padL - padR;
+
+  const ms = i => Date.parse(rows[i].t);
+  const t0 = ms(i0), t1 = ms(i1);
+  const span = Math.max(1, t1 - t0);
+
+  /* Two passes, so the first and last candle are drawn whole instead of being
+     clipped by the plot edge: measure the candle width against a provisional
+     mapping, then inset the mapping by half a candle and re-measure. */
+  const widthFrom = (map, lo_, hi_) => {
+    if (hi_ - lo_ < 1) return 8;
+    const gs = [];
+    for (let i = lo_ + 1; i <= hi_; i++) gs.push(map(ms(i)) - map(ms(i - 1)));
+    gs.sort((a, b) => a - b);
+    return Math.max(0.8, Math.min(22, gs[Math.floor(gs.length / 2)] * 0.72));
+  };
+  const X0 = t => padL + plotW * (t - t0) / span;
+  const inset = Math.min(plotW / 4, widthFrom(X0, i0, i1) / 2 + 1);
+  const X = t => padL + inset + (plotW - 2 * inset) * (t - t0) / span;
+
+  /* price scale over the VISIBLE rows only, from their own highs and lows */
+  let lo = Infinity, hi = -Infinity;
+  for (let i = i0; i <= i1; i++) {
+    const r = rows[i];
+    for (const k of ['h', 'l', 'o', 'c']) {
+      const x = r[k];
+      if (typeof x === 'number' && isFinite(x)) { if (x < lo) lo = x; if (x > hi) hi = x; }
+    }
+  }
+  if (!isFinite(lo) || !isFinite(hi)) { HIST_GEO = null; return; }
+  if (hi === lo) { hi = lo + 1; lo = lo - 1; }
+  const padv = (hi - lo) * 0.06; lo -= padv; hi += padv;
+  const Y = p => padT + priceH * (1 - (p - lo) / (hi - lo));
+
+  let vmax = 0;
+  for (let i = i0; i <= i1; i++) {
+    const x = rows[i].v;
+    if (typeof x === 'number' && isFinite(x) && x > vmax) vmax = x;
+  }
+  const volTop = padT + priceH + 8;
+  const VY = x => volTop + volH * (1 - (x / (vmax || 1)));
+
+  /* candle width: from the MEDIAN REAL pixel spacing between consecutive stored
+     sessions in view — not plotW/count. The x axis is real time, so sessions are
+     unevenly spaced; a width taken from the average would make candles overlap
+     each other on the dense side of a long halt and bleed into the empty gap. */
+  const nvis = i1 - i0 + 1;
+  const cw = widthFrom(X, i0, i1);
+
+  /* 1. shaded runs, under everything */
+  function band(test, fill) {
+    let s = null;
+    for (let i = i0; i <= i1 + 1; i++) {
+      const on = i <= i1 && test(rows[i]);
+      if (on && s === null) s = i;
+      if (!on && s !== null) {
+        const x0 = X(ms(s)) - cw / 2, x1 = X(ms(Math.max(s, i - 1))) + cw / 2;
+        g.fillStyle = fill;
+        g.fillRect(x0, padT, Math.max(1, x1 - x0), priceH + 8 + volH);
+        s = null;
+      }
+    }
+  }
+  band(r => r.floor === true, hexA(warn, 0.16));
+  band(r => r.annotated === false, hexA(ink3, 0.10));
+
+  /* 2. price grid */
+  g.strokeStyle = line; g.lineWidth = 1;
+  g.font = '10px ui-monospace, monospace'; g.fillStyle = ink3;
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const p = lo + (hi - lo) * i / 4, y = Math.round(Y(p)) + 0.5;
+    g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+    g.fillText(p >= 1000 ? Math.round(p).toString() : p.toFixed(1), padL - 5, y);
+  }
+
+  /* 3. coverage gaps — a dashed hairline where sessions are missing, so the
+        empty space is named rather than merely present */
+  const GAP_MS = 10 * 864e5;
+  g.save(); g.setLineDash([3, 3]); g.strokeStyle = hexA(ink3, 0.7); g.lineWidth = 1;
+  for (let i = Math.max(1, i0); i <= i1; i++) {
+    if (ms(i) - ms(i - 1) <= GAP_MS) continue;
+    const x = Math.round((X(ms(i - 1)) + X(ms(i))) / 2) + 0.5;
+    g.beginPath(); g.moveTo(x, padT); g.lineTo(x, volTop + volH); g.stroke();
+  }
+  g.restore();
+
+  /* 4. volume, one bar per stored row */
+  for (let i = i0; i <= i1; i++) {
+    const r = rows[i], x = r.v;
+    if (typeof x !== 'number' || !isFinite(x)) continue;
+    const o = r.o, c = r.c;
+    const up = (typeof o === 'number' && typeof c === 'number' && isFinite(o) && isFinite(c)) ? c >= o : null;
+    g.fillStyle = up === null ? hexA(ink3, 0.4) : hexA(up ? posC : negC, 0.38);
+    const y = VY(x);
+    g.fillRect(X(ms(i)) - cw / 2, y, Math.max(0.6, cw), Math.max(0.5, volTop + volH - y));
+  }
+
+  /* 5. THE CANDLES. wick = low→high, body = open→close, one row at a time.
+        A row missing any of the four is skipped — never reconstructed. */
+  let drawn = 0, skipped = 0;
+  for (let i = i0; i <= i1; i++) {
+    const r = rows[i];
+    const o = r.o, hgh = r.h, low = r.l, c = r.c;
+    const ok = [o, hgh, low, c].every(x => typeof x === 'number' && isFinite(x));
+    if (!ok) { skipped++; continue; }
+    const x = X(ms(i));
+    const col = c > o ? posC : (c < o ? negC : ink3);
+
+    /* wick: the session's own low to its own high */
+    g.strokeStyle = col; g.lineWidth = Math.min(1.4, Math.max(0.6, cw * 0.14));
+    const xw = cw >= 3 ? Math.round(x) + 0.5 : x;
+    g.beginPath(); g.moveTo(xw, Y(hgh)); g.lineTo(xw, Y(low)); g.stroke();
+
+    /* body: open to close. A session that opened and closed at the same price —
+       a limit-locked day, for instance — has a zero-height body; it is still a
+       real session, so it is given a full pixel row rather than a sub-pixel
+       sliver that antialiasing would render almost invisible. */
+    const yo = Y(o), yc = Y(c);
+    let top = Math.min(yo, yc), bh = Math.abs(yc - yo);
+    if (bh < 1) { top = Math.round(top); bh = 1; }   /* snap, so it is a real row of pixels */
+    g.fillStyle = col;
+    g.fillRect(x - cw / 2, top, Math.max(0.8, cw), bh);
+    drawn++;
+  }
+
+  /* 6. locked bars and QA-excluded sessions, marked on the price floor */
+  for (let i = i0; i <= i1; i++) {
+    const r = rows[i], x = X(ms(i));
+    if (r.locked === true) {
+      g.fillStyle = hexA(negC, 0.75);
+      g.fillRect(x - Math.max(0.5, cw / 2), padT + priceH + 1, Math.max(1, cw), 2.5);
+    }
+    if (r.qa_exclude === true) {
+      g.strokeStyle = negC; g.lineWidth = 1;
+      g.save(); g.setLineDash([1, 1]);
+      g.beginPath(); g.arc(x, padT + priceH + 5, 2.6, 0, Math.PI * 2); g.stroke();
+      g.restore();
+    }
+  }
+
+  /* 7. date axis — years when the window is wide, months when it is narrow */
+  g.fillStyle = ink3; g.textAlign = 'center'; g.textBaseline = 'top';
+  const days = span / 864e5;
+  const ticks = [];
+  if (days > 1200) {
+    const step = days > 4000 ? 2 : 1;
+    for (let y = new Date(t0).getUTCFullYear(); y <= new Date(t1).getUTCFullYear(); y += step) {
+      const t = Date.UTC(y, 0, 1);
+      if (t >= t0 && t <= t1) ticks.push([t, String(y)]);
+    }
+  } else if (days > 120) {
+    const d0 = new Date(t0);
+    for (let y = d0.getUTCFullYear(), m = d0.getUTCMonth(); ; m++) {
+      const t = Date.UTC(y, m, 1);
+      if (t > t1) break;
+      if (t >= t0) ticks.push([t, new Date(t).toISOString().slice(0, 7)]);
+      if (ticks.length > 24) break;
+    }
+  } else {
+    const n = Math.min(6, nvis);
+    for (let k = 0; k < n; k++) {
+      const i = i0 + Math.round(k * (i1 - i0) / Math.max(1, n - 1));
+      ticks.push([ms(i), rows[i].t.slice(5)]);
+    }
+  }
+  for (const [t, lab] of ticks) {
+    const x = X(t);
+    g.strokeStyle = hexA(ink3, 0.22);
+    g.beginPath(); g.moveTo(x, padT); g.lineTo(x, volTop + volH); g.stroke();
+    g.fillStyle = ink3;
+    const half = g.measureText(lab).width / 2;
+    g.fillText(lab, Math.max(padL + half, Math.min(w - padR - half, x)), volTop + volH + 3);
+  }
+
+  /* 8. the picked candle, crosshaired */
+  if (S.histPick !== null && S.histPick !== undefined && S.histPick >= i0 && S.histPick <= i1) {
+    const x = X(ms(S.histPick));
+    g.save(); g.setLineDash([2, 3]); g.strokeStyle = hexA(ink, 0.55); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x, padT); g.lineTo(x, volTop + volH); g.stroke();
+    g.restore();
+  }
+
+  HIST_GEO = { i0, i1, padL, padR, padT, padB, plotW, priceH, volTop, volH, w, h,
+               t0, t1, span, cw, inset, drawn, skipped, lo, hi, vmax };
+
+  const rEl = document.getElementById('hist-range');
+  if (rEl) rEl.textContent = `${rows[i0].t} → ${rows[i1].t} · ${nvis} session${nvis === 1 ? '' : 's'} drawn`;
+  histReadout(S.histPick !== null && S.histPick !== undefined ? rows[S.histPick] : rows[i1], H);
+}
+
+/* nearest stored session to a canvas x, within the visible window */
+function histIndexAt(px) {
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!H || !HIST_GEO) return null;
+  const { i0, i1, padL, plotW, t0, span } = HIST_GEO;
+  const t = t0 + span * (px - padL) / plotW;
+  let best = null, bd = Infinity;
+  for (let i = i0; i <= i1; i++) {
+    const d = Math.abs(Date.parse(H.rows[i].t) - t);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+
+function histZoom(factor, anchorPx) {
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!H) return;
+  const v = histView(H), n = H.rows.length;
+  const nvis = v.i1 - v.i0 + 1;
+  let a = 0.5;
+  if (typeof anchorPx === 'number' && HIST_GEO) {
+    a = Math.max(0, Math.min(1, (anchorPx - HIST_GEO.padL) / HIST_GEO.plotW));
+  }
+  const want = Math.max(5, Math.min(n, Math.round(nvis * factor)));
+  const centre = v.i0 + a * (nvis - 1);
+  let i0 = Math.round(centre - a * (want - 1));
+  i0 = Math.max(0, Math.min(n - want, i0));
+  S.histView = { sym: S.param, i0, i1: i0 + want - 1 };
+  drawHistory();
+}
+
+function histPan(dxPx) {
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!H || !HIST_GEO) return;
+  const v = histView(H), n = H.rows.length;
+  const nvis = v.i1 - v.i0 + 1;
+  const shift = Math.round(dxPx / HIST_GEO.plotW * nvis);
+  if (!shift) return;
+  let i0 = Math.max(0, Math.min(n - nvis, v.i0 - shift));
+  S.histView = { sym: S.param, i0, i1: i0 + nvis - 1 };
+  drawHistory();
+}
+
+function wireHistory() {
+  const cv = document.getElementById('hist-canvas');
+  const H = (S.hist && S.hist.__sym === S.param) ? S.hist : null;
+  if (!cv || !H || !H.rows.length) return;
+  const px = e => {
+    const b = cv.getBoundingClientRect();
+    return (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - b.left;
+  };
+
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    histZoom(e.deltaY > 0 ? 1.25 : 0.8, px(e));
+  }, { passive: false });
+
+  let drag = null;
+  cv.addEventListener('mousedown', e => { drag = { x: px(e), moved: false }; cv.classList.add('dragging'); });
+  window.addEventListener('mouseup', () => { if (drag) cv.classList.remove('dragging'); drag = null; });
+  cv.addEventListener('mousemove', e => {
+    const x = px(e);
+    if (drag) {
+      const dx = x - drag.x;
+      if (Math.abs(dx) >= 2) { drag.moved = true; histPan(dx); drag.x = x; }
+      return;
+    }
+    const i = histIndexAt(x);
+    if (i !== null && i !== S.histPick) { S.histPick = i; drawHistory(); }
+  });
+  cv.addEventListener('mouseleave', () => { if (!drag) { S.histPick = null; drawHistory(); } });
+  cv.addEventListener('dblclick', () => histReset());
+
+  /* touch: one finger pans and taps, two fingers pinch. Vertical page
+     scrolling is left alone unless the gesture is clearly horizontal. */
+  let t1x = null, pinch = null;
+  cv.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      pinch = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
+      t1x = null;
+    } else if (e.touches.length === 1) {
+      t1x = { x: px(e), y: e.touches[0].clientY, moved: false };
+      pinch = null;
+    }
+  }, { passive: true });
+  cv.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && pinch !== null) {
+      e.preventDefault();
+      const d = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
+      if (d > 4 && pinch > 4) { histZoom(pinch / d, HIST_GEO ? HIST_GEO.padL + HIST_GEO.plotW / 2 : null); pinch = d; }
+      return;
+    }
+    if (e.touches.length === 1 && t1x) {
+      const x = px(e), dy = Math.abs(e.touches[0].clientY - t1x.y), dx = x - t1x.x;
+      if (Math.abs(dx) > 6 && Math.abs(dx) > dy) {
+        e.preventDefault(); t1x.moved = true; histPan(dx); t1x.x = x;
+      }
+    }
+  }, { passive: false });
+  cv.addEventListener('touchend', e => {
+    if (t1x && !t1x.moved) {
+      const i = histIndexAt(t1x.x);
+      if (i !== null) { S.histPick = i; drawHistory(); }
+    }
+    t1x = null; pinch = null;
+  }, { passive: true });
+
+  cv.addEventListener('keydown', e => {
+    const k = e.key;
+    if (k === 'ArrowLeft')  { e.preventDefault(); histPan(HIST_GEO ? HIST_GEO.plotW * 0.12 : 40); }
+    else if (k === 'ArrowRight') { e.preventDefault(); histPan(HIST_GEO ? -HIST_GEO.plotW * 0.12 : -40); }
+    else if (k === '+' || k === '=') { e.preventDefault(); histZoom(0.8); }
+    else if (k === '-' || k === '_') { e.preventDefault(); histZoom(1.25); }
+    else if (k === 'Home' || k === '0') { e.preventDefault(); histReset(); }
+  });
+
+  const b = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+  b('hist-in', () => histZoom(0.7));
+  b('hist-out', () => histZoom(1.4));
+  b('hist-reset', () => histReset());
+}
+
+/* a CSS colour plus an alpha, without assuming the token is hex */
+function hexA(col, a) {
+  const c = String(col).trim();
+  const m = c.match(/^#([0-9a-f]{6})$/i);
+  if (m) {
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  const r = c.match(/^rgba?\(([^)]+)\)$/i);
+  if (r) { const p = r[1].split(',').map(x => x.trim()); return `rgba(${p[0]},${p[1]},${p[2]},${a})`; }
+  return c;
+}
 
 /* --------------------------- RESEARCH VERDICT ---------------------------- */
 /* Reads the committed ledger documents. The UI reports these verdicts; it does
@@ -921,6 +1402,11 @@ async function render() {
   if (S.route === 'stock' && S.param && (!S.stock || S.stock.__sym !== S.param)) {
     try { const d = await get('/api/stock/' + encodeURIComponent(S.param), 120000); d.__sym = S.param; S.stock = d; }
     catch (e) { S.stock = { __sym: S.param }; }
+    /* the daily spine is a separate read-only endpoint; a failure here must not
+       take the rest of the stock page down with it */
+    try { S.hist = await get('/api/stock/' + encodeURIComponent(S.param) + '/history', 120000); }
+    catch (e) { S.hist = null; }
+    if (S.hist) S.hist.__sym = S.param;
   }
   try { view.innerHTML = ROUTES[S.route](); }
   catch (e) { view.innerHTML = `<div class="wrap"><div class="card"><div class="empty">Could not draw this view: ${F.esc(e.message)}</div></div></div>`; }
@@ -930,6 +1416,19 @@ async function render() {
 }
 
 function wireView() {
+  if (S.route === 'stock') {
+    drawHistory();
+    wireHistory();
+    if (!S._histResize) {
+      S._histResize = true;
+      let tmr = null;
+      window.addEventListener('resize', () => {
+        clearTimeout(tmr);
+        tmr = setTimeout(() => { if (S.route === 'stock') drawHistory(); }, 120);
+      });
+    }
+  }
+
   const wb = document.getElementById('watch-btn');
   if (wb) wb.onclick = () => {
     const i = S.watch.indexOf(S.param);
